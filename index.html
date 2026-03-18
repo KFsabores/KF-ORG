@@ -18,6 +18,8 @@
         .ing-btn { border: 1px solid #333; padding: 10px; border-radius: 12px; font-size: 10px; text-align: left; background: #0a0a0a; transition: 0.2s; }
         .ing-btn.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         .hidden { display: none; }
+        .modal-btn { border: 2px solid #333; padding: 12px; rounded: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
+        .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
     </style>
 </head>
 <body class="pb-24">
@@ -36,7 +38,7 @@
         <button onclick="switchCategory('especial')" class="category-btn px-4 py-2 rounded-full shrink-0">🌟 Especial</button>
         <button onclick="switchCategory('premium')" class="category-btn px-4 py-2 rounded-full shrink-0">💎 Premium</button>
         <button onclick="switchCategory('doces')" class="category-btn px-4 py-2 rounded-full shrink-0">🍫 Pizzas Doces</button>
-        <button onclick="switchCategory('tapioca')" class="category-btn px-4 py-2 rounded-full shrink-0">🌯 Tapiocas</button>
+        <button onclick="switchCategory('tapioca')" class="category-btn px-4 py-2 rounded-full shrink-0">Burrito Tapiocas</button>
         <button onclick="switchCategory('bebidas')" class="category-btn px-4 py-2 rounded-full shrink-0">🥤 Bebidas</button>
     </nav>
 
@@ -71,10 +73,22 @@
     <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
         <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center">Meu Pedido</h2>
+            
             <div id="cart-items" class="space-y-2 mb-4"></div>
+            
             <input type="text" id="cust-name" placeholder="Seu Nome">
-            <input type="text" id="cust-addr" placeholder="Endereço, Número e Bairro">
-            <label class="text-[10px] gold-text font-black uppercase italic mt-4 block">Forma de Pagamento</label>
+
+            <label class="text-[10px] gold-text font-black uppercase italic mt-4 block">Como deseja receber?</label>
+            <div class="grid grid-cols-2 gap-2 mb-4">
+                <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
+                <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
+            </div>
+
+            <div id="area-endereco">
+                <input type="text" id="cust-addr" placeholder="Endereço, Número e Bairro">
+            </div>
+
+            <label class="text-[10px] gold-text font-black uppercase italic mt-2 block">Forma de Pagamento</label>
             <select id="pay-method" onchange="checkPayment()">
                 <option value="Pix">Pix</option>
                 <option value="Cartão">Cartão</option>
@@ -84,18 +98,18 @@
             
             <div class="mt-4 p-3 bg-zinc-800 rounded-xl border border-zinc-700 flex justify-between items-center">
                 <span class="text-[10px] uppercase font-black text-zinc-400">Taxa de Entrega:</span>
-                <span class="text-[10px] uppercase font-black gold-text italic">A confirmar no WhatsApp</span>
+                <span id="taxa-info" class="text-[10px] uppercase font-black gold-text italic">A confirmar no WhatsApp</span>
             </div>
 
             <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Subtotal: R$ <span id="cart-total">0.00</span></div>
-            <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase">Enviar no WhatsApp</button>
+            
+            <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Enviar no WhatsApp</button>
             <button onclick="toggleCart()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Continuar Comprando</button>
         </div>
     </div>
 
     <script>
         const WHATSAPP_NUMBER = "5521967592513";
-        // SEU LINK DO GOOGLE JÁ CONFIGURADO ABAIXO:
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec";
 
         const menuData = {
@@ -164,6 +178,27 @@
         let selectedSize = 35;
         let tapRecheios = [];
         let tapExtra = "Nenhum";
+        let modalidadeAtual = "DELIVERY";
+
+        function setModalidade(tipo) {
+            modalidadeAtual = tipo;
+            document.getElementById('mode-delivery').classList.toggle('active', tipo === 'DELIVERY');
+            document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
+            
+            const areaEnd = document.getElementById('area-endereco');
+            const inputEnd = document.getElementById('cust-addr');
+            const taxaInfo = document.getElementById('taxa-info');
+
+            if(tipo === 'RETIRADA') {
+                areaEnd.classList.add('hidden');
+                inputEnd.value = "RETIRADA NA LOJA";
+                taxaInfo.innerText = "ISENTO";
+            } else {
+                areaEnd.classList.remove('hidden');
+                inputEnd.value = "";
+                taxaInfo.innerText = "A confirmar no WhatsApp";
+            }
+        }
 
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
@@ -303,61 +338,55 @@
         }
 
         async function finalizeOrder() {
-    const n = document.getElementById('cust-name').value;
-    const a = document.getElementById('cust-addr').value;
-    const p = document.getElementById('pay-method').value;
-    const t = document.getElementById('troco-val').value;
-    const total = document.getElementById('cart-total').innerText;
+            const n = document.getElementById('cust-name').value;
+            const a = document.getElementById('cust-addr').value;
+            const p = document.getElementById('pay-method').value;
+            const t = document.getElementById('troco-val').value;
+            const total = document.getElementById('cart-total').innerText;
 
-    if(!n || !a || cart.length === 0) return alert("Preencha Nome e Endereço!");
-    
-    // 1. Organiza dados para planilha
-    const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
-    const dadosParaPlanilha = {
-        nome: n,
-        endereco: a,
-        itens: itensTexto,
-        pagamento: p + (t ? ' (Troco p/ '+t+')' : ''),
-        total: "R$ " + total
-    };
+            if(!n || !a || cart.length === 0) return alert("Preencha Nome e Endereço!");
+            
+            const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
+            
+            // DADOS PARA PLANILHA (Incluso Modalidade na Coluna H)
+            const dadosParaPlanilha = {
+                nome: n,
+                endereco: a,
+                itens: itensTexto,
+                pagamento: p + (t ? ' (Troco p/ '+t+')' : ''),
+                total: "R$ " + total,
+                modalidade: modalidadeAtual
+            };
 
-    try {
-        fetch(URL_PLANILHA, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify(dadosParaPlanilha)
-        });
-    } catch (e) { console.log("Erro ao salvar"); }
+            try {
+                fetch(URL_PLANILHA, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(dadosParaPlanilha)
+                });
+            } catch (e) { console.log("Erro ao salvar"); }
 
-    // 2. WHATSAPP COM ESPAÇAMENTO MELHORADO
-    // %0A é uma quebra de linha. Usamos duas para dar o espaço que você quer.
-    
-    let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-    
-    msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
-    
-    msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
-    
-    msg += `*------------------------------*%0A`;
-    msg += `*🛒 ITENS DO PEDIDO:*%0A`;
-    
-    // Adiciona cada item com uma linha em branco entre eles
-    cart.forEach(i => {
-        msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`;
-    });
-    
-    msg += `%0A*------------------------------*%0A%0A`;
-    
-    msg += `*🚚 ENTREGA:* A combinar%0A%0A`;
-    
-    msg += `*💳 PAGAMENTO:*%0A${p}${t ? ' (Troco para '+t+')' : ''}%0A%0A`;
-    
-    msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
-    
-    msg += `_Favor confirmar o pedido e o tempo de entrega._`;
-    
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-}
+            // WHATSAPP
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
+            msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
+            msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
+            
+            if(modalidadeAtual === 'DELIVERY') {
+                msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
+            }
+            
+            msg += `*------------------------------*%0A`;
+            msg += `*🛒 ITENS DO PEDIDO:*%0A`;
+            cart.forEach(i => {
+                msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`;
+            });
+            msg += `%0A*------------------------------*%0A%0A`;
+            msg += `*💳 PAGAMENTO:*%0A${p}${t ? ' (Troco para '+t+')' : ''}%0A%0A`;
+            msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
+            msg += `_Favor confirmar o pedido e o tempo de entrega._`;
+            
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+        }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
