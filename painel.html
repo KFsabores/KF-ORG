@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão de Pedidos</title>
+    <title>PAINEL KF - Gestão Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -13,25 +13,25 @@
         }
         .cupom { font-family: 'Courier New', Courier, monospace; width: 70mm; font-size: 13px; line-height: 1.3; color: #000; padding: 10px; background: #fff; }
         .item-row { border-bottom: 1px dashed #000; padding: 4px 0; }
-        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen p-4">
+<body class="bg-zinc-950 text-white min-h-screen p-4 font-sans">
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
-                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter">KF SABORES</h1>
-                <p class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Painel de Comandos Online</p>
+                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase">KF SABORES</h1>
+                <p class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Painel de Gestão Pro</p>
             </div>
-            <button onclick="carregarPedidos()" class="bg-[#39FF14] text-black hover:bg-green-400 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2">
-                🔄 ATUALIZAR PEDIDOS
+            <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-zinc-700 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2 border border-zinc-700">
+                🔄 ATUALIZAR LISTA
             </button>
         </div>
 
         <div id="lista-pedidos" class="grid-custom">
-            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold animate-pulse">
-                CARREGANDO PEDIDOS...
+            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase animate-pulse">
+                Sincronizando com a cozinha...
             </div>
         </div>
     </div>
@@ -40,16 +40,37 @@
 
     <script>
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
-        
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec'; 
+
+        async function alterarStatus(linhaIndex, novoStatus) {
+            // A linha real na planilha é baseada na posição do CSV
+            // Como inserimos no topo, precisamos desse cálculo
+            const url = `${WEB_APP_URL}?row=${linhaIndex}&status=${novoStatus}`;
+            
+            // Feedback visual no botão
+            const originalText = event.target.innerText;
+            event.target.innerText = "⏳...";
+            event.target.disabled = true;
+
+            try {
+                // Chamada silenciosa para o Apps Script
+                await fetch(url, { mode: 'no-cors' });
+                
+                // Aguarda um pouco e recarrega para mostrar a mudança
+                setTimeout(carregarPedidos, 1500);
+            } catch (e) {
+                alert("Erro ao mudar status. Tente novamente.");
+                event.target.innerText = originalText;
+                event.target.disabled = false;
+            }
+        }
+
         async function carregarPedidos() {
-            // Usamos tqx=out:csv para evitar bloqueios de segurança do Google
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF`;
             
             try {
                 const response = await fetch(url);
                 const data = await response.text();
-                
-                // Converte CSV em Array
                 const rows = data.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, ''))
                 );
@@ -57,46 +78,79 @@
                 const container = document.getElementById('lista-pedidos');
                 container.innerHTML = "";
 
-                // Pula o cabeçalho e inverte para ver os novos primeiro
-                const pedidos = rows.slice(1).reverse();
+                // Começamos da linha 1 (pulando o cabeçalho)
+                // Não usamos .reverse() aqui para manter a ordem da planilha
+                const pedidosRaw = rows.slice(1);
 
-                if (pedidos.length === 0 || !pedidos[0][1]) {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500'>Nenhum pedido encontrado.</div>";
+                if (pedidosRaw.length === 0 || !pedidosRaw[0][1]) {
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500 py-10'>Nenhum pedido na fila.</div>";
                     return;
                 }
 
-                pedidos.forEach((row) => {
+                pedidosRaw.forEach((row, index) => {
                     if(!row[1]) return;
+                    
+                    // A linha real na planilha é index + 2 (por causa do cabeçalho e base 0)
+                    const linhaPlanilha = index + 1; 
 
                     const p = {
-                        data: row[0] || '',
+                        data: row[0],
                         nome: (row[1] || '').toUpperCase(),
                         endereco: (row[2] || '').toUpperCase(),
                         itens: row[3] || '',
                         pagamento: (row[4] || '').toUpperCase(),
-                        total: row[5] || '0.00',
-                        status: (row[6] || 'PENDENTE').toUpperCase()
+                        total: row[5] || '0,00',
+                        status: (row[6] || '🟡 PENDENTE').toUpperCase()
                     };
 
+                    // Cores do Card conforme Status
+                    let cardBorder = "border-zinc-800";
+                    let statusColor = "text-yellow-500 border-yellow-500/20";
+                    
+                    if(p.status.includes("PREPARANDO")) {
+                        cardBorder = "border-blue-500/40";
+                        statusColor = "bg-blue-900/20 text-blue-400 border-blue-400/30";
+                    } else if(p.status.includes("CONCLUÍDO")) {
+                        cardBorder = "border-green-500/40";
+                        statusColor = "bg-green-900/20 text-green-500 border-green-500/30";
+                    }
+
                     container.innerHTML += `
-                        <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl shadow-lg flex flex-col h-full border-l-4 border-l-[#39FF14]">
+                        <div class="bg-zinc-900 border ${cardBorder} p-6 rounded-3xl shadow-xl flex flex-col h-full transition-all">
                             <div class="flex justify-between items-start mb-4">
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
-                                <span class="text-[9px] font-black px-2 py-1 rounded bg-zinc-800 text-yellow-500 border border-yellow-500/20">${p.status}</span>
+                                <span class="text-[9px] font-black px-2 py-1 rounded-md ${statusColor} border uppercase">${p.status}</span>
                             </div>
+                            
                             <h3 class="text-xl font-black mb-1 text-white italic tracking-tighter">${p.nome}</h3>
-                            <p class="text-[11px] text-zinc-500 mb-4 font-bold leading-tight">${p.endereco}</p>
-                            <div class="bg-black/40 p-4 rounded-2xl mb-6 border border-zinc-800/50 flex-grow">
-                                <p class="text-[12px] text-zinc-300 font-medium">• ${p.itens.split('|').join('<br>• ')}</p>
+                            <p class="text-[11px] text-zinc-500 mb-4 font-bold leading-tight h-8 overflow-hidden uppercase">${p.endereco}</p>
+                            
+                            <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium">
+                                • ${p.itens.split('|').join('<br>• ')}
                             </div>
+
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <button onclick="alterarStatus(${linhaPlanilha}, 'PREPARANDO')" 
+                                    class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-2 rounded-xl border border-blue-600/20 transition-all uppercase">
+                                    👨‍🍳 PREPARAR
+                                </button>
+                                <button onclick="alterarStatus(${linhaPlanilha}, 'CONCLUIDO')" 
+                                    class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-2 rounded-xl border border-green-600/20 transition-all uppercase">
+                                    ✅ CONCLUIR
+                                </button>
+                            </div>
+
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                                 <div><p class="text-[9px] text-zinc-500 font-black uppercase">Total</p><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
-                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:bg-white active:scale-95 transition-all">🖨️ IMPRIMIR</button>
+                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" 
+                                    class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:bg-white active:scale-95 transition-all shadow-lg">
+                                    🖨️ IMPRIMIR
+                                </button>
                             </div>
                         </div>`;
                 });
             } catch (e) {
-                container.innerHTML = "<div class='col-span-full text-center text-red-500 font-bold'>ERRO AO SINCRONIZAR. VERIFIQUE SE A PLANILHA ESTÁ PÚBLICA.</div>";
+                console.error(e);
             }
         }
 
@@ -106,11 +160,20 @@
             const lista = p.itens.split('|').map(item => `<div class="item-row">• ${item.trim()}</div>`).join('');
             area.innerHTML = `
                 <div class="cupom">
-                    <center><strong style="font-size:18px">KF SABORES</strong><br>${p.data}<br>-----------------</center><br>
+                    <center>
+                        <strong style="font-size:18px">KF SABORES</strong><br>
+                        -------------------------------<br>
+                        <strong>VIA DE PRODUÇÃO</strong><br>
+                        ${p.data}<br>
+                        -------------------------------
+                    </center>
+                    <br>
                     <strong>CLIENTE:</strong> ${p.nome}<br>
-                    <strong>ENDEREÇO:</strong><br>${p.endereco}<br>-----------------<br>
+                    <strong>ENDEREÇO:</strong><br>${p.endereco}<br>
+                    -------------------------------<br>
                     <strong>ITENS:</strong><br>${lista}<br>
-                    <strong>PAGAMENTO:</strong> ${p.pagamento}<br>-----------------<br>
+                    <strong>PAGAMENTO:</strong> ${p.pagamento}<br>
+                    -------------------------------<br>
                     <strong style="font-size:16px">TOTAL: ${p.total}</strong><br><br>
                     <center>OBRIGADO PELA PREFERÊNCIA!</center>
                 </div>`;
@@ -118,7 +181,7 @@
         }
 
         carregarPedidos();
-        setInterval(carregarPedidos, 30000);
+        setInterval(carregarPedidos, 40000);
     </script>
 </body>
 </html>
