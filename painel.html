@@ -18,22 +18,20 @@
 </head>
 <body class="bg-zinc-950 text-white min-h-screen p-4 font-sans">
 
+    <audio id="notificacao-som" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
                 <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase">KF SABORES</h1>
-                <p class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Painel de Gestão Pro</p>
+                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1 italic">Sincronizado • Clique na tela para ativar som 🔔</p>
             </div>
             <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-zinc-700 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2 border border-zinc-700">
-                🔄 ATUALIZAR LISTA
+                🔄 ATUALIZAR AGORA
             </button>
         </div>
 
-        <div id="lista-pedidos" class="grid-custom">
-            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase animate-pulse">
-                Sincronizando com a cozinha...
-            </div>
-        </div>
+        <div id="lista-pedidos" class="grid-custom"></div>
     </div>
 
     <div id="print-area" class="hidden"></div>
@@ -42,23 +40,8 @@
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec'; 
 
-        async function alterarStatus(linhaIndex, novoStatus) {
-            const url = `${WEB_APP_URL}?row=${linhaIndex}&status=${novoStatus}`;
-            const btn = event.target;
-            const originalText = btn.innerText;
-            
-            btn.innerText = "⏳...";
-            btn.disabled = true;
-
-            try {
-                await fetch(url, { mode: 'no-cors' });
-                setTimeout(carregarPedidos, 1500);
-            } catch (e) {
-                alert("Erro ao mudar status.");
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        }
+        let quantidadePedidosAntiga = 0;
+        let primeiraCarga = true;
 
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF`;
@@ -66,118 +49,97 @@
             try {
                 const response = await fetch(url);
                 const data = await response.text();
-                // Separa as 8 colunas corretamente
                 const rows = data.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, ''))
                 );
 
                 const container = document.getElementById('lista-pedidos');
+                const pedidosRaw = rows.slice(1).filter(r => r[1]); // Filtra linhas vazias
+
+                // LÓGICA DO SOM:
+                if (!primeiraCarga && pedidosRaw.length > quantidadePedidosAntiga) {
+                    tocarSom();
+                }
+                
+                quantidadePedidosAntiga = pedidosRaw.length;
+                primeiraCarga = false;
+
                 container.innerHTML = "";
 
-                const pedidosRaw = rows.slice(1);
-
-                if (pedidosRaw.length === 0 || !pedidosRaw[0][1]) {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500 py-10 font-bold uppercase'>Fila vazia. Aguardando pedidos...</div>";
+                if (pedidosRaw.length === 0) {
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500 py-10 font-bold uppercase'>Fila vazia...</div>";
                     return;
                 }
 
                 pedidosRaw.forEach((row, index) => {
-                    if(!row[1]) return;
-                    
                     const linhaPlanilha = index + 1; 
-
                     const p = {
-                        data: row[0],
-                        nome: (row[1] || '').toUpperCase(),
-                        endereco: (row[2] || '').toUpperCase(),
-                        itens: row[3] || '',
-                        pagamento: (row[4] || '').toUpperCase(),
-                        total: row[5] || '0,00',
-                        status: (row[6] || '🟡 PENDENTE').toUpperCase(),
-                        modalidade: (row[7] || 'DELIVERY').toUpperCase() // Coluna H
+                        data: row[0], nome: (row[1] || '').toUpperCase(), endereco: (row[2] || '').toUpperCase(),
+                        itens: row[3] || '', pagto: (row[4] || '').toUpperCase(), total: row[5] || '0,00',
+                        status: (row[6] || 'PENDENTE').toUpperCase(), modalidade: (row[7] || 'DELIVERY').toUpperCase()
                     };
 
-                    // Cores e Ícones
                     let cardBorder = "border-zinc-800";
-                    let statusColor = "text-yellow-500 border-yellow-500/20";
                     let iconeMod = p.modalidade.includes("RETIRADA") ? "🛍️ RETIRADA" : "🛵 DELIVERY";
-                    if(p.modalidade.includes("BALCÃO")) iconeMod = "🍽️ BALCÃO";
                     
-                    if(p.status.includes("PREPARANDO")) {
-                        cardBorder = "border-blue-500/40 shadow-blue-900/10";
-                        statusColor = "bg-blue-900/20 text-blue-400 border-blue-400/30";
-                    } else if(p.status.includes("CONCLUÍDO")) {
-                        cardBorder = "border-green-500/40 shadow-green-900/10";
-                        statusColor = "bg-green-900/20 text-green-500 border-green-500/30";
-                    }
+                    if(p.status.includes("PREPARANDO")) cardBorder = "border-blue-500/40";
+                    else if(p.status.includes("CONCLUIDO")) cardBorder = "border-green-500/40";
 
                     container.innerHTML += `
-                        <div class="bg-zinc-900 border ${cardBorder} p-6 rounded-3xl shadow-xl flex flex-col h-full transition-all border-t-8 ${p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600'}">
+                        <div class="bg-zinc-900 border ${cardBorder} p-6 rounded-3xl shadow-xl flex flex-col border-t-8 ${p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600'}">
                             <div class="flex justify-between items-start mb-4">
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
                                 <span class="text-[10px] font-black px-2 py-1 rounded bg-black/40 text-white border border-zinc-700">${iconeMod}</span>
                             </div>
-                            
-                            <h3 class="text-xl font-black mb-1 text-white italic tracking-tighter">${p.nome}</h3>
-                            <p class="text-[10px] text-zinc-500 mb-4 font-bold uppercase leading-tight">${p.endereco}</p>
-                            
-                            <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium">
+                            <h3 class="text-xl font-black text-white italic tracking-tighter">${p.nome}</h3>
+                            <p class="text-[10px] text-zinc-500 mb-4 font-bold uppercase">${p.endereco}</p>
+                            <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm">
                                 • ${p.itens.split('|').join('<br>• ')}
                             </div>
-
                             <div class="grid grid-cols-2 gap-2 mb-4">
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'PREPARANDO')" 
-                                    class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-2 rounded-xl border border-blue-600/20 transition-all uppercase">
-                                    👨‍🍳 PREPARAR
-                                </button>
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'CONCLUIDO')" 
-                                    class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-2 rounded-xl border border-green-600/20 transition-all uppercase">
-                                    ✅ CONCLUIR
-                                </button>
+                                <button onclick="alterarStatus(${linhaPlanilha}, 'PREPARANDO')" class="bg-blue-600/10 text-blue-400 py-2 rounded-xl border border-blue-600/20 text-[10px] font-black uppercase">👨‍🍳 PREPARAR</button>
+                                <button onclick="alterarStatus(${linhaPlanilha}, 'CONCLUIDO')" class="bg-green-600/10 text-green-400 py-2 rounded-xl border border-green-600/20 text-[10px] font-black uppercase">✅ CONCLUIR</button>
                             </div>
-
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
-                                <div><p class="text-[9px] text-zinc-500 font-black uppercase">Status: ${p.status}</p><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
-                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" 
-                                    class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:bg-white active:scale-95 transition-all shadow-lg">
-                                    🖨️ IMPRIMIR
-                                </button>
+                                <div><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
+                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase">🖨️ IMPRIMIR</button>
                             </div>
                         </div>`;
                 });
-            } catch (e) {
-                console.error("Erro ao carregar pedidos:", e);
-            }
+            } catch (e) { console.error("Erro:", e); }
+        }
+
+        function tocarSom() {
+            const som = document.getElementById('notificacao-som');
+            som.play().catch(e => console.log("Aguardando interação do usuário para tocar som."));
+        }
+
+        async function alterarStatus(linhaIndex, novoStatus) {
+            const url = `${WEB_APP_URL}?row=${linhaIndex}&status=${novoStatus}`;
+            try {
+                await fetch(url, { mode: 'no-cors' });
+                setTimeout(carregarPedidos, 1000);
+            } catch (e) { alert("Erro ao mudar status."); }
         }
 
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(item => `<div class="item-row">• ${item.trim()}</div>`).join('');
-            area.innerHTML = `
-                <div class="cupom">
-                    <center>
-                        <strong style="font-size:18px">KF SABORES</strong><br>
-                        -------------------------------<br>
-                        <strong>${p.modalidade}</strong><br>
-                        ${p.data}<br>
-                        -------------------------------
-                    </center>
-                    <br>
-                    <strong>CLIENTE:</strong> ${p.nome}<br>
-                    <strong>ENDEREÇO:</strong><br>${p.endereco}<br>
-                    -------------------------------<br>
-                    <strong>ITENS:</strong><br>${lista}<br>
-                    <strong>PAGAMENTO:</strong> ${p.pagamento}<br>
-                    -------------------------------<br>
-                    <strong style="font-size:16px">TOTAL: ${p.total}</strong><br><br>
-                    <center>OBRIGADO PELA PREFERÊNCIA!</center>
-                </div>`;
+            area.innerHTML = `<div class="cupom"><center><strong>KF SABORES</strong><br>--- ${p.modalidade} ---<br>${p.data}</center><br><strong>CLIENTE:</strong> ${p.nome}<br><strong>ENDEREÇO:</strong> ${p.endereco}<br>---<br><strong>ITENS:</strong><br>${lista}<br><strong>TOTAL: ${p.total}</strong></div>`;
             window.print();
         }
 
+        // Tenta tocar um som mudo ao clicar em qualquer lugar para "desbloquear" o áudio no Chrome
+        document.body.addEventListener('click', () => {
+            const som = document.getElementById('notificacao-som');
+            som.volume = 0;
+            som.play().then(() => { som.volume = 1; });
+            document.getElementById('status-conexao').innerText = "Sincronizado • SOM ATIVADO ✅";
+        }, { once: true });
+
         carregarPedidos();
-        setInterval(carregarPedidos, 40000); // Atualiza a cada 40 segundos
+        setInterval(carregarPedidos, 30000); // Verifica a cada 30 segundos
     </script>
 </body>
 </html>
