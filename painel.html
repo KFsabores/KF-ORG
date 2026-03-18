@@ -16,22 +16,22 @@
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
     </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen p-4 font-sans">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen p-4">
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
                 <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter">KF SABORES</h1>
-                <p class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Painel de Comandos</p>
+                <p class="text-zinc-500 text-xs font-bold uppercase tracking-widest">Painel de Comandos Online</p>
             </div>
-            <button onclick="carregarPedidos()" class="bg-[#39FF14] text-black hover:bg-green-400 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
+            <button onclick="carregarPedidos()" class="bg-[#39FF14] text-black hover:bg-green-400 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2">
                 🔄 ATUALIZAR PEDIDOS
             </button>
         </div>
 
         <div id="lista-pedidos" class="grid-custom">
-            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase animate-pulse">
-                Buscando pedidos...
+            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold animate-pulse">
+                CARREGANDO PEDIDOS...
             </div>
         </div>
     </div>
@@ -39,65 +39,64 @@
     <div id="print-area" class="hidden"></div>
 
     <script>
-        // CONFIGURAÇÕES
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
-        const SHEET_NAME = 'PEDIDOSKF'; 
-
+        
         async function carregarPedidos() {
-            // Mudamos para o formato /pub?output=csv que o navegador aceita abrir direto do PC
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/pub?output=csv&sheet=${SHEET_NAME}`;
+            // Usamos tqx=out:csv para evitar bloqueios de segurança do Google
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
             
             try {
                 const response = await fetch(url);
                 const data = await response.text();
                 
-                // Converte o CSV recebido em uma lista (Array)
-                const rows = data.split('\n').map(row => row.split(',').map(cell => cell.replace(/"/g, '')));
+                // Converte CSV em Array
+                const rows = data.split('\n').map(row => 
+                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, ''))
+                );
 
                 const container = document.getElementById('lista-pedidos');
                 container.innerHTML = "";
 
-                // Começamos da linha 1 para pular o cabeçalho
-                // Usamos reverse para o mais novo aparecer primeiro
+                // Pula o cabeçalho e inverte para ver os novos primeiro
                 const pedidos = rows.slice(1).reverse();
 
-                if (pedidos.length === 0 || pedidos[0][0] === "") {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500'>Nenhum pedido na planilha.</div>";
+                if (pedidos.length === 0 || !pedidos[0][1]) {
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500'>Nenhum pedido encontrado.</div>";
                     return;
                 }
 
                 pedidos.forEach((row) => {
-                    if(!row[1]) return; // Pula linha vazia
+                    if(!row[1]) return;
 
                     const p = {
-                        data: row[0],
-                        nome: row[1].toUpperCase(),
-                        endereco: row[2].toUpperCase(),
-                        itens: row[3],
-                        pagamento: row[4].toUpperCase(),
-                        total: row[5],
-                        status: row[6] || 'PENDENTE'
+                        data: row[0] || '',
+                        nome: (row[1] || '').toUpperCase(),
+                        endereco: (row[2] || '').toUpperCase(),
+                        itens: row[3] || '',
+                        pagamento: (row[4] || '').toUpperCase(),
+                        total: row[5] || '0.00',
+                        status: (row[6] || 'PENDENTE').toUpperCase()
                     };
 
                     container.innerHTML += `
-                        <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl shadow-lg flex flex-col h-full">
+                        <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl shadow-lg flex flex-col h-full border-l-4 border-l-[#39FF14]">
                             <div class="flex justify-between items-start mb-4">
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
-                                <span class="text-[9px] font-black px-2 py-1 rounded-md bg-zinc-800 text-yellow-500 border border-yellow-500/30">${p.status}</span>
+                                <span class="text-[9px] font-black px-2 py-1 rounded bg-zinc-800 text-yellow-500 border border-yellow-500/20">${p.status}</span>
                             </div>
                             <h3 class="text-xl font-black mb-1 text-white italic tracking-tighter">${p.nome}</h3>
                             <p class="text-[11px] text-zinc-500 mb-4 font-bold leading-tight">${p.endereco}</p>
                             <div class="bg-black/40 p-4 rounded-2xl mb-6 border border-zinc-800/50 flex-grow">
-                                <p class="text-[12px] text-zinc-300 font-medium tracking-wide">• ${p.itens.split('|').join('<br>• ')}</p>
+                                <p class="text-[12px] text-zinc-300 font-medium">• ${p.itens.split('|').join('<br>• ')}</p>
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                                 <div><p class="text-[9px] text-zinc-500 font-black uppercase">Total</p><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
-                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:bg-white active:scale-95 transition-all shadow-lg">🖨️ IMPRIMIR</button>
+                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:bg-white active:scale-95 transition-all">🖨️ IMPRIMIR</button>
                             </div>
                         </div>`;
                 });
             } catch (e) {
-                container.innerHTML = "<div class='col-span-full text-center text-red-500'>Erro ao carregar dados. Tente atualizar a página.</div>";
+                container.innerHTML = "<div class='col-span-full text-center text-red-500 font-bold'>ERRO AO SINCRONIZAR. VERIFIQUE SE A PLANILHA ESTÁ PÚBLICA.</div>";
             }
         }
 
@@ -105,7 +104,16 @@
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(item => `<div class="item-row">• ${item.trim()}</div>`).join('');
-            area.innerHTML = `<div class="cupom"><center><strong style="font-size:18px">KF SABORES</strong><br>--- PEDIDO ---<br>${p.data}<br>-----------------</center><br><strong>CLIENTE:</strong> ${p.nome}<br><strong>ENDEREÇO:</strong><br>${p.endereco}<br>-----------------<br><strong>ITENS:</strong><br>${lista}<br><strong>PAGAMENTO:</strong> ${p.pagamento}<br>-----------------<br><strong style="font-size:16px">TOTAL: ${p.total}</strong><br><br><center>OBRIGADO!</center></div>`;
+            area.innerHTML = `
+                <div class="cupom">
+                    <center><strong style="font-size:18px">KF SABORES</strong><br>${p.data}<br>-----------------</center><br>
+                    <strong>CLIENTE:</strong> ${p.nome}<br>
+                    <strong>ENDEREÇO:</strong><br>${p.endereco}<br>-----------------<br>
+                    <strong>ITENS:</strong><br>${lista}<br>
+                    <strong>PAGAMENTO:</strong> ${p.pagamento}<br>-----------------<br>
+                    <strong style="font-size:16px">TOTAL: ${p.total}</strong><br><br>
+                    <center>OBRIGADO PELA PREFERÊNCIA!</center>
+                </div>`;
             window.print();
         }
 
