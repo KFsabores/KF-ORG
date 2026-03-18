@@ -12,26 +12,37 @@
             #print-area { position: absolute; left: 0; top: 0; width: 75mm; }
         }
         .cupom { font-family: 'Courier New', Courier, monospace; width: 70mm; font-size: 13px; line-height: 1.3; color: #000; padding: 10px; background: #fff; }
-        .item-row { border-bottom: 1px dashed #000; padding: 4px 0; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+        .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
+        /* Animação para novos pedidos */
+        .novo-pedido { animation: pulse-border 2s infinite; }
+        @keyframes pulse-border {
+            0% { box-shadow: 0 0 0 0px rgba(57, 255, 20, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(57, 255, 20, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(57, 255, 20, 0); }
+        }
     </style>
 </head>
 <body class="bg-zinc-950 text-white min-h-screen p-4 font-sans">
 
-    <audio id="notificacao-som" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto"></audio>
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
-                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase">KF SABORES</h1>
-                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-1 italic">Sincronizado • Clique na tela para ativar som 🔔</p>
+                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
+                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o toque do telefone 📞</p>
             </div>
-            <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-zinc-700 px-8 py-3 rounded-2xl font-black transition-all flex items-center gap-2 border border-zinc-700">
-                🔄 ATUALIZAR AGORA
-            </button>
+            <div class="flex gap-2">
+                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-6 py-3 rounded-2xl font-black transition-all flex items-center gap-2 border border-zinc-700 uppercase text-[10px]">
+                    🔄 Sincronizar
+                </button>
+            </div>
         </div>
 
-        <div id="lista-pedidos" class="grid-custom"></div>
+        <div id="lista-pedidos" class="grid-custom">
+            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase">Iniciando sistema...</div>
+        </div>
     </div>
 
     <div id="print-area" class="hidden"></div>
@@ -40,106 +51,126 @@
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec'; 
 
-        let quantidadePedidosAntiga = 0;
+        let totalPedidosAnterior = 0;
         let primeiraCarga = true;
 
         async function carregarPedidos() {
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF`;
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             
             try {
                 const response = await fetch(url);
-                const data = await response.text();
-                const rows = data.split('\n').map(row => 
-                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, ''))
+                const csvData = await response.text();
+                
+                const rows = csvData.split('\n').map(row => 
+                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
 
                 const container = document.getElementById('lista-pedidos');
-                const pedidosRaw = rows.slice(1).filter(r => r[1]); // Filtra linhas vazias
+                const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
 
-                // LÓGICA DO SOM:
-                if (!primeiraCarga && pedidosRaw.length > quantidadePedidosAntiga) {
-                    tocarSom();
+                // Toca o Telefone se chegar pedido novo
+                if (!primeiraCarga && pedidosRaw.length > totalPedidosAnterior) {
+                    const ringtone = document.getElementById('notificacao-som');
+                    ringtone.currentTime = 0;
+                    ringtone.play().catch(e => console.log("Áudio bloqueado. Clique na tela!"));
                 }
                 
-                quantidadePedidosAntiga = pedidosRaw.length;
+                totalPedidosAnterior = pedidosRaw.length;
                 primeiraCarga = false;
 
                 container.innerHTML = "";
 
                 if (pedidosRaw.length === 0) {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-500 py-10 font-bold uppercase'>Fila vazia...</div>";
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-700 py-10 font-bold uppercase italic'>Fila de pedidos vazia.</div>";
                     return;
                 }
 
-                pedidosRaw.forEach((row, index) => {
-                    const linhaPlanilha = index + 1; 
+                pedidosRaw.reverse().forEach((row, index) => {
+                    // Como invertemos a lista para o novo aparecer primeiro, calculamos a linha original:
+                    const linhaReal = pedidosRaw.length - index + 1;
+                    
                     const p = {
-                        data: row[0], nome: (row[1] || '').toUpperCase(), endereco: (row[2] || '').toUpperCase(),
-                        itens: row[3] || '', pagto: (row[4] || '').toUpperCase(), total: row[5] || '0,00',
-                        status: (row[6] || 'PENDENTE').toUpperCase(), modalidade: (row[7] || 'DELIVERY').toUpperCase()
+                        data: row[0] || '--:--',
+                        nome: (row[1] || 'CLIENTE').toUpperCase(),
+                        endereco: (row[2] || 'RETIRADA NA LOJA').toUpperCase(),
+                        itens: row[3] || '',
+                        pagto: (row[4] || 'A COMBINAR').toUpperCase(),
+                        total: row[5] || '0,00',
+                        status: (row[6] || 'PENDENTE').toUpperCase(),
+                        modalidade: (row[7] || 'DELIVERY').toUpperCase()
                     };
 
                     let cardBorder = "border-zinc-800";
-                    let iconeMod = p.modalidade.includes("RETIRADA") ? "🛍️ RETIRADA" : "🛵 DELIVERY";
+                    let statusColor = "bg-zinc-800 text-zinc-400";
                     
-                    if(p.status.includes("PREPARANDO")) cardBorder = "border-blue-500/40";
-                    else if(p.status.includes("CONCLUIDO")) cardBorder = "border-green-500/40";
+                    if(p.status.includes("PREPARANDO")) {
+                        cardBorder = "border-blue-500/50 shadow-lg";
+                        statusColor = "bg-blue-600 text-white";
+                    } else if(p.status.includes("CONCLUIDO") || p.status.includes("CONCLUÍDO")) {
+                        cardBorder = "border-[#39FF14]/40";
+                        statusColor = "bg-[#39FF14] text-black";
+                    }
+
+                    const isRetirada = p.modalidade.includes("RETIRADA");
 
                     container.innerHTML += `
-                        <div class="bg-zinc-900 border ${cardBorder} p-6 rounded-3xl shadow-xl flex flex-col border-t-8 ${p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600'}">
-                            <div class="flex justify-between items-start mb-4">
+                        <div class="bg-zinc-900 border ${cardBorder} p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'}">
+                            <div class="flex justify-between items-center mb-4">
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
-                                <span class="text-[10px] font-black px-2 py-1 rounded bg-black/40 text-white border border-zinc-700">${iconeMod}</span>
+                                <span class="status-badge ${statusColor}">${p.status}</span>
                             </div>
-                            <h3 class="text-xl font-black text-white italic tracking-tighter">${p.nome}</h3>
-                            <p class="text-[10px] text-zinc-500 mb-4 font-bold uppercase">${p.endereco}</p>
-                            <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm">
-                                • ${p.itens.split('|').join('<br>• ')}
+                            
+                            <div class="flex justify-between items-start mb-1">
+                                <h3 class="text-xl font-black text-white italic tracking-tighter leading-none">${p.nome}</h3>
+                                <span class="text-[9px] font-black px-2 py-1 rounded bg-black text-zinc-400 border border-zinc-800 uppercase">${isRetirada ? '🛍️ Retirada' : '🛵 Entrega'}</span>
                             </div>
+                            <p class="text-[10px] text-zinc-500 mb-4 font-bold uppercase truncate">${p.endereco}</p>
+                            
+                            <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium">
+                                ${p.itens.split('|').map(i => `<div class="mb-1">• ${i.trim()}</div>`).join('')}
+                            </div>
+
                             <div class="grid grid-cols-2 gap-2 mb-4">
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'PREPARANDO')" class="bg-blue-600/10 text-blue-400 py-2 rounded-xl border border-blue-600/20 text-[10px] font-black uppercase">👨‍🍳 PREPARAR</button>
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'CONCLUIDO')" class="bg-green-600/10 text-green-400 py-2 rounded-xl border border-green-600/20 text-[10px] font-black uppercase">✅ CONCLUIR</button>
+                                <button onclick="alterarStatus(${linhaReal}, 'PREPARANDO', this)" class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-blue-600/20 transition-all">👨‍🍳 PREPARAR</button>
+                                <button onclick="alterarStatus(${linhaReal}, 'CONCLUIDO', this)" class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-green-600/20 transition-all">✅ CONCLUIR</button>
                             </div>
+
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                                 <div><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
-                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black font-black px-5 py-3 rounded-xl text-xs uppercase">🖨️ IMPRIMIR</button>
+                                <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black font-black px-5 py-3 rounded-xl text-xs uppercase hover:scale-95 transition-all">🖨️ CUPOM</button>
                             </div>
                         </div>`;
                 });
             } catch (e) { console.error("Erro:", e); }
         }
 
-        function tocarSom() {
-            const som = document.getElementById('notificacao-som');
-            som.play().catch(e => console.log("Aguardando interação do usuário para tocar som."));
-        }
-
-        async function alterarStatus(linhaIndex, novoStatus) {
-            const url = `${WEB_APP_URL}?row=${linhaIndex}&status=${novoStatus}`;
+        async function alterarStatus(linha, status, btn) {
+            btn.innerText = "⏳";
+            const url = `${WEB_APP_URL}?row=${linha}&status=${status}`;
             try {
                 await fetch(url, { mode: 'no-cors' });
-                setTimeout(carregarPedidos, 1000);
-            } catch (e) { alert("Erro ao mudar status."); }
+                setTimeout(carregarPedidos, 1500);
+            } catch (e) { alert("Erro!"); }
         }
 
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
-            const lista = p.itens.split('|').map(item => `<div class="item-row">• ${item.trim()}</div>`).join('');
-            area.innerHTML = `<div class="cupom"><center><strong>KF SABORES</strong><br>--- ${p.modalidade} ---<br>${p.data}</center><br><strong>CLIENTE:</strong> ${p.nome}<br><strong>ENDEREÇO:</strong> ${p.endereco}<br>---<br><strong>ITENS:</strong><br>${lista}<br><strong>TOTAL: ${p.total}</strong></div>`;
+            area.innerHTML = `<div class="cupom"><center><strong>KF SABORES</strong><br>${p.modalidade}<br>${p.data}</center><br><strong>CLIENTE:</strong> ${p.nome}<br><strong>ENDEREÇO:</strong> ${p.endereco}<br><hr><strong>ITENS:</strong><br>${p.itens.split('|').map(i => `• ${i.trim()}<br>`).join('')}<br><strong>PAGTO:</strong> ${p.pagto}<br><hr><strong>TOTAL: ${p.total}</strong></div>`;
             window.print();
         }
 
-        // Tenta tocar um som mudo ao clicar em qualquer lugar para "desbloquear" o áudio no Chrome
+        // Libera o áudio ao clicar na página
         document.body.addEventListener('click', () => {
-            const som = document.getElementById('notificacao-som');
-            som.volume = 0;
-            som.play().then(() => { som.volume = 1; });
-            document.getElementById('status-conexao').innerText = "Sincronizado • SOM ATIVADO ✅";
+            const audio = document.getElementById('notificacao-som');
+            audio.volume = 0;
+            audio.play().then(() => { audio.volume = 1; });
+            document.getElementById('status-conexao').innerText = "📞 TELEFONE ATIVADO - AGUARDANDO PEDIDOS";
+            document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase tracking-widest mt-2";
         }, { once: true });
 
         carregarPedidos();
-        setInterval(carregarPedidos, 30000); // Verifica a cada 30 segundos
+        setInterval(carregarPedidos, 15000); // Verifica a cada 15 segundos agora
     </script>
 </body>
 </html>
