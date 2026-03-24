@@ -18,8 +18,12 @@
         .ing-btn { border: 1px solid #333; padding: 10px; border-radius: 12px; font-size: 10px; text-align: left; background: #0a0a0a; transition: 0.2s; }
         .ing-btn.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         .hidden { display: none; }
-        .modal-btn { border: 2px solid #333; padding: 12px; rounded: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
+        .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
+        
+        /* Animação de Sucesso */
+        .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="pb-24">
@@ -71,7 +75,7 @@
     </button>
 
     <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
-        <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
+        <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center">Meu Pedido</h2>
             
             <div id="cart-items" class="space-y-2 mb-4"></div>
@@ -109,7 +113,7 @@
     </div>
 
     <script>
-        const WHATSAPP_NUMBER = "5521997437285";
+        const WHATSAPP_NUMBER = "5521967592513";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec";
 
         const menuData = {
@@ -184,7 +188,6 @@
             modalidadeAtual = tipo;
             document.getElementById('mode-delivery').classList.toggle('active', tipo === 'DELIVERY');
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
-            
             const areaEnd = document.getElementById('area-endereco');
             const inputEnd = document.getElementById('cust-addr');
             const taxaInfo = document.getElementById('taxa-info');
@@ -262,7 +265,6 @@
             const flavAs = document.querySelectorAll('.flavor-a');
             const flavBs = document.querySelectorAll('.flavor-b');
             const promoRefri = document.getElementById('promo-refri');
-            
             let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
             let desc = [];
             flavAs.forEach((f, i) => {
@@ -270,11 +272,9 @@
                 if(sB && sB !== sA) desc.push(`½ ${sA} / ½ ${sB}`);
                 else desc.push(`${sA} (Inteira)`);
             });
-            
             let name = currentItem.name + " (" + desc.join(" | ") + ")";
             if(promoRefri) name += " + " + promoRefri.value;
             if(!currentItem.pizzas && currentItem.p25) name += ` [${selectedSize}cm]`;
-            
             cart.push({ name, price });
             updateCartUI(); closeModal();
         }
@@ -312,13 +312,8 @@
 
         function selectSize(s) {
             selectedSize = s;
-            if(s === 25) {
-                document.getElementById('btn-25').className = 'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]';
-                document.getElementById('btn-35').className = 'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 text-zinc-400';
-            } else {
-                document.getElementById('btn-35').className = 'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]';
-                document.getElementById('btn-25').className = 'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 text-zinc-400';
-            }
+            document.getElementById('btn-25').className = s === 25 ? 'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]' : 'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 text-zinc-400';
+            document.getElementById('btn-35').className = s === 35 ? 'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]' : 'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 text-zinc-400';
         }
 
         function updateCartUI() {
@@ -348,7 +343,6 @@
             
             const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
             
-            // DADOS PARA PLANILHA (Incluso Modalidade na Coluna H)
             const dadosParaPlanilha = {
                 nome: n,
                 endereco: a,
@@ -358,39 +352,51 @@
                 modalidade: modalidadeAtual
             };
 
+            // Envia para Planilha
             try {
-                fetch(URL_PLANILHA, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(dadosParaPlanilha)
-                });
+                fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
             } catch (e) { console.log("Erro ao salvar"); }
 
-            // WHATSAPP
+            // WhatsApp
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
             msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
             msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
-            
-            if(modalidadeAtual === 'DELIVERY') {
-                msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
-            }
-            
+            if(modalidadeAtual === 'DELIVERY') msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
             msg += `*------------------------------*%0A`;
             msg += `*🛒 ITENS DO PEDIDO:*%0A`;
-            cart.forEach(i => {
-                msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`;
-            });
+            cart.forEach(i => { msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`; });
             msg += `%0A*------------------------------*%0A%0A`;
             msg += `*💳 PAGAMENTO:*%0A${p}${t ? ' (Troco para '+t+')' : ''}%0A%0A`;
             msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
             msg += `_Favor confirmar o pedido e o tempo de entrega._`;
-            
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+
+            // TELA DE SUCESSO
+            const cartContent = document.getElementById('cart-content');
+            cartContent.innerHTML = `
+                <div class="success-screen">
+                    <div class="flex justify-center mb-6">
+                        <div class="rounded-full bg-[#39FF14]/20 p-8">
+                            <span class="text-7xl">✅</span>
+                        </div>
+                    </div>
+                    <h2 class="text-3xl font-black neon-text italic uppercase mb-2">Pedido Enviado!</h2>
+                    <p class="text-zinc-400 text-sm mb-8 uppercase font-bold tracking-widest leading-relaxed">
+                        Seu pedido foi registrado.<br>Estamos te levando para o WhatsApp para confirmar!
+                    </p>
+                    <button onclick="location.reload()" class="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase border border-zinc-700">Fazer Novo Pedido</button>
+                </div>
+            `;
+
+            // Abre WhatsApp e limpa tudo
+            setTimeout(() => {
+                window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+                cart = [];
+                updateCartUI();
+            }, 2500);
         }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
-        
         switchCategory('promos');
     </script>
 </body>
