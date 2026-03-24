@@ -3,39 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão Pro (58mm Edition)</title>
+    <title>PAINEL KF - Gestão Pro (Som Contínuo)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* CONFIGURAÇÃO DE IMPRESSÃO - OTIMIZADA PARA 58mm / RawBT */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; display: block !important; }
-            #print-area { 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 48mm; /* Margem de segurança para bobina 58mm */
-                background: #fff;
-                color: #000;
-                padding: 0;
-                margin: 0;
-            }
+            #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; color: #000; }
             @page { margin: 0; size: auto; }
         }
 
-        /* ESTILO DO CUPOM TÉRMICO */
+        /* ESTILO DO CUPOM - TUDO EM NEGRITO */
         .cupom-termico {
             font-family: 'Courier New', Courier, monospace;
             width: 48mm;
-            font-size: 12px;
-            line-height: 1.2;
+            font-size: 13px;
+            line-height: 1.3;
             color: #000;
-            background: #fff;
-            padding: 5px;
+            font-weight: bold; /* Todo o texto em negrito */
+            padding: 2px;
         }
-        .linha { border-bottom: 1px dashed #000; margin: 5px 0; }
+        .item-separador { margin-bottom: 8px; display: block; } /* Espaço entre itens */
+        .linha { border-bottom: 2px dashed #000; margin: 5px 0; }
         
-        /* ESTILO DO PAINEL DASHBOARD */
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
         body { background-color: #09090b; }
@@ -43,37 +33,38 @@
 </head>
 <body class="text-white min-h-screen p-4 font-sans">
 
-    <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto"></audio>
+    <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto" loop></audio>
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
                 <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
-                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o som 📞</p>
+                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o receptor 📞</p>
             </div>
-            <div class="flex gap-2">
-                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-6 py-3 rounded-2xl font-black transition-all border border-zinc-700 uppercase text-[10px]">
-                    🔄 Sincronizar
-                </button>
-            </div>
+            <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-6 py-3 rounded-2xl font-black transition-all border border-zinc-700 uppercase text-[10px]">
+                🔄 Sincronizar Agora
+            </button>
         </div>
 
         <div id="lista-pedidos" class="grid-custom">
-            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase tracking-widest">
-                Conectando à base de dados...
-            </div>
+            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase tracking-widest">Sincronizando...</div>
         </div>
     </div>
 
     <div id="print-area"></div>
 
     <script>
-        // CONFIGURAÇÕES
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec'; 
 
         let totalPedidosAnterior = 0;
         let primeiraCarga = true;
+        const ringtone = document.getElementById('notificacao-som');
+
+        function pararSom() {
+            ringtone.pause();
+            ringtone.currentTime = 0;
+        }
 
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
@@ -81,8 +72,6 @@
             try {
                 const response = await fetch(url);
                 const csvData = await response.text();
-                
-                // Parser de CSV robusto
                 const rows = csvData.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
@@ -90,11 +79,9 @@
                 const container = document.getElementById('lista-pedidos');
                 const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
 
-                // Alerta Sonoro
+                // Lógica de Som (Toca se houver aumento no número de pedidos)
                 if (!primeiraCarga && pedidosRaw.length > totalPedidosAnterior) {
-                    const ringtone = document.getElementById('notificacao-som');
-                    ringtone.currentTime = 0;
-                    ringtone.play().catch(e => console.log("Som bloqueado pelo navegador."));
+                    ringtone.play().catch(e => console.log("Aguardando interação do usuário."));
                 }
                 
                 totalPedidosAnterior = pedidosRaw.length;
@@ -102,13 +89,12 @@
                 container.innerHTML = "";
 
                 if (pedidosRaw.length === 0) {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-700 py-10 font-bold uppercase italic'>Nenhum pedido na fila.</div>";
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-700 py-10 font-bold uppercase italic'>Fila vazia.</div>";
                     return;
                 }
 
                 pedidosRaw.forEach((row, index) => {
                     const linhaPlanilha = index + 2; 
-                    
                     const p = {
                         data: row[0] || '--/--',
                         nome: (row[1] || 'CLIENTE').toUpperCase(),
@@ -120,18 +106,9 @@
                         modalidade: (row[7] || 'DELIVERY').toUpperCase()
                     };
 
-                    let cardBorder = "border-zinc-800";
-                    let statusStyle = "bg-zinc-800 text-zinc-400";
-                    
-                    if(p.status.includes("PREPARANDO")) {
-                        cardBorder = "border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.2)]";
-                        statusStyle = "bg-blue-600 text-white";
-                    } else if(p.status.includes("CONCLUIDO") || p.status.includes("CONCLUÍDO")) {
-                        cardBorder = "border-[#39FF14]/40";
-                        statusStyle = "bg-[#39FF14] text-black";
-                    }
+                    let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500/50" : (p.status.includes("CONCLUIDO") ? "border-[#39FF14]/40" : "border-zinc-800");
+                    let statusStyle = p.status.includes("PREPARANDO") ? "bg-blue-600 text-white" : (p.status.includes("CONCLUIDO") ? "bg-[#39FF14] text-black" : "bg-zinc-800 text-zinc-400");
 
-                    // Prepara dados para a função de impressão (evita erro de aspas)
                     const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
 
                     container.innerHTML += `
@@ -140,103 +117,70 @@
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
                                 <span class="status-badge ${statusStyle}">${p.status}</span>
                             </div>
-                            
-                            <div class="flex justify-between items-start mb-1">
-                                <h3 class="text-xl font-black text-white italic tracking-tighter leading-none">${p.nome}</h3>
-                                <span class="text-[9px] font-black px-2 py-1 rounded bg-black text-zinc-400 border border-zinc-800 uppercase">
-                                    ${p.modalidade.includes('RETIRADA') ? '🛍️ Retirada' : '🛵 Entrega'}
-                                </span>
-                            </div>
+                            <h3 class="text-xl font-black text-white italic tracking-tighter leading-none mb-1">${p.nome}</h3>
                             <p class="text-[10px] text-zinc-500 mb-4 font-bold uppercase truncate">${p.endereco}</p>
                             
                             <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium">
-                                ${p.itens.split('|').map(i => `<div class="mb-1 text-zinc-300">• ${i.trim().toUpperCase()}</div>`).join('')}
+                                ${p.itens.split('|').map(i => `<div class="mb-2 text-zinc-300 border-b border-zinc-800/30 pb-1">• ${i.trim().toUpperCase()}</div>`).join('')}
                             </div>
 
                             <div class="grid grid-cols-2 gap-2 mb-4">
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'PREPARANDO', this)" class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-blue-600/20 transition-all uppercase">👨‍🍳 Cozinha</button>
-                                <button onclick="alterarStatus(${linhaPlanilha}, 'CONCLUIDO', this)" class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-green-600/20 transition-all uppercase">✅ Concluir</button>
+                                <button onclick="pararSom(); alterarStatus(${linhaPlanilha}, 'PREPARANDO', this)" class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-blue-600/20 transition-all uppercase">👨‍🍳 Cozinha</button>
+                                <button onclick="pararSom(); alterarStatus(${linhaPlanilha}, 'CONCLUIDO', this)" class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-3 rounded-xl border border-green-600/20 transition-all uppercase">✅ Concluir</button>
                             </div>
 
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
-                                <div><span class="text-xl font-black text-[#39FF14]">${p.total}</span></div>
-                                <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black hover:bg-zinc-200 font-black px-5 py-3 rounded-xl text-xs uppercase shadow-lg transition-transform active:scale-95">🖨️ Imprimir</button>
+                                <span class="text-xl font-black text-[#39FF14]">${p.total}</span>
+                                <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black font-black px-5 py-3 rounded-xl text-xs uppercase">🖨️ Imprimir</button>
                             </div>
                         </div>`;
                 });
-            } catch (e) { console.error("Erro ao buscar dados:", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function alterarStatus(linha, status, btn) {
-            const textoOriginal = btn.innerText;
             btn.innerText = "⏳";
             btn.disabled = true;
-            const url = `${WEB_APP_URL}?row=${linha}&status=${status}`;
-            
             try {
-                await fetch(url, { mode: 'no-cors' });
+                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1200);
-            } catch (e) {
-                console.error("Erro:", e);
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
-            }
+            } catch (e) { btn.disabled = false; }
         }
 
         function imprimir(dadosCodificados) {
-            try {
-                const p = JSON.parse(decodeURIComponent(dadosCodificados));
-                const area = document.getElementById('print-area');
-                
-                const listaItens = p.itens.split('|')
-                    .map(i => `• ${i.trim().toUpperCase()}`)
-                    .join('<br>');
+            const p = JSON.parse(decodeURIComponent(dadosCodificados));
+            const area = document.getElementById('print-area');
+            const listaItens = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
 
-                area.innerHTML = `
-                    <div class="cupom-termico">
-                        <center>
-                            <strong style="font-size: 16px;">KF SABORES</strong><br>
-                            <span>${p.modalidade}</span><br>
-                            <span>${p.data}</span>
-                        </center>
-                        <div class="linha"></div>
-                        <strong>CLIENTE:</strong> ${p.nome}<br>
-                        <strong>ENDEREÇO:</strong><br>${p.endereco}<br>
-                        <div class="linha"></div>
-                        <strong>ITENS:</strong><br>
-                        ${listaItens}<br>
-                        <div class="linha"></div>
-                        <strong>PAGTO:</strong> ${p.pagto}<br>
-                        <strong style="font-size: 14px;">TOTAL: ${p.total}</strong>
-                        <div class="linha"></div>
-                        <center><br>Pedido feito pelo site<br>Bom Apetite!</center>
-                        <br>.<br>.
-                    </div>`;
-
-                // Delay para garantir renderização do HTML antes do print
-                setTimeout(() => {
-                    window.print();
-                }, 300);
-                
-            } catch (e) {
-                alert("Erro ao gerar impressão.");
-                console.error(e);
-            }
+            area.innerHTML = `
+                <div class="cupom-termico">
+                    <center>
+                        <strong style="font-size: 16px;">KF SABORES</strong><br>
+                        ${p.modalidade}<br>${p.data}
+                    </center>
+                    <div class="linha"></div>
+                    CLIENTE: ${p.nome}<br>
+                    ENDEREÇO: ${p.endereco}<br>
+                    <div class="linha"></div>
+                    ITENS DO PEDIDO:<br><br>
+                    ${listaItens}
+                    <div class="linha"></div>
+                    PAGTO: ${p.pagto}<br>
+                    TOTAL: ${p.total}
+                    <div class="linha"></div>
+                    <center><br>OBRIGADO E BOM APETITE!<br>.<br>.<br>.</center>
+                </div>`;
+            setTimeout(() => { window.print(); }, 300);
         }
 
-        // Ativação do áudio e inicialização
         document.body.addEventListener('click', () => {
-            const audio = document.getElementById('notificacao-som');
-            audio.play().then(() => { 
-                audio.pause(); 
-                audio.currentTime = 0; 
-            });
-            document.getElementById('status-conexao').innerText = "📞 SISTEMA ONLINE - SOM ATIVADO";
+            pararSom();
+            document.getElementById('status-conexao').innerText = "📞 RECEPTOR ATIVO - AGUARDANDO";
             document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase tracking-widest mt-2";
         }, { once: true });
 
         carregarPedidos();
-        setInterval(carregarPedidos, 15000); // 15 segundos para não sobrecarregar
+        setInterval(carregarPedidos, 10000);
     </script>
 </body>
 </html>
