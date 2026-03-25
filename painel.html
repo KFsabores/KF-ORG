@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão Pro (Filtro de Turno)</title>
+    <title>PAINEL KF - Gestão Pro (Correção Fluxo)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -33,8 +33,8 @@
             </div>
             
             <div class="flex flex-wrap gap-2">
-                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all">📊 Vendas Hoje</button>
-                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all">📅 Vendas Semana</button>
+                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500">📊 Vendas Hoje</button>
+                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500">📅 Vendas Semana</button>
                 <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-4 py-3 rounded-xl font-black transition-all border border-zinc-700 uppercase text-[10px]">🔄 Sincronizar</button>
             </div>
         </div>
@@ -47,7 +47,7 @@
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4">
         <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
             <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 border-b border-zinc-800 pb-2">Relatório</h2>
-            <div id="rel-content" class="space-y-4"></div>
+            <div id="rel-content" class="space-y-4 text-left"></div>
             <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs">Fechar Janela</button>
         </div>
     </div>
@@ -65,6 +65,15 @@
 
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
+        // Função crucial para converter data da planilha (DD/MM/YYYY HH:mm:ss) para objeto Date
+        function parseDataBR(stringData) {
+            if(!stringData) return new Date(0);
+            const partes = stringData.split(' ');
+            const dataP = partes[0].split('/');
+            const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
+            return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
+        }
+
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             
@@ -78,10 +87,10 @@
                 const container = document.getElementById('lista-pedidos');
                 const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
                 
-                // Mapear dados
                 todosOsPedidos = pedidosRaw.map((row, idx) => ({
                     linhaOriginal: idx + 2,
                     dataFull: row[0], 
+                    objData: parseDataBR(row[0]),
                     nome: row[1],
                     endereco: row[2],
                     itens: row[3],
@@ -92,44 +101,45 @@
                     modalidade: (row[7] || (row[2].includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase()
                 }));
 
-                // Lógica de Som
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
                     ringtone.play().catch(e => console.log("Som aguardando clique."));
                 }
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
 
-                // --- FILTRO PARA EXIBIÇÃO NO PAINEL ---
+                // --- LÓGICA DE FILTRO E ORDENAÇÃO ---
                 const agora = new Date();
                 let inicioTurno = new Date(agora);
                 if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
                 inicioTurno.setHours(17, 0, 0);
 
-                const pedidosParaExibir = todosOsPedidos.filter(p => {
-                    const [dataP, horaP] = p.dataFull.split(' ');
-                    const [d, m, a] = dataP.split('/');
-                    const [h, min] = horaP.split(':');
-                    const dataPed = new Date(a, m - 1, d, h, min);
+                let pedidosParaExibir = todosOsPedidos.filter(p => {
+                    const ehTurnoAtual = p.objData >= inicioTurno;
+                    const ehPendenteOuCozinha = p.status.includes("PENDENTE") || p.status.includes("PREPARANDO");
+                    // Só exibe se for do turno atual OU se estiver aberto (não concluído)
+                    return ehTurnoAtual || ehPendenteOuCozinha;
+                });
 
-                    // Regra: Exibe se for do turno atual OU se ainda não estiver concluído
-                    const ehTurnoAtual = dataPed >= inicioTurno;
-                    const ehPendente = !p.status.includes("CONCLUIDO");
-
-                    return ehTurnoAtual || ehPendente;
+                // ORDENAÇÃO: Pendentes e Preparando primeiro (mais novos no topo desses), Concluídos por último.
+                pedidosParaExibir.sort((a, b) => {
+                    const statusA = (a.status.includes("PENDENTE") || a.status.includes("PREPARANDO")) ? 0 : 1;
+                    const statusB = (b.status.includes("PENDENTE") || b.status.includes("PREPARANDO")) ? 0 : 1;
+                    
+                    if (statusA !== statusB) return statusA - statusB;
+                    return b.objData - a.objData; // Entre status iguais, o mais novo fica em cima
                 });
 
                 container.innerHTML = "";
                 if (pedidosParaExibir.length === 0) {
-                    container.innerHTML = "<div class='col-span-full text-center text-zinc-700 py-10 font-bold uppercase italic'>Nenhum pedido ativo no turno.</div>";
+                    container.innerHTML = "<div class='col-span-full text-center text-zinc-700 py-10 font-bold uppercase italic'>Fila vazia ou turno encerrado.</div>";
                     return;
                 }
 
-                pedidosParaExibir.reverse().forEach(p => {
+                pedidosParaExibir.forEach(p => {
                     let isRetirada = p.modalidade.includes('RETIRADA') || p.endereco.includes('RETIRADA');
                     let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500/50" : (p.status.includes("CONCLUIDO") ? "border-[#39FF14]/40" : "border-zinc-800");
                     let statusStyle = p.status.includes("PREPARANDO") ? "bg-blue-600 text-white" : (p.status.includes("CONCLUIDO") ? "bg-[#39FF14] text-black" : "bg-zinc-800 text-zinc-400");
                     let addrBoxClass = isRetirada ? "bg-orange-950/30 border-orange-500/40" : "bg-amber-950/20 border-amber-500/30";
-                    let addrLabelClass = isRetirada ? "text-orange-500" : "text-amber-500";
                     const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
 
                     container.innerHTML += `
@@ -140,7 +150,7 @@
                             </div>
                             <h3 class="text-2xl font-black text-white italic mb-4 underline decoration-[#39FF14] underline-offset-4 uppercase">${p.nome}</h3>
                             <div class="border ${addrBoxClass} p-4 rounded-2xl mb-4 shadow-inner">
-                                <span class="text-[9px] font-black ${addrLabelClass} uppercase tracking-widest">📍 ${isRetirada ? 'Retirada no Balcão' : 'Entrega'}:</span>
+                                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500">📍 ${isRetirada ? 'Retirada' : 'Entrega'}:</span>
                                 <p class="text-lg font-black text-white uppercase leading-tight mt-1">${p.endereco}</p>
                             </div>
                             <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium uppercase">
@@ -163,23 +173,17 @@
             } catch (e) { console.error("Erro carga:", e); }
         }
 
-        // RELATÓRIOS (Baseados em todos os pedidos da planilha)
+        // RELATÓRIOS
         function gerarRelatorio(tipo) {
             const agora = new Date();
             let lista = [];
-            
             todosOsPedidos.forEach(p => {
-                const [dataP, horaP] = p.dataFull.split(' ');
-                const [d, m, a] = dataP.split('/');
-                const [h, min] = horaP.split(':');
-                const dataPed = new Date(a, m - 1, d, h, min);
-                
                 if (tipo === 'dia') {
                     let inicio = new Date(agora);
                     if (agora.getHours() < 17) inicio.setDate(agora.getDate() - 1);
                     inicio.setHours(17, 0, 0);
                     let fim = new Date(inicio); fim.setDate(inicio.getDate() + 1); fim.setHours(3, 0, 0);
-                    if (dataPed >= inicio && dataPed <= fim) lista.push(p);
+                    if (p.objData >= inicio && p.objData <= fim) lista.push(p);
                 } 
                 else if (tipo === 'semana') {
                     let quinta = new Date(agora);
@@ -187,10 +191,9 @@
                     let diff = diaS >= 4 ? diaS - 4 : diaS + 3;
                     quinta.setDate(agora.getDate() - diff); quinta.setHours(17, 0, 0);
                     let segunda = new Date(quinta); segunda.setDate(quinta.getDate() + 4); segunda.setHours(3, 0, 0);
-                    if (dataPed >= quinta && dataPed <= segunda) lista.push(p);
+                    if (p.objData >= quinta && p.objData <= segunda) lista.push(p);
                 }
             });
-
             exibirRelatorio(tipo, lista);
         }
 
@@ -202,20 +205,20 @@
             });
             document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Turno Atual" : "Ciclo da Semana";
             document.getElementById('rel-content').innerHTML = `
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-b-4 border-green-500 text-left">
+                <div class="grid grid-cols-2 gap-3 mb-4 text-white">
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-b-4 border-green-500">
                         <p class="text-[9px] uppercase font-black text-zinc-500">🛵 Entrega</p>
                         <p class="text-xl font-black">${delC}</p>
                         <p class="text-sm font-bold text-[#39FF14]">R$ ${delV.toFixed(2)}</p>
                     </div>
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-b-4 border-orange-500 text-left">
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-b-4 border-orange-500">
                         <p class="text-[9px] uppercase font-black text-zinc-500">🛍️ Retirada</p>
                         <p class="text-xl font-black">${retC}</p>
                         <p class="text-sm font-bold text-[#39FF14]">R$ ${retV.toFixed(2)}</p>
                     </div>
                 </div>
-                <div class="bg-zinc-800 p-6 rounded-3xl border border-zinc-700">
-                    <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Faturamento Bruto</p>
+                <div class="bg-zinc-800 p-6 rounded-3xl border border-zinc-700 text-center">
+                    <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Bruto Total</p>
                     <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(delV + retV).toFixed(2)}</p>
                 </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
