@@ -20,8 +20,6 @@
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        
-        /* Animação de Sucesso */
         .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -77,21 +75,16 @@
     <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center">Meu Pedido</h2>
-            
             <div id="cart-items" class="space-y-2 mb-4"></div>
-            
             <input type="text" id="cust-name" placeholder="Seu Nome">
-
             <label class="text-[10px] gold-text font-black uppercase italic mt-4 block">Como deseja receber?</label>
             <div class="grid grid-cols-2 gap-2 mb-4">
                 <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                 <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
             </div>
-
             <div id="area-endereco">
                 <input type="text" id="cust-addr" placeholder="Endereço, Número e Bairro">
             </div>
-
             <label class="text-[10px] gold-text font-black uppercase italic mt-2 block">Forma de Pagamento</label>
             <select id="pay-method" onchange="checkPayment()">
                 <option value="Pix">Pix</option>
@@ -99,22 +92,47 @@
                 <option value="Dinheiro">Dinheiro</option>
             </select>
             <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
-            
             <div class="mt-4 p-3 bg-zinc-800 rounded-xl border border-zinc-700 flex justify-between items-center">
                 <span class="text-[10px] uppercase font-black text-zinc-400">Taxa de Entrega:</span>
                 <span id="taxa-info" class="text-[10px] uppercase font-black gold-text italic">A confirmar no WhatsApp</span>
             </div>
-
             <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Subtotal: R$ <span id="cart-total">0.00</span></div>
             
-            <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Enviar no WhatsApp</button>
+            <div id="area-botao-finalizar">
+                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">Enviar no WhatsApp</button>
+            </div>
+            
             <button onclick="toggleCart()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Continuar Comprando</button>
         </div>
     </div>
 
     <script>
-        const WHATSAPP_NUMBER = "5521967592513";
+        const WHATSAPP_NUMBER = "5521997437285";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec";
+
+        // CONFIGURAÇÃO DE HORÁRIOS (0: Dom, 4: Qui, 5: Sex, 6: Sab)
+        const HORARIOS = {
+            4: { abrir: 2000, fechar: 2400 }, // Quinta 20:00 - 00:00
+            5: { abrir: 2000, fechar: 2500 }, // Sexta 20:00 - 01:00 (dia seguinte)
+            6: { abrir: 2000, fechar: 2500 }, // Sábado 20:00 - 01:00 (dia seguinte)
+            0: { abrir: 1900, fechar: 2500 }  // Domingo 19:00 - 01:00 (dia seguinte)
+        };
+
+        function estaAberto() {
+            const agora = new Date();
+            let dia = agora.getDay();
+            let horaAtual = (agora.getHours() * 100) + agora.getMinutes();
+
+            // Lógica para pedidos entre 00:00 e 01:00 (que tecnicamente é o dia seguinte)
+            if (horaAtual < 500) { 
+                horaAtual += 2400; 
+                dia = dia === 0 ? 6 : dia - 1; 
+            }
+
+            const config = HORARIOS[dia];
+            if (!config) return false;
+            return horaAtual >= config.abrir && horaAtual <= config.fechar;
+        }
 
         const menuData = {
             promos: [
@@ -333,6 +351,16 @@
         }
 
         async function finalizeOrder() {
+            if (!estaAberto()) {
+                document.getElementById('area-botao-finalizar').innerHTML = `
+                    <div class="bg-red-900/50 border border-red-600 p-4 rounded-2xl text-center">
+                        <p class="text-white font-black uppercase text-xs">Fora do Horário de Funcionamento</p>
+                        <p class="text-[9px] text-red-200 mt-1 uppercase font-bold">Consulte os horários no topo ou Instagram.</p>
+                    </div>
+                `;
+                return;
+            }
+
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
             const p = document.getElementById('pay-method').value;
@@ -352,12 +380,10 @@
                 modalidade: modalidadeAtual
             };
 
-            // Envia para Planilha
             try {
                 fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
             } catch (e) { console.log("Erro ao salvar"); }
 
-            // WhatsApp
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
             msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
             msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
@@ -370,7 +396,6 @@
             msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
             msg += `_Favor confirmar o pedido e o tempo de entrega._`;
 
-            // TELA DE SUCESSO
             const cartContent = document.getElementById('cart-content');
             cartContent.innerHTML = `
                 <div class="success-screen">
@@ -387,7 +412,6 @@
                 </div>
             `;
 
-            // Abre WhatsApp e limpa tudo
             setTimeout(() => {
                 window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
                 cart = [];
