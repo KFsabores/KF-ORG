@@ -206,17 +206,18 @@
             ],
             bebidas: [
                 { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 },
-                { name: "Guaracamp", price: 2.50 }, { name: "Refrigerante Lata", price: 6.00 },
-                { name: "Refrigerante 1L", price: 10.00 }, { name: "Pepsi 1.5L", price: 12.00 },
-                { name: "Antarctica 1.5L", price: 12.00 }, { name: "Sukita Uva 2L", price: 12.00 },
+                { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
+                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná Antarctica 1L", price: 10.00 },
+                { name: "Pepsi 1.5L", price: 12.00 }, { name: "Guaraná Antarctica 1.5L", price: 12.00 },
+                { name: "Guaraná Antarctica Zero 1.5L", price: 12.00 }, { name: "Sukita Uva 2L", price: 12.00 },
                 { name: "Sukita Laranja 2L", price: 12.00 }, { name: "Sukita Limão 2L", price: 12.00 }
             ]
         };
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
         const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos"];
-        const REFRIS_1L = ["Guaraná 1L"]; 
-        const REFRIS_2L = ["Sukita Uva 2L", "Sukita Laranja 2L", "Sukita Limão 2L", "Pepsi 1.5L", "Antarctica 1.5L"];
+        const REFRIS_1L = ["Guaraná Antarctica 1L"]; 
+        const REFRIS_2L = ["Sukita Uva 2L", "Sukita Laranja 2L", "Sukita Limão 2L", "Pepsi 1.5L", "Guaraná Antarctica 1.5L", "Guaraná Antarctica Zero 1.5L"];
 
         let cart = [];
         let currentItem = null;
@@ -314,7 +315,6 @@
                 else desc.push(`${sA} (Inteira)`);
             });
             
-            // AJUSTE: Tamanho agora vem no início do nome do item
             let name = "";
             if(!currentItem.pizzas && currentItem.p25) {
                 name = `${selectedSize}CM ${currentItem.name} (${desc.join(" | ")})`;
