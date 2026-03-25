@@ -13,7 +13,8 @@
         .gold-text { color: #FFD700; text-shadow: 0 0 3px rgba(255, 215, 0, 0.6); }
         .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; }
         .category-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        select, input { background: #111 !important; border: 1px solid #333 !important; border-radius: 10px !important; padding: 12px !important; color: white !important; width: 100%; outline: none; margin-bottom: 8px; font-size: 14px; }
+        select, input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 10px !important; padding: 12px !important; color: white !important; width: 100%; outline: none; margin-bottom: 8px; font-size: 14px; }
+        textarea { resize: none; height: 80px; }
         .ing-label { grid-column: 1 / -1; background: #1a1a1a; padding: 6px 12px; border-left: 4px solid #39FF14; font-size: 10px; font-weight: 900; color: #FFD700; margin-top: 15px; text-transform: uppercase; }
         .ing-btn { border: 1px solid #333; padding: 10px; border-radius: 12px; font-size: 10px; text-align: left; background: #0a0a0a; transition: 0.2s; }
         .ing-btn.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.1); }
@@ -71,6 +72,9 @@
                 <div id="area-endereco">
                     <input type="text" id="cust-addr" placeholder="Endereço, Número e Bairro">
                 </div>
+
+                <label class="text-[10px] gold-text font-black uppercase italic mt-2 block">Alguma observação? (Opcional)</label>
+                <textarea id="cust-obs" placeholder="Ex: Tirar cebola, campainha estragada, etc..."></textarea>
 
                 <label class="text-[10px] gold-text font-black uppercase italic mt-2 block">Forma de Pagamento</label>
                 <select id="pay-method" onchange="checkPayment()">
@@ -149,7 +153,6 @@
             }
         }
 
-        // Restante dos dados mantidos como no original enviado
         const menuData = {
             promos: [
                 { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
@@ -371,6 +374,7 @@
 
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
+            const o = document.getElementById('cust-obs').value; // Pegando a observação
             const p = document.getElementById('pay-method').value;
             const t = document.getElementById('troco-val').value;
             const total = document.getElementById('cart-total').innerText;
@@ -379,8 +383,14 @@
             
             const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
             
+            // Enviando observação para a planilha também
             const dadosParaPlanilha = {
-                nome: n, endereco: a, itens: itensTexto, pagamento: p + (t ? ' (Troco p/ '+t+')' : ''), total: "R$ " + total, modalidade: modalidadeAtual
+                nome: n, 
+                endereco: a, 
+                itens: itensTexto + (o ? ` [OBS: ${o.toUpperCase()}]` : ""), 
+                pagamento: p + (t ? ' (Troco p/ '+t+')' : ''), 
+                total: "R$ " + total, 
+                modalidade: modalidadeAtual
             };
 
             fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
@@ -389,6 +399,10 @@
             msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
             msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
             if(modalidadeAtual === 'DELIVERY') msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
+            
+            // Adicionando observação na mensagem do WhatsApp
+            if(o) msg += `*📝 OBSERVAÇÃO:*%0A${o.toUpperCase()}%0A%0A`;
+
             msg += `*------------------------------*%0A`;
             msg += `*🛒 ITENS DO PEDIDO:*%0A`;
             cart.forEach(i => { msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`; });
