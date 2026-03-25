@@ -313,9 +313,17 @@
                 if(sB && sB !== sA) desc.push(`½ ${sA} / ½ ${sB}`);
                 else desc.push(`${sA} (Inteira)`);
             });
-            let name = currentItem.name + " (" + desc.join(" | ") + ")";
+            
+            // AJUSTE: Tamanho agora vem no início do nome do item
+            let name = "";
+            if(!currentItem.pizzas && currentItem.p25) {
+                name = `${selectedSize}CM ${currentItem.name} (${desc.join(" | ")})`;
+            } else {
+                name = currentItem.name + " (" + desc.join(" | ") + ")";
+            }
+
             if(promoRefri) name += " + " + promoRefri.value;
-            if(!currentItem.pizzas && currentItem.p25) name += ` [${selectedSize}cm]`;
+            
             cart.push({ name, price });
             updateCartUI(); closeModal();
         }
