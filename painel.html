@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão Pro (Destaque Endereço)</title>
+    <title>PAINEL KF - Gestão Pro (Relatórios)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
@@ -12,22 +12,15 @@
             #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; color: #000; }
             @page { margin: 0; size: auto; }
         }
-
-        .cupom-termico {
-            font-family: 'Courier New', Courier, monospace;
-            width: 48mm;
-            font-size: 13px;
-            line-height: 1.3;
-            color: #000;
-            font-weight: bold;
-            padding: 2px;
-        }
+        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 13px; line-height: 1.3; color: #000; font-weight: bold; padding: 2px; }
         .item-separador { margin-bottom: 8px; display: block; }
         .linha { border-bottom: 2px dashed #000; margin: 5px 0; }
-        
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
         body { background-color: #09090b; }
+        
+        /* Estilo do Modal de Relatório */
+        #modal-relatorio { background: rgba(0,0,0,0.9); }
     </style>
 </head>
 <body class="text-white min-h-screen p-4 font-sans">
@@ -40,13 +33,25 @@
                 <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
                 <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o receptor 📞</p>
             </div>
-            <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-6 py-3 rounded-2xl font-black transition-all border border-zinc-700 uppercase text-[10px]">
-                🔄 Sincronizar Agora
-            </button>
+            
+            <div class="flex flex-wrap gap-2">
+                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all">📊 Vendas Hoje</button>
+                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all">📅 Vendas Semana</button>
+                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-4 py-3 rounded-xl font-black transition-all border border-zinc-700 uppercase text-[10px]">🔄 Sincronizar</button>
+            </div>
         </div>
 
         <div id="lista-pedidos" class="grid-custom">
             <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase tracking-widest">Sincronizando...</div>
+        </div>
+    </div>
+
+    <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl">
+            <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 border-b border-zinc-800 pb-2">Relatório</h2>
+            <div id="rel-content" class="space-y-4">
+                </div>
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs">Fechar Relatório</button>
         </div>
     </div>
 
@@ -56,6 +61,7 @@
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec'; 
 
+        let todosOsPedidos = []; // Cache para os relatórios
         let totalPedidosAnterior = 0;
         let primeiraCarga = true;
         const ringtone = document.getElementById('notificacao-som');
@@ -77,6 +83,18 @@
 
                 const container = document.getElementById('lista-pedidos');
                 const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
+                
+                // Mapear para objeto global
+                todosOsPedidos = pedidosRaw.map(row => ({
+                    dataFull: row[0], // Assumindo formato "DD/MM/YYYY HH:mm:ss"
+                    nome: row[1],
+                    endereco: row[2],
+                    itens: row[3],
+                    pagto: row[4],
+                    total: parseFloat((row[5] || "0").replace("R$", "").replace(",", ".")),
+                    status: row[6],
+                    modalidade: row[7] || (row[2].includes("RETIRADA") ? "RETIRADA" : "DELIVERY")
+                }));
 
                 if (!primeiraCarga && pedidosRaw.length > totalPedidosAnterior) {
                     ringtone.play().catch(e => console.log("Aguardando interação."));
@@ -107,11 +125,8 @@
                     let isRetirada = p.modalidade.includes('RETIRADA') || p.endereco.includes('RETIRADA');
                     let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500/50" : (p.status.includes("CONCLUIDO") ? "border-[#39FF14]/40" : "border-zinc-800");
                     let statusStyle = p.status.includes("PREPARANDO") ? "bg-blue-600 text-white" : (p.status.includes("CONCLUIDO") ? "bg-[#39FF14] text-black" : "bg-zinc-800 text-zinc-400");
-                    
-                    // Cores do destaque de endereço
                     let addrBoxClass = isRetirada ? "bg-orange-950/30 border-orange-500/40" : "bg-amber-950/20 border-amber-500/30";
                     let addrLabelClass = isRetirada ? "text-orange-500" : "text-amber-500";
-
                     const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
 
                     container.innerHTML += `
@@ -120,24 +135,19 @@
                                 <span class="text-[10px] font-bold text-zinc-600">${p.data}</span>
                                 <span class="status-badge ${statusStyle}">${p.status}</span>
                             </div>
-
                             <h3 class="text-2xl font-black text-white italic tracking-tighter leading-none mb-4 underline decoration-[#39FF14] underline-offset-4">${p.nome}</h3>
-                            
                             <div class="border ${addrBoxClass} p-4 rounded-2xl mb-4 shadow-inner">
                                 <span class="text-[9px] font-black ${addrLabelClass} uppercase tracking-[0.2em]">📍 ${isRetirada ? 'Retirada no Balcão' : 'Endereço de Entrega'}:</span>
                                 <p class="text-lg font-black text-white uppercase leading-tight mt-1">${p.endereco}</p>
                             </div>
-                            
                             <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-medium">
                                 <span class="text-[9px] font-black text-zinc-600 uppercase mb-2 block tracking-widest">📋 Pedido:</span>
                                 ${p.itens.split('|').map(i => `<div class="mb-2 text-zinc-200 border-b border-zinc-800/30 pb-1 font-bold">• ${i.trim().toUpperCase()}</div>`).join('')}
                             </div>
-
                             <div class="grid grid-cols-2 gap-2 mb-4">
                                 <button onclick="pararSom(); alterarStatus(${linhaPlanilha}, 'PREPARANDO', this)" class="bg-blue-600/10 text-blue-400 hover:bg-blue-600 hover:text-white text-[10px] font-black py-4 rounded-xl border border-blue-600/20 transition-all uppercase">👨‍🍳 Cozinha</button>
                                 <button onclick="pararSom(); alterarStatus(${linhaPlanilha}, 'CONCLUIDO', this)" class="bg-green-600/10 text-green-400 hover:bg-green-600 hover:text-white text-[10px] font-black py-4 rounded-xl border border-green-600/20 transition-all uppercase">✅ Concluir</button>
                             </div>
-
                             <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                                 <div class="flex flex-col">
                                     <span class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter">${p.pagto}</span>
@@ -150,6 +160,84 @@
             } catch (e) { console.error(e); }
         }
 
+        // LÓGICA DE RELATÓRIO
+        function gerarRelatorio(tipo) {
+            const agora = new Date();
+            let pedidosFiltrados = [];
+            
+            todosOsPedidos.forEach(p => {
+                const [dataParte, horaParte] = p.dataFull.split(' ');
+                const [dia, mes, ano] = dataParte.split('/');
+                const [hora, min] = horaParte.split(':');
+                const dataPedido = new Date(ano, mes - 1, dia, hora, min);
+                
+                if (tipo === 'dia') {
+                    // Turno das 17h às 03h (ajustado para o dia anterior se for antes das 3 da manhã)
+                    let inicioTurno = new Date(agora);
+                    if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
+                    inicioTurno.setHours(17, 0, 0);
+
+                    let fimTurno = new Date(inicioTurno);
+                    fimTurno.setDate(inicioTurno.getDate() + 1);
+                    fimTurno.setHours(3, 0, 0);
+
+                    if (dataPedido >= inicioTurno && dataPedido <= fimTurno) pedidosFiltrados.push(p);
+                } 
+                else if (tipo === 'semana') {
+                    // Quinta 17:00 até Segunda 03:00
+                    let quinta = new Date(agora);
+                    let diaSemana = agora.getDay(); // 0-Dom, 1-Seg... 4-Qui
+                    let diff = diaSemana >= 4 ? diaSemana - 4 : diaSemana + 3;
+                    quinta.setDate(agora.getDate() - diff);
+                    quinta.setHours(17, 0, 0);
+
+                    let segunda = new Date(quinta);
+                    segunda.setDate(quinta.getDate() + 4);
+                    segunda.setHours(3, 0, 0);
+
+                    if (dataPedido >= quinta && dataPedido <= segunda) pedidosFiltrados.push(p);
+                }
+            });
+
+            exibirRelatorio(tipo, pedidosFiltrados);
+        }
+
+        function exibirRelatorio(tipo, lista) {
+            let delCount = 0, delSoma = 0;
+            let retCount = 0, retSoma = 0;
+
+            lista.forEach(p => {
+                if (p.modalidade.includes('RETIRADA') || p.endereco.includes('RETIRADA')) {
+                    retCount++; retSoma += p.total;
+                } else {
+                    delCount++; delSoma += p.total;
+                }
+            });
+
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Relatório do Dia" : "Relatório da Semana";
+            document.getElementById('rel-content').innerHTML = `
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-green-500">
+                        <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Entregas</p>
+                        <p class="text-xl font-black">${delCount}</p>
+                        <p class="text-sm font-bold text-[#39FF14]">R$ ${delSoma.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-500">
+                        <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retiradas</p>
+                        <p class="text-xl font-black">${retCount}</p>
+                        <p class="text-sm font-bold text-[#39FF14]">R$ ${retSoma.toFixed(2)}</p>
+                    </div>
+                </div>
+                <div class="bg-black/50 p-6 rounded-2xl border border-zinc-800 mt-4 text-center">
+                    <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Faturamento Total</p>
+                    <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(delSoma + retSoma).toFixed(2)}</p>
+                    <p class="text-[9px] text-zinc-600 mt-2 uppercase font-bold tracking-widest">${lista.length} Pedidos Processados</p>
+                </div>
+            `;
+            document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        // --- Funções Originais Mantidas ---
         async function alterarStatus(linha, status, btn) {
             btn.innerText = "⏳";
             btn.disabled = true;
@@ -163,25 +251,7 @@
             const p = JSON.parse(decodeURIComponent(dadosCodificados));
             const area = document.getElementById('print-area');
             const listaItens = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
-
-            area.innerHTML = `
-                <div class="cupom-termico">
-                    <center>
-                        <strong style="font-size: 16px;">KF SABORES</strong><br>
-                        ${p.modalidade}<br>${p.data}
-                    </center>
-                    <div class="linha"></div>
-                    CLIENTE: ${p.nome}<br>
-                    ENDEREÇO: ${p.endereco}<br>
-                    <div class="linha"></div>
-                    ITENS DO PEDIDO:<br><br>
-                    ${listaItens}
-                    <div class="linha"></div>
-                    PAGTO: ${p.pagto}<br>
-                    TOTAL: ${p.total}
-                    <div class="linha"></div>
-                    <center><br>OBRIGADO E BOM APETITE!<br>.<br>.<br>.</center>
-                </div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 16px;">KF SABORES</strong><br>${p.modalidade}<br>${p.data}</center><div class="linha"></div>CLIENTE: ${p.nome}<br>ENDEREÇO: ${p.endereco}<br><div class="linha"></div>ITENS DO PEDIDO:<br><br>${listaItens}<div class="linha"></div>PAGTO: ${p.pagto}<br>TOTAL: ${p.total}<div class="linha"></div><center><br>OBRIGADO E BOM APETITE!<br>.<br>.<br>.</center></div>`;
             setTimeout(() => { window.print(); }, 300);
         }
 
