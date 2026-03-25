@@ -125,12 +125,11 @@
         let modoAdmin = false;
         const SENHA_ADMIN = "1233";
 
-        // Lógica de Horários
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 }, // Quinta
-            5: { abrir: 2000, fechar: 2500 }, // Sexta
-            6: { abrir: 2000, fechar: 2500 }, // Sábado
-            0: { abrir: 1900, fechar: 2500 }  // Domingo
+            4: { abrir: 2000, fechar: 2400 },
+            5: { abrir: 2000, fechar: 2500 },
+            6: { abrir: 2000, fechar: 2500 },
+            0: { abrir: 1900, fechar: 2500 }
         };
 
         function estaAberto() {
@@ -146,12 +145,11 @@
         function ativarModoAdmin() {
             if(prompt("Senha de Acesso Admin:") === SENHA_ADMIN) {
                 modoAdmin = true;
-                alert("🛠️ MODO ADMIN ATIVADO! Vendas liberadas.");
-            } else {
-                alert("❌ Senha incorreta!");
+                alert("🛠️ MODO ADMIN ATIVADO!");
             }
         }
 
+        // Restante dos dados mantidos como no original enviado
         const menuData = {
             promos: [
                 { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
@@ -369,11 +367,7 @@
         }
 
         async function finalizeOrder() {
-            // VERIFICAÇÃO DE HORÁRIO
-            if (!estaAberto()) {
-                alert("Desculpe, estamos fechados no momento!");
-                return;
-            }
+            if (!estaAberto()) { alert("Estamos fechados agora!"); return; }
 
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
@@ -386,20 +380,11 @@
             const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
             
             const dadosParaPlanilha = {
-                nome: n,
-                endereco: a,
-                itens: itensTexto,
-                pagamento: p + (t ? ' (Troco p/ '+t+')' : ''),
-                total: "R$ " + total,
-                modalidade: modalidadeAtual
+                nome: n, endereco: a, itens: itensTexto, pagamento: p + (t ? ' (Troco p/ '+t+')' : ''), total: "R$ " + total, modalidade: modalidadeAtual
             };
 
-            // Envia para Planilha
-            try {
-                fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
-            } catch (e) { console.log("Erro ao salvar"); }
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
 
-            // Monta Mensagem WhatsApp
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
             msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
             msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
@@ -412,7 +397,6 @@
             msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
             msg += `_Favor confirmar o pedido e o tempo de entrega._`;
 
-            // TELA DE SUCESSO DO IPHONE
             const cartContent = document.getElementById('cart-content');
             cartContent.innerHTML = `
                 <div class="success-screen">
@@ -426,11 +410,10 @@
                         Seu pedido foi registrado no sistema.<br>Clique no botão abaixo para enviar o resumo via WhatsApp.
                     </p>
                     <a href="https://wa.me/${WHATSAPP_NUMBER}?text=${msg}" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg text-center block mb-4">ENVIAR NO WHATSAPP</a>
-                    <button onclick="location.reload()" class="w-full bg-zinc-800 text-zinc-500 py-3 rounded-2xl font-black uppercase text-[10px]">Cancelar / Voltar</button>
+                    <button onclick="location.reload()" class="w-full bg-zinc-800 text-zinc-500 py-3 rounded-2xl font-black uppercase text-[10px]">FECHAR JANELA</button>
                 </div>
             `;
             
-            // Limpa o carrinho
             cart = [];
             updateCartUI();
         }
