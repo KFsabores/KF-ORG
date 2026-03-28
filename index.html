@@ -125,9 +125,9 @@
 
         const menuData = {
             promos: [
-                { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
-                { name: "1 Pizza 35cm + Refri 2L", price: 46.00, pizzas: 1, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" },
-                { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" }
+                { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L" },
+                { name: "1 Pizza 35cm + Refri 2L", price: 46.00, pizzas: 1, refri: "2L" },
+                { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L" }
             ],
             tradicional: [
                 { name: "Mussarela", p25: 24, p35: 39 },
@@ -176,10 +176,11 @@
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
         const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos"];
+        
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0; let distanciaTexto = "";
 
-        // GOOGLE MAPS FUNCTIONS
+        // --- MAPS ---
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -213,12 +214,13 @@
             });
         }
 
+        // --- SISTEMA ---
         async function carregarEstoqueUmaVez() {
             try {
                 const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
                 estoqueAtual = await res.json();
-                switchCategory('promos');
-            } catch (e) { console.error("Erro estoque", e); switchCategory('promos'); }
+            } catch (e) { console.error("Erro estoque", e); }
+            switchCategory('promos');
         }
 
         function estaAberto() {
@@ -274,11 +276,12 @@
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
                 const cardStyle = isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : '';
                 const btnAcao = isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`;
+                let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
                 return `
                     <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${cardStyle}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                            <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+(item.p25 ? item.p25.toFixed(2) : '0.00')}</p>
+                            <p class="text-[10px] gold-text font-bold mt-2">${precoTexto}</p>
                             ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase italic tracking-tighter">Indisponível hoje</span>' : ''}
                         </div>
                         <button ${btnAcao} class="bg-zinc-800 ${isPausado ? 'text-zinc-600 cursor-not-allowed' : 'text-white'} px-4 py-2 rounded-xl text-[10px] font-black uppercase">
@@ -288,7 +291,6 @@
             }).join('');
         }
 
-        // --- FUNÇÃO ATUALIZADA: AGORA CARREGA AS BEBIDAS SE FOR PROMO ---
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { 
@@ -300,19 +302,25 @@
             const container = document.getElementById('modal-options');
             let list = (cat === 'promos') ? SABORES_PROMO : SABORES_PIZZA;
             
-            // Inicia o HTML com a escolha das Pizzas
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
 
-            // INSERÇÃO DE BEBIDAS NAS PROMOS
+            // LOGICA DE FILTRO DE BEBIDAS REVISADA
             if(cat === 'promos' && currentItem.refri) {
-                // Filtra apenas bebidas que batem com o tamanho da promo (ex: 1L ou 2L)
-                const bebidasPromo = menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
+                let bebidasFiltradas = [];
+                if(currentItem.refri === "2L") {
+                    // Para promo de 35cm, aceita 1.5L e 2L
+                    bebidasFiltradas = menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L"));
+                } else {
+                    // Para promo de 1L (25cm)
+                    bebidasFiltradas = menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
+                }
+
                 html += `
                 <div class="mt-4">
-                    <label class="text-[10px] gold-text font-black uppercase italic">Escolha sua Bebida (${currentItem.refri})</label>
+                    <label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label>
                     <select id="promo-refri-select" class="mt-1">
-                        ${bebidasPromo.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}
+                        ${bebidasFiltradas.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}
                     </select>
                 </div>`;
             }
@@ -329,9 +337,12 @@
             return `<div class="space-y-2"><label class="text-[10px] gold-text font-black uppercase italic">Sabor Pizza ${num}</label><div class="grid grid-cols-2 gap-2"><select class="flavor-a" ${isFixed?'disabled':''}>${list.map(f=>`<option value="${f}" ${f===valDef?'selected':''}>${f}</option>`).join('')}</select><select class="flavor-b"><option value="">(INTEIRA)</option>${list.map(f=>`<option value="${f}">½ ${f}</option>`).join('')}</select></div></div>`;
         }
 
-        function selectSize(s) { selectedSize = s; document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; }
+        function selectSize(s) { 
+            selectedSize = s; 
+            document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
+            document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
+        }
 
-        // --- FUNÇÃO ATUALIZADA: SALVA A BEBIDA NO CARRINHO ---
         function addToCartFinal() {
             const flavAs = document.querySelectorAll('.flavor-a'); 
             const flavBs = document.querySelectorAll('.flavor-b');
@@ -340,19 +351,14 @@
             let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
             let desc = []; 
             flavAs.forEach((f, i) => { 
-                let sA = f.value; 
-                let sB = flavBs[i].value; 
+                let sA = f.value; let sB = flavBs[i].value; 
                 desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); 
             });
 
-            let itemNomeFinal = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
-            
-            // Adiciona o refrigerante escolhido ao nome do item
-            if(refriSelect) {
-                itemNomeFinal += ` + BEBIDA: ${refriSelect.value}`;
-            }
+            let finalName = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
+            if(refriSelect) finalName += ` + BEBIDA: ${refriSelect.value}`;
 
-            cart.push({ name: itemNomeFinal.toUpperCase(), price });
+            cart.push({ name: finalName.toUpperCase(), price });
             updateCartUI(); 
             closeModal();
         }
@@ -381,7 +387,12 @@
             if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
         }
 
-        function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price}); updateCartUI(); closeModal(); }
+        function addTapiocaFinal() { 
+            if(tapRecheios.length===0)return; 
+            const price = Math.max(...tapRecheios.map(r=>r.price)); 
+            cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price}); 
+            updateCartUI(); closeModal(); 
+        }
 
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
@@ -403,7 +414,6 @@
             const pagto = document.getElementById('pay-method').value;
             const troco = document.getElementById('troco-val').value;
             const totalStr = document.getElementById('cart-total').innerText;
-            const sub = document.getElementById('cart-subtotal').innerText;
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
@@ -417,7 +427,7 @@
             msg += `%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name} (R$ ${i.price.toFixed(2)})%0A`);
             msg += `%0A--------------------------%0A`;
-            msg += `*Subtotal:* R$ ${sub}%0A`;
+            msg += `*Subtotal:* R$ ${document.getElementById('cart-subtotal').innerText}%0A`;
             if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
             msg += `*💰 TOTAL: R$ ${totalStr}*`;
             
@@ -430,9 +440,7 @@
                 }) 
             });
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-            cart = []; taxaEntrega = 0; distanciaTexto = "";
-            document.getElementById('distancia-info').innerText = "";
-            updateCartUI(); toggleCart();
+            cart = []; taxaEntrega = 0; updateCartUI(); toggleCart();
         }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
