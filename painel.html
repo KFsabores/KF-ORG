@@ -77,14 +77,19 @@
             return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
         }
 
-        // NOVA FUNÇÃO DE LIMPEZA DE VALOR MOETÁRIO
+        // FUNÇÃO DE SOMA REFORMULADA (CORREÇÃO DE MILHAR)
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            // 1. Remove "R$", espaços e pontos de milhar
-            let limpo = valorStr.replace("R$", "").replace(/\s/g, "").replace(/\./g, "");
-            // 2. Troca a vírgula decimal por ponto para o sistema entender
-            limpo = limpo.replace(",", ".");
-            return parseFloat(limpo) || 0;
+            // Remove tudo que não for número, ponto ou vírgula
+            let apenasNumeros = valorStr.replace(/[^\d,.]/g, '');
+            
+            // Se houver vírgula, transforma em ponto para o JS somar certo
+            if (apenasNumeros.includes(',')) {
+                apenasNumeros = apenasNumeros.replace(/\./g, '').replace(',', '.');
+            }
+            
+            let num = parseFloat(apenasNumeros);
+            return isNaN(num) ? 0 : num;
         }
 
         async function carregarPedidos() {
@@ -106,8 +111,9 @@
                     itens: row[3],
                     pagto: row[4],
                     total: row[5],
-                    totalNum: limparValor(row[5]), // Usando a nova função aqui
+                    totalNum: limparValor(row[5]),
                     status: (row[6] || 'PENDENTE').toUpperCase(),
+                    // Melhoria na detecção da modalidade
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase()
                 }));
 
@@ -183,20 +189,20 @@
                 else { totalDel += p.totalNum; qtdDel++; }
             });
 
-            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas Turno Hoje" : "Vendas 7 Dias";
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Resumo de Hoje" : "Resumo da Semana";
             document.getElementById('rel-content').innerHTML = `
                 <div class="space-y-4">
                     <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-green-600">
                         <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p>
-                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600">
                         <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p>
-                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
-                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Total Geral</p>
-                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Faturamento Total</p>
+                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                 </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
