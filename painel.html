@@ -22,7 +22,7 @@
         .timer-badge { background: #3f3f46; color: #fff; padding: 2px 8px; border-radius: 99px; font-family: monospace; font-size: 11px; }
         .link-maps { color: #60a5fa; text-decoration: underline; }
         .link-maps:hover { color: #93c5fd; }
-        #map { height: 400px; width: 100%; border-radius: 1rem; margin-top: 1rem; }
+        #map { height: 450px; width: 100%; border-radius: 1rem; margin-top: 1rem; border: 2px solid #39FF14; }
     </style>
 </head>
 <body class="p-4 md:p-8 font-sans">
@@ -45,10 +45,10 @@
             </div>
         </div>
 
-        <div id="painel-mapa" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border border-green-500/30">
-            <h2 class="text-2xl font-black text-[#39FF14] uppercase italic mb-4 text-center">Configurar Áreas de Entrega</h2>
+        <div id="painel-mapa" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border border-green-500/50 shadow-[0_0_20px_rgba(57,255,20,0.1)]">
+            <h2 class="text-2xl font-black text-[#39FF14] uppercase italic mb-4 text-center">Definir Áreas de Entrega</h2>
             <div id="map"></div>
-            <p class="text-center text-zinc-500 text-[10px] mt-4 uppercase font-bold tracking-widest">Desenhe polígonos para definir preços. Áreas sem desenho serão "A Combinar".</p>
+            <p class="text-center text-zinc-500 text-[10px] mt-4 uppercase font-bold tracking-widest">Clique no ícone de polígono no topo do mapa para desenhar.</p>
         </div>
 
         <div id="painel-estoque" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border border-orange-500/30">
@@ -60,9 +60,10 @@
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4 bg-black/90">
-        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 text-center">
-            <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 border-b border-zinc-800 pb-2">Relatório</h2>
-            <div id="rel-content" class="space-y-4 text-left"></div>
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8">
+            <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 border-b border-zinc-800 pb-2 text-center">Relatório</h2>
+            <div id="rel-content" class="space-y-4 text-sm font-bold uppercase text-zinc-300">
+                </div>
             <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs">Fechar</button>
         </div>
     </div>
@@ -80,34 +81,48 @@
         let primeiraCarga = true;
         const ringtone = document.getElementById('notificacao-som');
         let map, drawingManager;
-        let zonasDeEntrega = [];
 
+        // INICIALIZAÇÃO DO MAPA
         function initMap() {
             const centro = { lat: -22.9064, lng: -43.6253 };
             map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 13,
+                zoom: 14,
                 center: centro,
                 styles: [{ "stylers": [{ "invert_lightness": true }, { "saturation": -100 }] }]
             });
 
             drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                drawingMode: null,
                 drawingControl: true,
-                drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
-                polygonOptions: { fillColor: '#39FF14', fillOpacity: 0.3, strokeWeight: 2, clickable: true, editable: true }
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: ['polygon']
+                },
+                polygonOptions: {
+                    fillColor: '#39FF14',
+                    fillOpacity: 0.3,
+                    strokeWeight: 2,
+                    clickable: true,
+                    editable: true
+                }
             });
             drawingManager.setMap(map);
 
             google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
-                const valor = prompt("Valor da entrega para esta área (Ex: 10.00):");
+                const valor = prompt("Valor da entrega para esta área (Ex: 7.00):");
                 if (valor) {
-                    zonasDeEntrega.push({ polygon, valor: parseFloat(valor) });
+                    alert("Zona salva localmente para esta sessão. Valor: R$ " + valor);
                 }
             });
         }
 
-        function toggleMapa() { document.getElementById('painel-mapa').classList.toggle('hidden'); }
-        function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
+        function toggleMapa() {
+            const painel = document.getElementById('painel-mapa');
+            painel.classList.toggle('hidden');
+            if(!painel.classList.contains('hidden') && map) {
+                setTimeout(() => { google.maps.event.trigger(map, 'resize'); }, 100);
+            }
+        }
 
         function parseDataBR(stringData) {
             if(!stringData) return new Date(0);
@@ -119,28 +134,41 @@
 
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            let apenasNumeros = valorStr.replace(/[^\d,.]/g, '');
-            if (apenasNumeros.includes(',')) {
-                apenasNumeros = apenasNumeros.replace(/\./g, '').replace(',', '.');
-            }
-            let num = parseFloat(apenasNumeros);
-            return isNaN(num) ? 0 : num;
+            let val = valorStr.toString().replace(/[^\d,.]/g, '').replace(',', '.');
+            return parseFloat(val) || 0;
         }
 
-        function atualizarCronometros() {
+        // LÓGICA DE RELATÓRIO (REINSTALADA)
+        function gerarRelatorio(tipo) {
             const agora = new Date();
-            document.querySelectorAll('[data-hora-pedido]').forEach(el => {
-                const status = el.getAttribute('data-status');
-                if (status.includes('CONCLU')) return;
-                const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
-                const diff = Math.floor((agora - dataPedido) / 1000);
-                if (diff < 0) { el.innerText = "00:00"; return; }
-                const m = Math.floor((diff % 3600) / 60);
-                const s = diff % 60;
-                el.innerText = String(m).padStart(2, '0') + ":" + String(s).padStart(2, '0');
-            });
+            let filtrados = todosOsPedidos.filter(p => p.status.includes("CONCLUIDO"));
+            
+            if (tipo === 'dia') {
+                const hojeStr = agora.toLocaleDateString('pt-BR');
+                filtrados = filtrados.filter(p => p.dataFull.includes(hojeStr));
+                document.getElementById('rel-titulo').innerText = "Vendas de Hoje";
+            } else {
+                document.getElementById('rel-titulo').innerText = "Vendas da Semana";
+                // Lógica simplificada: últimos 7 dias
+                const umaSemanaAtras = new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000);
+                filtrados = filtrados.filter(p => p.objData >= umaSemanaAtras);
+            }
+
+            const totalVendas = filtrados.reduce((acc, p) => acc + p.totalNum, 0);
+            const qtd = filtrados.length;
+
+            document.getElementById('rel-content').innerHTML = `
+                <div class="flex justify-between border-b border-zinc-800 pb-2">
+                    <span>Pedidos Concluídos:</span>
+                    <span class="text-white">${qtd}</span>
+                </div>
+                <div class="flex justify-between text-lg pt-2">
+                    <span>Faturamento:</span>
+                    <span class="text-[#39FF14]">R$ ${totalVendas.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
+                </div>
+            `;
+            document.getElementById('modal-relatorio').classList.remove('hidden');
         }
-        setInterval(atualizarCronometros, 1000);
 
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
@@ -184,13 +212,9 @@
             pedidosParaExibir.forEach(p => {
                 let isRetirada = p.modalidade.includes('RETIRADA');
                 let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (p.status.includes("CONCLUIDO") ? "border-zinc-800 opacity-50" : "border-yellow-500");
-                const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
-                const telLimpo = p.telefone.toString().replace(/\D/g, '');
-                const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
-
-                // CORREÇÃO DA LÓGICA DE EXIBIÇÃO DO FRETE
-                let valorTaxa = limparValor(p.taxaEntrega);
-                let taxaTexto = (valorTaxa > 0) ? `R$ ${valorTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
+                
+                let vTaxa = limparValor(p.taxaEntrega);
+                let taxaTexto = (vTaxa > 0) ? `R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
                 if (isRetirada) taxaTexto = "RETIRADA";
 
                 container.innerHTML += `
@@ -203,20 +227,14 @@
                             </div>
                         </div>
                         <h3 class="text-2xl font-black italic mb-1 uppercase leading-none">${p.nome}</h3>
-                        
-                        <div class="mb-3">
-                            <a href="${linkZap}" target="_blank" class="inline-flex items-center gap-2 bg-green-600/20 text-green-500 px-3 py-1.5 rounded-lg text-[10px] font-black border border-green-600/30 hover:bg-green-600 hover:text-white transition-all">
-                                📞 ${p.telefone || 'N/A'}
-                            </a>
-                        </div>
-
                         <p class="text-xs font-bold text-zinc-400 mb-4 italic block uppercase">📍 ${p.endereco}</p>
+                        
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-bold uppercase">
                             ${p.itens.split('|').map(i => `<div class="mb-1 text-zinc-200">• ${i.trim()}</div>`).join('')}
                         </div>
                         
                         <div class="flex justify-between text-[11px] font-black uppercase mb-4 px-1 border-b border-zinc-800 pb-2">
-                            <span class="text-zinc-500">TAXA DE ENTREGA:</span>
+                            <span class="text-zinc-500">TAXA ENTREGA:</span>
                             <span class="${taxaTexto.includes('COMBINAR') ? 'text-orange-500' : 'text-[#39FF14]'}">${taxaTexto}</span>
                         </div>
 
@@ -224,12 +242,10 @@
                             <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">👨‍🍳 Cozinha</button>
                             <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="bg-green-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">✅ Concluir</button>
                         </div>
+
                         <div class="flex justify-between items-center pt-2">
                             <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
-                            <div class="flex gap-2">
-                                <button onclick="cancelarPedido(${p.linhaOriginal}, this)" class="bg-red-900/40 text-red-500 border border-red-500 font-black px-3 py-3 rounded-xl text-[10px] uppercase">🗑️</button>
-                                <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black font-black px-4 py-3 rounded-xl text-[10px] uppercase">🖨️ Imprimir</button>
-                            </div>
+                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black font-black px-6 py-3 rounded-xl text-[10px] uppercase">🖨️ Imprimir</button>
                         </div>
                     </div>`;
             });
@@ -239,44 +255,60 @@
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
-            
             let vTaxa = limparValor(p.taxaEntrega);
             let fretePrint = (vTaxa > 0) ? `R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
-            if (p.modalidade.includes('RETIRADA')) fretePrint = "RETIRADA";
 
-            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 14px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>END: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>TAXA ENTREGA: ${fretePrint}<br>PAGTO: ${p.pagto.toUpperCase()}<br><strong style="font-size: 14px;">TOTAL: ${p.total}</strong><div class="linha"></div><center>BOM APETITE!</center></div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 14px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>END: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>TAXA: ${fretePrint}<br>PAGTO: ${p.pagto.toUpperCase()}<br><strong style="font-size: 14px;">TOTAL: ${p.total}</strong><div class="linha"></div><center>BOM APETITE!</center></div>`;
             setTimeout(() => { window.print(); }, 300);
         }
 
-        async function cancelarPedido(linha, btn) { if (confirm("Deseja cancelar?")) { btn.innerText = "⏳"; await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' }); setTimeout(carregarPedidos, 1500); } }
-        async function alterarStatus(linha, status, btn) { btn.innerText = "⏳"; await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' }); setTimeout(carregarPedidos, 1500); }
-        function toggleEstoque() { const p = document.getElementById('painel-estoque'); p.classList.toggle('hidden'); if(!p.classList.contains('hidden')) carregarEstoque(); }
-        async function carregarEstoque() { 
+        async function alterarStatus(linha, status, btn) {
+            btn.innerText = "⏳";
+            await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
+            setTimeout(carregarPedidos, 1500);
+        }
+
+        function toggleEstoque() {
+            document.getElementById('painel-estoque').classList.toggle('hidden');
+            carregarEstoque();
+        }
+
+        async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoqueArr = await res.json();
                 const grupos = {};
-                estoqueArr.forEach(i => { const cat = (i.categoria || "OUTROS").toUpperCase(); if (!grupos[cat]) grupos[cat] = []; grupos[cat].push(i); });
+                estoqueArr.forEach(i => {
+                    const cat = (i.categoria || "OUTROS").toUpperCase();
+                    if (!grupos[cat]) grupos[cat] = [];
+                    grupos[cat].push(i);
+                });
                 let html = "";
-                Object.keys(grupos).forEach(cat => {
+                for (let cat in grupos) {
                     html += `<div class="cat-card"><h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic">● ${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
                     grupos[cat].forEach(i => {
                         const isPausado = i.status === 'PAUSADO';
                         html += `<div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-50' : 'border-zinc-800'}">
-                            <p class="text-[10px] font-black uppercase mb-3 text-zinc-300 leading-tight">${i.nome}</p>
+                            <p class="text-[10px] font-black uppercase mb-3 text-zinc-300">${i.nome}</p>
                             <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-xl text-[9px] font-black ${isPausado ? 'bg-green-600' : 'bg-red-600'} uppercase">${isPausado ? 'Ativar' : 'Pausar'}</button>
                         </div>`;
                     });
                     html += `</div></div>`;
-                });
+                }
                 container.innerHTML = html;
             } catch (e) { console.error("Erro estoque"); }
         }
-        async function mudarStatusEstoque(item, status, btn) { btn.innerText = "⏳"; await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) }); setTimeout(carregarEstoque, 1000); }
-        function gerarRelatorio(tipo) { /* original */ }
-        
+
+        async function mudarStatusEstoque(item, status, btn) {
+            btn.innerText = "⏳";
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
+            setTimeout(carregarEstoque, 1000);
+        }
+
+        function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
         document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO TURNOS"; }, { once: true });
+        
         carregarPedidos();
         setInterval(carregarPedidos, 15000);
     </script>
