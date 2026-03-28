@@ -26,11 +26,9 @@
 </head>
 <body class="pb-24">
 
-    <header class="bg-black py-10 flex flex-col items-center border-b-2 border-[#39FF14]">
-        <div class="relative p-5 border-2 neon-border rounded-2xl mb-4 text-center bg-black">
-             <h1 class="text-6xl font-black italic tracking-tighter gold-text leading-none">KF</h1>
-             <p class="text-xl font-medium neon-text tracking-[.6em] uppercase -mt-1 pl-1 text-center">Sabores</p>
-        </div>
+    <header class="bg-black py-6 flex flex-col items-center border-b-2 border-[#39FF14]">
+        <img src="https://i.postimg.cc/CLZZN0CT/LOGO-KF.png" alt="KF Sabores Logo" class="w-32 md:w-40 h-auto mb-2">
+        <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-2">Desde 2016</p>
         <p class="text-[12px] text-zinc-300 font-normal uppercase tracking-widest italic text-center px-6">Pizzas & Tapiocas Gourmet</p>
     </header>
 
@@ -56,16 +54,26 @@
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
             <div id="cart-items" class="space-y-2 mb-4"></div>
+            
             <div id="form-fechamento">
                 <input type="text" id="cust-name" placeholder="Seu Nome">
+                <input type="tel" id="cust-phone" placeholder="WhatsApp (Ex: 21997437285)">
+                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
+                
                 <div id="area-endereco"><input type="text" id="cust-addr" placeholder="Endereço de Entrega"></div>
                 <textarea id="cust-obs" placeholder="Observações (Opcional)"></textarea>
-                <select id="pay-method" onchange="checkPayment()"><option value="Pix">Pix</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
+                
+                <select id="pay-method" onchange="checkPayment()">
+                    <option value="Pix">Pix</option>
+                    <option value="Cartão">Cartão</option>
+                    <option value="Dinheiro">Dinheiro</option>
+                </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
+                
                 <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Total: R$ <span id="cart-total">0.00</span></div>
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase">Finalizar Pedido</button>
             </div>
@@ -97,7 +105,6 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        // URL DO SEU SCRIPT ATUALIZADO
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzhbU6KsTKfKb58jhjTOVki860Z5kYQgJ_ESjOjwh4kJzGmIDaOKu2EXIDQrV44TY-oEQ/exec";
         
         let estoqueAtual = {}; 
@@ -111,42 +118,6 @@
             6: { abrir: 2000, fechar: 2500 },
             0: { abrir: 1900, fechar: 2500 }
         };
-
-        // --- CARREGAR ESTOQUE ---
-        async function carregarEstoqueUmaVez() {
-            try {
-                const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
-                estoqueAtual = await res.json();
-                switchCategory('promos'); // Atualiza a tela inicial após carregar o estoque
-            } catch (e) { console.error("Erro estoque", e); switchCategory('promos'); }
-        }
-
-        function estaAberto() {
-            if (modoAdmin) return true;
-            const agora = new Date();
-            let dia = agora.getDay();
-            let horaAtual = (agora.getHours() * 100) + agora.getMinutes();
-            if (horaAtual < 500) { horaAtual += 2400; dia = dia === 0 ? 6 : dia - 1; }
-            const config = HORARIOS[dia];
-            return config ? (horaAtual >= config.abrir && horaAtual <= config.fechar) : false;
-        }
-
-        function verificarStatusLoja() {
-            const banner = document.getElementById('banner-status');
-            const listaH = document.getElementById('horarios-lista');
-            const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-            if (!estaAberto()) {
-                banner.classList.remove('hidden');
-                let html = "";
-                [4, 5, 6, 0].forEach(dia => {
-                    const h = HORARIOS[dia];
-                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
-                });
-                listaH.innerHTML = html;
-            } else { banner.classList.add('hidden'); }
-        }
 
         const menuData = {
             promos: [
@@ -203,15 +174,50 @@
         const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos"];
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; let modalidadeAtual = "DELIVERY";
 
+        async function carregarEstoqueUmaVez() {
+            try {
+                const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
+                estoqueAtual = await res.json();
+                switchCategory('promos');
+            } catch (e) { console.error("Erro estoque", e); switchCategory('promos'); }
+        }
+
+        function estaAberto() {
+            if (modoAdmin) return true;
+            const agora = new Date();
+            let dia = agora.getDay();
+            let horaAtual = (agora.getHours() * 100) + agora.getMinutes();
+            if (horaAtual < 500) { horaAtual += 2400; dia = dia === 0 ? 6 : dia - 1; }
+            const config = HORARIOS[dia];
+            return config ? (horaAtual >= config.abrir && horaAtual <= config.fechar) : false;
+        }
+
+        function verificarStatusLoja() {
+            const banner = document.getElementById('banner-status');
+            const listaH = document.getElementById('horarios-lista');
+            const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+            if (!estaAberto()) {
+                banner.classList.remove('hidden');
+                let html = "";
+                [4, 5, 6, 0].forEach(dia => {
+                    const h = HORARIOS[dia];
+                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
+                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                });
+                listaH.innerHTML = html;
+            } else { banner.classList.add('hidden'); }
+        }
+
         function setModalidade(tipo) {
             modalidadeAtual = tipo;
             document.getElementById('mode-delivery').classList.toggle('active', tipo === 'DELIVERY');
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
+            else if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") document.getElementById('cust-addr').value = "";
         }
 
-        // --- SWITCH CATEGORY COM BLOQUEIO DE ESTOQUE ---
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
@@ -270,7 +276,6 @@
             updateCartUI(); closeModal();
         }
 
-        // --- TAPIOCAS COM BLOQUEIO ---
         function openTapiocaModal() {
             tapRecheios = []; let html = "";
             menuData.tapioca_cats.forEach(group => {
@@ -306,16 +311,44 @@
 
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
+            
             const n = document.getElementById('cust-name').value;
+            const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
+            const obs = document.getElementById('cust-obs').value;
+            const pagto = document.getElementById('pay-method').value;
+            const troco = document.getElementById('troco-val').value;
             const total = document.getElementById('cart-total').innerText;
-            if(!n || !a || cart.length === 0) { alert("Preencha seu nome e endereço!"); return; }
             
-            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*CLIENTE:* ${n.toUpperCase()}%0A*ENDEREÇO:* ${a.toUpperCase()}%0A%0A*ITENS:*%0A`;
+            if(!n || !tel || !a || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
+            
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A`;
+            msg += `*📞 TELEFONE:* ${tel}%0A`;
+            msg += `*📍 ENDEREÇO:* ${a.toUpperCase()}%0A`;
+            msg += `*🚚 MODALIDADE:* ${modalidadeAtual}%0A`;
+            msg += `*💳 PAGTO:* ${pagto}${troco ? ' (Troco p/ ' + troco + ')' : ''}%0A`;
+            if(obs) msg += `*📝 OBS:* ${obs}%0A`;
+            msg += `%0A*🍕 ITENS:*%0A`;
+            
             cart.forEach(i => msg += `• ${i.name.toUpperCase()} (R$ ${i.price.toFixed(2)})%0A`);
-            msg += `%0A*TOTAL: R$ ${total}*`;
+            msg += `%0A*💰 TOTAL: R$ ${total}*`;
             
-            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({nome:n, endereco:a, total:total, itens: cart.map(i=>i.name).join(" | ")}) });
+            // Enviar para Planilha
+            fetch(URL_PLANILHA, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({
+                    nome: n, 
+                    telefone: tel,
+                    endereco: a, 
+                    total: total, 
+                    pagamento: pagto,
+                    modalidade: modalidadeAtual,
+                    itens: cart.map(i=>i.name).join(" | ")
+                }) 
+            });
+
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
@@ -324,7 +357,6 @@
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         function checkPayment() { document.getElementById('troco-val').classList.toggle('hidden', document.getElementById('pay-method').value !== 'Dinheiro'); }
 
-        // INICIALIZAÇÃO
         verificarStatusLoja();
         carregarEstoqueUmaVez();
     </script>
