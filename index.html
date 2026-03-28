@@ -21,8 +21,6 @@
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
     </style>
 </head>
@@ -99,8 +97,10 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec";
+        // URL DO SEU SCRIPT ATUALIZADO
+        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbxIMMrePzpECmCR7yhkhpWwFGg4EupV2xaFSy3q4FLh3BgOD5o1Ern_3-0r54UfaOrA0g/exec";
         
+        let estoqueAtual = {}; 
         let modoAdmin = false;
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('admin') === 'true') { modoAdmin = true; }
@@ -111,6 +111,15 @@
             6: { abrir: 2000, fechar: 2500 },
             0: { abrir: 1900, fechar: 2500 }
         };
+
+        // --- CARREGAR ESTOQUE ---
+        async function carregarEstoqueUmaVez() {
+            try {
+                const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
+                estoqueAtual = await res.json();
+                switchCategory('promos'); // Atualiza a tela inicial após carregar o estoque
+            } catch (e) { console.error("Erro estoque", e); switchCategory('promos'); }
+        }
 
         function estaAberto() {
             if (modoAdmin) return true;
@@ -202,21 +211,33 @@
             if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
         }
 
+        // --- SWITCH CATEGORY COM BLOQUEIO DE ESTOQUE ---
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
+            
             if(cat === 'tapioca') {
                 container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
-            container.innerHTML = (menuData[cat] || []).map((item, index) => `
-                <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3">
-                    <div class="flex-1">
-                        <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                        <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
-                    </div>
-                    <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Escolher</button>
-                </div>`).join('');
+
+            container.innerHTML = (menuData[cat] || []).map((item, index) => {
+                const isPausado = estoqueAtual[item.name] === 'PAUSADO';
+                const cardStyle = isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : '';
+                const btnAcao = isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`;
+
+                return `
+                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${cardStyle}">
+                        <div class="flex-1">
+                            <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
+                            <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
+                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase italic tracking-tighter">Indisponível hoje</span>' : ''}
+                        </div>
+                        <button ${btnAcao} class="bg-zinc-800 ${isPausado ? 'text-zinc-600 cursor-not-allowed' : 'text-white'} px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                            ${isPausado ? 'ESGOTADO' : 'Escolher'}
+                        </button>
+                    </div>`;
+            }).join('');
         }
 
         function openItemModal(cat, index) {
@@ -249,18 +270,30 @@
             updateCartUI(); closeModal();
         }
 
+        // --- TAPIOCAS COM BLOQUEIO ---
         function openTapiocaModal() {
             tapRecheios = []; let html = "";
             menuData.tapioca_cats.forEach(group => {
                 html += `<div class="ing-label">${group.cat}</div>`;
-                group.items.forEach(r => { html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; });
+                group.items.forEach(r => { 
+                    const isPausado = estoqueAtual[r.n] === 'PAUSADO';
+                    const estilo = isPausado ? 'opacity: 0.4; border-color: #333; pointer-events: none;' : '';
+                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${estilo}" class="ing-btn flex flex-col">
+                                <span class="text-white font-bold uppercase">${r.n}</span>
+                                <span class="${isPausado ? 'text-red-500' : 'gold-text'}">${isPausado ? 'ESGOTADO' : 'R$ '+r.p.toFixed(2)}</span>
+                             </button>`; 
+                });
             });
             document.getElementById('tapioca-options').innerHTML = html;
             document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn">${e}</button>`).join('');
             document.getElementById('tapioca-modal').classList.remove('hidden');
         }
 
-        function toggleTapRecheio(n, p, b) { const idx = tapRecheios.findIndex(x=>x.name===n); if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} }
+        function toggleTapRecheio(n, p, b) { 
+            if(estoqueAtual[n] === 'PAUSADO') return;
+            const idx = tapRecheios.findIndex(x=>x.name===n); 
+            if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
+        }
 
         function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [Extra: ${tapExtra}]`, price}); updateCartUI(); closeModal(); }
 
@@ -291,7 +324,9 @@
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         function checkPayment() { document.getElementById('troco-val').classList.toggle('hidden', document.getElementById('pay-method').value !== 'Dinheiro'); }
 
-        verificarStatusLoja(); switchCategory('promos');
+        // INICIALIZAÇÃO
+        verificarStatusLoja();
+        carregarEstoqueUmaVez();
     </script>
 </body>
 </html>
