@@ -54,38 +54,30 @@
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto relative">
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
-            
             <div id="cart-items" class="space-y-2 mb-4"></div>
-            
             <div id="form-fechamento">
                 <input type="text" id="cust-name" placeholder="Seu Nome">
                 <input type="tel" id="cust-phone" placeholder="WhatsApp (Ex: 21997437285)">
-                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
-                
                 <div id="area-endereco">
                     <input type="text" id="cust-addr" placeholder="Digite endereço e selecione..." onfocus="initAutocomplete()">
                     <p id="distancia-info" class="text-[10px] gold-text mb-2 italic font-bold text-center"></p>
                 </div>
-
                 <textarea id="cust-obs" placeholder="Ponto de referência ou observação"></textarea>
-                
                 <select id="pay-method" onchange="checkPayment()">
                     <option value="Pix">Pix</option>
                     <option value="Cartão">Cartão</option>
                     <option value="Dinheiro">Dinheiro</option>
                 </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
-                
                 <div class="space-y-1 text-sm border-t border-zinc-800 pt-4 mt-4">
                     <div class="flex justify-between text-zinc-400"><span>Subtotal:</span><span>R$ <span id="cart-subtotal">0.00</span></span></div>
                     <div class="flex justify-between text-zinc-400" id="row-taxa"><span>Taxa de Entrega:</span><span>R$ <span id="taxa-valor">0.00</span></span></div>
                     <div class="flex justify-between text-2xl font-black neon-text pt-2"><span>Total:</span><span>R$ <span id="cart-total">0.00</span></span></div>
                 </div>
-
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4">Finalizar Pedido</button>
             </div>
         </div>
@@ -117,7 +109,6 @@
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
         const ENDERECO_TRAILER = "R. das Pitombeiras, 507-575 - Paciência, Rio de Janeiro - RJ, 23585-245";
-        // URL ATUALIZADA V5
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbw9G28_dGoaU90k6qs9--5FOJNEr6zT2gS1vvcrlqmjJPbYaDnJPilpzjqcgtWYq87yXQ/exec";
         
         let estoqueAtual = {}; 
@@ -126,10 +117,10 @@
         if (urlParams.get('admin') === 'true') { modoAdmin = true; }
         
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 }, // Quinta
-            5: { abrir: 2000, fechar: 2500 }, // Sexta
-            6: { abrir: 2000, fechar: 2500 }, // Sábado
-            0: { abrir: 1900, fechar: 2500 }  // Domingo
+            4: { abrir: 2000, fechar: 2400 },
+            5: { abrir: 2000, fechar: 2500 },
+            6: { abrir: 2000, fechar: 2500 },
+            0: { abrir: 1900, fechar: 2500 }
         };
 
         const menuData = {
@@ -139,12 +130,12 @@
                 { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" }
             ],
             tradicional: [
-                { name: "Mussarela", p25: 24, p35: 39, desc: "Molho de pizza e mussarela" },
-                { name: "Presunto", p25: 24, p35: 39, desc: "Mussarela, presunto e azeitona" },
-                { name: "Calabresa", p25: 24, p35: 39, desc: "Mussarela, calabresa e cebola" },
-                { name: "3 Queijos", p25: 24, p35: 39, desc: "Mussarela, catupiry e queijo minas" },
-                { name: "Marguerita", p25: 24, p35: 39, desc: "Mussarela, tomate e manjericão" },
-                { name: "Alho", p25: 24, p35: 39, desc: "Mussarela coberta com alho torrado" }
+                { name: "Mussarela", p25: 24, p35: 39 },
+                { name: "Presunto", p25: 24, p35: 39 },
+                { name: "Calabresa", p25: 24, p35: 39 },
+                { name: "3 Queijos", p25: 24, p35: 39 },
+                { name: "Marguerita", p25: 24, p35: 39 },
+                { name: "Alho", p25: 24, p35: 39 }
             ],
             especial: [
                 { name: "Frango c/ Catupiry", p25: 29, p35: 43 },
@@ -210,15 +201,12 @@
                     const dados = response.rows[0].elements[0];
                     const km = dados.distance.value / 1000;
                     distanciaTexto = dados.distance.text;
-
-                    // Lógica de Taxas por KM
                     if (km <= 2.5) taxaEntrega = 4.00;
                     else if (km <= 4.0) taxaEntrega = 6.00;
                     else if (km <= 5.5) taxaEntrega = 8.00;
                     else if (km <= 7.0) taxaEntrega = 9.00;
                     else if (km <= 9.0) taxaEntrega = 10.00;
                     else taxaEntrega = 12.00;
-
                     document.getElementById('distancia-info').innerText = `🛵 Distância: ${distanciaTexto} | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
                     updateCartUI();
                 }
@@ -278,22 +266,19 @@
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
-            
             if(cat === 'tapioca') {
                 container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
-
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
                 const cardStyle = isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : '';
                 const btnAcao = isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`;
-
                 return `
                     <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${cardStyle}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                            <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
+                            <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+(item.p25 ? item.p25.toFixed(2) : '0.00')}</p>
                             ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase italic tracking-tighter">Indisponível hoje</span>' : ''}
                         </div>
                         <button ${btnAcao} class="bg-zinc-800 ${isPausado ? 'text-zinc-600 cursor-not-allowed' : 'text-white'} px-4 py-2 rounded-xl text-[10px] font-black uppercase">
@@ -303,14 +288,35 @@
             }).join('');
         }
 
+        // --- FUNÇÃO ATUALIZADA: AGORA CARREGA AS BEBIDAS SE FOR PROMO ---
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
-            if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
+            if(cat === 'bebidas') { 
+                cart.push({ name: currentItem.name, price: currentItem.price }); 
+                updateCartUI(); 
+                return; 
+            }
             document.getElementById('modal-title').innerText = currentItem.name;
             const container = document.getElementById('modal-options');
             let list = (cat === 'promos') ? SABORES_PROMO : SABORES_PIZZA;
+            
+            // Inicia o HTML com a escolha das Pizzas
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
+
+            // INSERÇÃO DE BEBIDAS NAS PROMOS
+            if(cat === 'promos' && currentItem.refri) {
+                // Filtra apenas bebidas que batem com o tamanho da promo (ex: 1L ou 2L)
+                const bebidasPromo = menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
+                html += `
+                <div class="mt-4">
+                    <label class="text-[10px] gold-text font-black uppercase italic">Escolha sua Bebida (${currentItem.refri})</label>
+                    <select id="promo-refri-select" class="mt-1">
+                        ${bebidasPromo.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}
+                    </select>
+                </div>`;
+            }
+
             if(currentItem.p35) {
                 html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
             }
@@ -325,12 +331,30 @@
 
         function selectSize(s) { selectedSize = s; document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; }
 
+        // --- FUNÇÃO ATUALIZADA: SALVA A BEBIDA NO CARRINHO ---
         function addToCartFinal() {
-            const flavAs = document.querySelectorAll('.flavor-a'); const flavBs = document.querySelectorAll('.flavor-b');
+            const flavAs = document.querySelectorAll('.flavor-a'); 
+            const flavBs = document.querySelectorAll('.flavor-b');
+            const refriSelect = document.getElementById('promo-refri-select');
+            
             let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
-            let desc = []; flavAs.forEach((f, i) => { let sA = f.value; let sB = flavBs[i].value; desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); });
-            cart.push({ name: `${currentItem.p35?selectedSize+'CM ':''}${currentItem.name} (${desc.join(" | ")})`, price });
-            updateCartUI(); closeModal();
+            let desc = []; 
+            flavAs.forEach((f, i) => { 
+                let sA = f.value; 
+                let sB = flavBs[i].value; 
+                desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); 
+            });
+
+            let itemNomeFinal = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
+            
+            // Adiciona o refrigerante escolhido ao nome do item
+            if(refriSelect) {
+                itemNomeFinal += ` + BEBIDA: ${refriSelect.value}`;
+            }
+
+            cart.push({ name: itemNomeFinal.toUpperCase(), price });
+            updateCartUI(); 
+            closeModal();
         }
 
         function openTapiocaModal() {
@@ -357,13 +381,12 @@
             if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
         }
 
-        function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [Extra: ${tapExtra}]`, price}); updateCartUI(); closeModal(); }
+        function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price}); updateCartUI(); closeModal(); }
 
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
             const total = subtotal + taxa;
-
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
             document.getElementById('cart-total').innerText = total.toFixed(2);
@@ -373,7 +396,6 @@
 
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-            
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
@@ -382,7 +404,6 @@
             const troco = document.getElementById('troco-val').value;
             const totalStr = document.getElementById('cart-total').innerText;
             const sub = document.getElementById('cart-subtotal').innerText;
-            
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
@@ -394,30 +415,20 @@
             msg += `*💳 PAGTO:* ${pagto}${troco ? ' (Troco p/ ' + troco + ')' : ''}%0A`;
             if(obs) msg += `*📝 OBS:* ${obs}%0A`;
             msg += `%0A*🍕 ITENS:*%0A`;
-            
-            cart.forEach(i => msg += `• ${i.name.toUpperCase()} (R$ ${i.price.toFixed(2)})%0A`);
-            
+            cart.forEach(i => msg += `• ${i.name} (R$ ${i.price.toFixed(2)})%0A`);
             msg += `%0A--------------------------%0A`;
             msg += `*Subtotal:* R$ ${sub}%0A`;
             if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
             msg += `*💰 TOTAL: R$ ${totalStr}*`;
             
-            // ENVIO PARA O GOOGLE SHEETS (Sincronizado com Script V5)
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
                 mode: 'no-cors', 
                 body: JSON.stringify({
-                    nome: n, 
-                    telefone: tel,
-                    endereco: a, 
-                    total: totalStr, 
-                    pagamento: pagto,
-                    modalidade: modalidadeAtual,
-                    itens: cart.map(i=>i.name).join(" | "),
-                    taxa: taxaEntrega.toFixed(2) // ENVIA PARA COLUNA J
+                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto,
+                    modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
                 }) 
             });
-
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; taxaEntrega = 0; distanciaTexto = "";
             document.getElementById('distancia-info').innerText = "";
