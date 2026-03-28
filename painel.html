@@ -13,13 +13,12 @@
             @page { margin: 0; size: auto; }
         }
         .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 13px; line-height: 1.3; color: #000; font-weight: bold; padding: 2px; }
-        .item-separador { margin-bottom: 8px; display: block; }
         .linha { border-bottom: 2px dashed #000; margin: 5px 0; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
         body { background-color: #09090b; }
-        .estoque-item { transition: 0.3s; border: 1px solid #27272a; }
-        .estoque-item.pausado { opacity: 0.5; border-color: #ef4444; background: rgba(239, 68, 68, 0.05); }
+        .estoque-item { transition: 0.3s; border: 1px solid #27272a; background: rgba(255,255,255,0.03); }
+        .estoque-item.pausado { opacity: 0.5; border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
     </style>
 </head>
 <body class="text-white min-h-screen p-4 font-sans">
@@ -40,12 +39,13 @@
         </div>
 
         <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-black text-orange-500 italic uppercase">Controle de Disponibilidade</h2>
                 <button onclick="toggleEstoque()" class="text-zinc-500 font-bold text-sm uppercase">Fechar X</button>
             </div>
-            <div id="lista-estoque" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <p class="text-zinc-600 italic text-xs animate-pulse">Carregando itens...</p>
+            
+            <div id="lista-estoque-categorias" class="space-y-8">
+                <p class="text-zinc-600 italic text-xs animate-pulse text-center py-4">Sincronizando prateleiras...</p>
             </div>
         </div>
 
@@ -83,7 +83,6 @@
             return new Date(2000 + parseInt(d[2] || 0), d[1]-1, d[0], h[0], h[1]);
         }
 
-        // CARREGAR PEDIDOS DA PLANILHA
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             try {
@@ -92,7 +91,6 @@
                 const rows = csvData.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
-
                 const pedidosRaw = rows.slice(1).filter(r => r[1]);
                 todosOsPedidos = pedidosRaw.map((row, idx) => ({
                     linhaOriginal: idx + 2,
@@ -103,11 +101,9 @@
                     itens: row[3],
                     pagto: row[4],
                     total: row[5],
-                    totalNum: parseFloat((row[5] || "0").replace("R$", "").replace(".", "").replace(",", ".")),
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || "DELIVERY").toUpperCase()
                 }));
-
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
                     ringtone.play().catch(() => {});
                 }
@@ -120,18 +116,14 @@
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
-            
-            // Filtro simples: Pendentes e Preparando primeiro
             const ordenados = [...todosOsPedidos].sort((a,b) => {
                 const sA = a.status.includes("CONCLUIDO") ? 1 : 0;
                 const sB = b.status.includes("CONCLUIDO") ? 1 : 0;
                 return sA - sB || b.linhaOriginal - a.linhaOriginal;
             });
-
             ordenados.forEach(p => {
                 let isRetirada = p.modalidade.includes('RETIRADA');
                 let statusStyle = p.status.includes("PREPARANDO") ? "bg-blue-600" : (p.status.includes("CONCLUIDO") ? "bg-[#39FF14] text-black" : "bg-zinc-800 text-zinc-400");
-                
                 container.innerHTML += `
                     <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'}">
                         <div class="flex justify-between items-center mb-4">
@@ -155,7 +147,7 @@
             });
         }
 
-        // --- GESTÃO DE ESTOQUE ---
+        // --- GESTÃO DE ESTOQUE CATEGORIZADO ---
         function toggleEstoque() {
             const p = document.getElementById('painel-estoque');
             p.classList.toggle('hidden');
@@ -163,34 +155,71 @@
         }
 
         async function carregarEstoque() {
-            const container = document.getElementById('lista-estoque');
+            const container = document.getElementById('lista-estoque-categorias');
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoque = await res.json();
-                container.innerHTML = Object.keys(estoque).map(item => {
-                    const isPausado = estoque[item] === 'PAUSADO';
-                    return `
-                        <div class="estoque-item ${isPausado ? 'pausado' : ''} p-3 rounded-xl flex flex-col justify-between gap-2">
-                            <span class="text-[9px] font-black uppercase leading-tight">${item}</span>
-                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                class="w-full py-2 rounded-lg text-[8px] font-black uppercase ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">
-                                ${isPausado ? 'Ativar' : 'Pausar'}
-                            </button>
+                
+                // Mapeamento de categorias
+                const cats = {
+                    "🍕 Pizzas Tradicionais": ["Mussarela", "Presunto", "Calabresa", "3 Queijos", "Marguerita", "Alho"],
+                    "🌟 Pizzas Especiais": ["Frango c/ Catupiry", "Frango c/ Cheddar", "Portuguesa", "Peito de Peru", "Lombo Canadense"],
+                    "💎 Pizzas Premium": ["Camarão", "Bacon com Ovos"],
+                    "🍫 Pizzas Doces": ["Banana", "Prestígio", "M&M", "Paçoca", "Romeu", "Caribe", "Sensação"],
+                    "🌮 Tapiocas": ["Minas", "Requeijão", "Nutella", "Chocolate", "Doce de Leite", "Goiabada", "Coco", "Morango", "Abacaxi", "Frango", "Tapioca"],
+                    "🥤 Bebidas": ["Água", "Guaracamp", "Coca", "Guaraná", "Pepsi", "Sukita"],
+                    "🔥 Promoções": ["Refri", "Promo", "1L", "2L"]
+                };
+
+                let htmlFinal = "";
+                const itensProcessados = new Set();
+
+                for (let titulo in cats) {
+                    const itensDaCat = Object.keys(estoque).filter(item => 
+                        cats[titulo].some(key => item.toLowerCase().includes(key.toLowerCase()))
+                    );
+
+                    if (itensDaCat.length > 0) {
+                        htmlFinal += `<div>
+                            <h3 class="text-[#39FF14] text-[10px] font-black uppercase mb-3 tracking-widest border-b border-zinc-800 pb-1">${titulo}</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                ${itensDaCat.map(item => {
+                                    itensProcessados.add(item);
+                                    const isPausado = estoque[item] === 'PAUSADO';
+                                    return `
+                                        <div class="estoque-item ${isPausado ? 'pausado' : ''} p-3 rounded-xl flex flex-col justify-between gap-2">
+                                            <span class="text-[9px] font-black uppercase leading-tight">${item}</span>
+                                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                                                class="w-full py-2 rounded-lg text-[8px] font-black uppercase ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">
+                                                ${isPausado ? '✅ Ativar' : '🚫 Pausar'}
+                                            </button>
+                                        </div>`;
+                                }).join('')}
+                            </div>
                         </div>`;
-                }).join('');
+                    }
+                }
+
+                // Segurança: Itens que não entraram em nenhuma categoria
+                const outros = Object.keys(estoque).filter(i => !itensProcessados.has(i));
+                if(outros.length > 0) {
+                    htmlFinal += `<div><h3 class="text-zinc-500 text-[10px] font-black uppercase mb-3 border-b border-zinc-800 pb-1">Outros</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">${outros.map(item => `<div class="estoque-item p-3 rounded-xl flex flex-col justify-between gap-2">...</div>`).join('')}</div></div>`;
+                }
+
+                container.innerHTML = htmlFinal;
             } catch (e) { container.innerHTML = "Erro ao carregar estoque."; }
         }
 
         async function mudarStatusEstoque(item, novoStatus, btn) {
-            btn.innerText = "⏳..."; btn.disabled = true;
+            btn.innerText = "⏳"; btn.disabled = true;
             try {
                 await fetch(WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify({ action: 'updateStock', item: item, status: novoStatus })
                 });
-                setTimeout(carregarEstoque, 1000);
-            } catch (e) { alert("Erro ao atualizar estoque."); btn.disabled = false; }
+                setTimeout(carregarEstoque, 800);
+            } catch (e) { alert("Erro!"); btn.disabled = false; }
         }
 
         async function alterarStatus(linha, status, btn) {
