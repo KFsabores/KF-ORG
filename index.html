@@ -23,6 +23,9 @@
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Estilo do Banner de Fechado */
+        #banner-fechado { background: rgba(255, 0, 0, 0.1); border: 1px solid #ff4444; color: #ff4444; }
     </style>
 </head>
 <body class="pb-24">
@@ -39,7 +42,13 @@
         <p class="text-[12px] text-zinc-300 font-normal uppercase tracking-widest italic text-center px-6">Pizzas & Tapiocas Gourmet</p>
     </header>
 
-    <nav class="flex overflow-x-auto bg-black p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800">
+    <div id="banner-status" class="hidden p-4 mx-4 mt-4 rounded-2xl border text-center">
+        <h2 class="font-black uppercase italic text-sm mb-2">🚫 Estamos Fechados Agora</h2>
+        <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase">
+            </div>
+    </div>
+
+    <nav class="flex overflow-x-auto bg-black p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800 mt-4">
         <button onclick="switchCategory('promos')" class="category-btn active px-4 py-2 rounded-full shrink-0">🔥 Promos</button>
         <button onclick="switchCategory('tradicional')" class="category-btn px-4 py-2 rounded-full shrink-0">🍕 Tradicional</button>
         <button onclick="switchCategory('especial')" class="category-btn px-4 py-2 rounded-full shrink-0">🌟 Especial</button>
@@ -53,33 +62,25 @@
 
     <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto relative">
-            
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
-            
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
-            
             <div id="cart-items" class="space-y-2 mb-4"></div>
-            
             <div id="form-fechamento">
                 <label class="text-[10px] gold-text font-black uppercase italic mb-1 block">Identificação</label>
                 <input type="text" id="cust-name" placeholder="Seu Nome">
-
                 <label class="text-[10px] gold-text font-black uppercase italic mt-4 mb-2 block">Como deseja receber?</label>
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
-
                 <div id="area-endereco">
                     <label class="text-[10px] gold-text font-black uppercase italic mb-1 block">Endereço de Entrega</label>
                     <input type="text" id="cust-addr" placeholder="Rua, Número e Bairro">
                 </div>
-
                 <div class="mt-4">
                     <label class="text-[10px] gold-text font-black uppercase italic mb-1 block">Observações (Opcional)</label>
                     <textarea id="cust-obs" placeholder="Ex: Tirar cebola, campainha estragada, ponto da massa..."></textarea>
                 </div>
-
                 <label class="text-[10px] gold-text font-black uppercase italic mt-4 mb-1 block">Forma de Pagamento</label>
                 <select id="pay-method" onchange="checkPayment()">
                     <option value="Pix">Pix</option>
@@ -87,14 +88,11 @@
                     <option value="Dinheiro">Dinheiro</option>
                 </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
-                
                 <div class="mt-6 p-3 bg-zinc-800 rounded-xl border border-zinc-700 flex justify-between items-center">
                     <span class="text-[10px] uppercase font-black text-zinc-400">Taxa de Entrega:</span>
                     <span id="taxa-info" class="text-[10px] uppercase font-black gold-text italic">A confirmar no WhatsApp</span>
                 </div>
-
                 <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Subtotal: R$ <span id="cart-total">0.00</span></div>
-                
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg hover:bg-green-500 transition-colors">Finalizar Pedido</button>
             </div>
         </div>
@@ -134,10 +132,10 @@
         const SENHA_ADMIN = "1233";
 
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 },
-            5: { abrir: 2000, fechar: 2500 },
-            6: { abrir: 2000, fechar: 2500 },
-            0: { abrir: 1900, fechar: 2500 }
+            4: { abrir: 2000, fechar: 2400 }, // Quinta
+            5: { abrir: 2000, fechar: 2500 }, // Sexta
+            6: { abrir: 2000, fechar: 2500 }, // Sábado
+            0: { abrir: 1900, fechar: 2500 }  // Domingo
         };
 
         function estaAberto() {
@@ -150,10 +148,31 @@
             return config ? (horaAtual >= config.abrir && horaAtual <= config.fechar) : false;
         }
 
+        function verificarStatusLoja() {
+            const banner = document.getElementById('banner-status');
+            const listaH = document.getElementById('horarios-lista');
+            const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+            if (!estaAberto()) {
+                banner.classList.remove('hidden');
+                let html = "";
+                Object.keys(HORARIOS).forEach(dia => {
+                    const h = HORARIOS[dia];
+                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : (h.fechar/100).toFixed(2).replace('.',':'))) : (h.fechar/100).toFixed(2).replace('.',':');
+                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                });
+                listaH.innerHTML = html;
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
         function ativarModoAdmin() {
             if(prompt("Senha de Acesso Admin:") === SENHA_ADMIN) {
                 modoAdmin = true;
                 alert("🛠️ MODO ADMIN ATIVADO!");
+                verificarStatusLoja();
             }
         }
 
@@ -382,7 +401,7 @@
         }
 
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("Estamos fechados agora!"); return; }
+            if (!estaAberto()) { alert("ESTAMOS FECHADOS AGORA!\nConsulte nossos horários no topo da página."); return; }
 
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
@@ -445,6 +464,8 @@
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         
+        // Inicialização
+        verificarStatusLoja();
         switchCategory('promos');
     </script>
 </body>
