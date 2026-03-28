@@ -64,15 +64,9 @@
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
-                <div id="area-endereco">
-                    <input type="text" id="cust-addr" placeholder="Endereço Completo">
-                </div>
+                <div id="area-endereco"><input type="text" id="cust-addr" placeholder="Endereço de Entrega"></div>
                 <textarea id="cust-obs" placeholder="Observações (Opcional)"></textarea>
-                <select id="pay-method" onchange="checkPayment()">
-                    <option value="Pix">Pix</option>
-                    <option value="Cartão">Cartão</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                </select>
+                <select id="pay-method" onchange="checkPayment()"><option value="Pix">Pix</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
                 <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Total: R$ <span id="cart-total">0.00</span></div>
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase">Finalizar Pedido</button>
@@ -84,7 +78,7 @@
         <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
             <h3 id="modal-title" class="text-2xl font-black neon-text mb-4 italic uppercase text-center"></h3>
             <div id="modal-options" class="space-y-6"></div>
-            <button onclick="addToCartFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-6">ADICIONAR</button>
+            <button onclick="addToCartFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-6">ADICIONAR AO PEDIDO</button>
             <button onclick="closeModal()" class="w-full py-3 text-zinc-500 text-[10px] mt-2 uppercase font-bold text-center block">Cancelar</button>
         </div>
     </div>
@@ -93,8 +87,8 @@
         <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
             <h3 class="text-2xl font-black neon-text mb-2 italic uppercase">Montar Tapioca</h3>
             <div id="tapioca-options" class="grid grid-cols-2 gap-2"></div>
-            <div id="tapioca-extras" class="grid grid-cols-2 gap-2 mt-4"></div>
-            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8">ADICIONAR</button>
+            <div id="tapioca-extras" class="grid grid-cols-2 gap-2 mt-6"></div>
+            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8">ADICIONAR TAPIOCA</button>
             <button onclick="closeModal()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Voltar</button>
         </div>
     </div>
@@ -112,10 +106,10 @@
         if (urlParams.get('admin') === 'true') { modoAdmin = true; }
         
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 }, // Quinta
-            5: { abrir: 2000, fechar: 2500 }, // Sexta (até 1h)
-            6: { abrir: 2000, fechar: 2500 }, // Sábado (até 1h)
-            0: { abrir: 1900, fechar: 2500 }  // Domingo (até 1h)
+            4: { abrir: 2000, fechar: 2400 },
+            5: { abrir: 2000, fechar: 2500 },
+            6: { abrir: 2000, fechar: 2500 },
+            0: { abrir: 1900, fechar: 2500 }
         };
 
         function estaAberto() {
@@ -132,7 +126,6 @@
             const banner = document.getElementById('banner-status');
             const listaH = document.getElementById('horarios-lista');
             const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-
             if (!estaAberto()) {
                 banner.classList.remove('hidden');
                 let html = "";
@@ -148,38 +141,53 @@
 
         const menuData = {
             promos: [
-                { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais" },
-                { name: "1 Pizza 35cm + Refri 2L", price: 46.00, pizzas: 1, refri: "2L", desc: "Sabores Tradicionais" },
-                { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L", desc: "Sabores Tradicionais" }
+                { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
+                { name: "1 Pizza 35cm + Refri 2L", price: 46.00, pizzas: 1, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" },
+                { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" }
             ],
             tradicional: [
-                { name: "Mussarela", p25: 24, p35: 39, desc: "Molho e mussarela" },
-                { name: "Calabresa", p25: 24, p35: 39, desc: "Mussarela, calabresa e cebola" },
+                { name: "Mussarela", p25: 24, p35: 39, desc: "Molho de pizza e mussarela" },
                 { name: "Presunto", p25: 24, p35: 39, desc: "Mussarela, presunto e azeitona" },
+                { name: "Calabresa", p25: 24, p35: 39, desc: "Mussarela, calabresa e cebola" },
                 { name: "3 Queijos", p25: 24, p35: 39, desc: "Mussarela, catupiry e queijo minas" },
                 { name: "Marguerita", p25: 24, p35: 39, desc: "Mussarela, tomate e manjericão" },
-                { name: "Alho", p25: 24, p35: 39, desc: "Mussarela e alho torrado" }
+                { name: "Alho", p25: 24, p35: 39, desc: "Mussarela coberta com alho torrado" }
             ],
             especial: [
                 { name: "Frango c/ Catupiry", p25: 29, p35: 43 },
+                { name: "Frango c/ Cheddar", p25: 29, p35: 43 },
                 { name: "Portuguesa", p25: 29, p35: 43 },
+                { name: "Peito de Peru", p25: 29, p35: 43 },
                 { name: "Lombo Canadense", p25: 29, p35: 43 }
             ],
             premium: [
                 { name: "Camarão c/ Catupiry", p25: 32, p35: 58 },
+                { name: "Camarão c/ Cheddar", p25: 32, p35: 58 },
+                { name: "Camarão c/ Alho", p25: 32, p35: 58 },
                 { name: "Bacon com Ovos", p25: 32, p35: 58 }
             ],
             doces: [
                 { name: "Banana c/ Canela", p25: 30, p35: 45 },
                 { name: "Prestígio", p25: 30, p35: 45 },
-                { name: "Romeu e Julieta", p25: 30, p35: 45 }
+                { name: "M&M", p25: 30, p35: 45 },
+                { name: "Paçoca", p25: 30, p35: 45 },
+                { name: "Romeu e Julieta", p25: 30, p35: 45 },
+                { name: "Caribe", p25: 30, p35: 45 },
+                { name: "Sensação", p25: 30, p35: 45 },
+                { name: "Banana Nevada", p25: 30, p35: 45 }
             ],
             tapioca_cats: [
-                { cat: "Proteínas", items: [{ n: "Lombo", p: 10 }, { n: "Frango", p: 13 }, { n: "Calabresa", p: 10 }] },
-                { cat: "Queijos", items: [{ n: "Minas", p: 10 }, { n: "Mussarela", p: 10 }] }
+                { cat: "Proteínas", items: [{ n: "Lombo Canadense", p: 10 }, { n: "Peito de Peru", p: 13 }, { n: "Calabresa", p: 10 }, { n: "Presunto", p: 10 }, { n: "Frango", p: 13 }] },
+                { cat: "Queijos", items: [{ n: "Minas", p: 10 }, { n: "Mussarela", p: 10 }, { n: "Requeijão", p: 10 }, { n: "Catupiry", p: 10 }, { n: "Cheddar", p: 10 }] },
+                { cat: "Frutas", items: [{ n: "Coco", p: 10 }, { n: "Morango", p: 14 }, { n: "Abacaxi", p: 10 }, { n: "Banana", p: 10 }] },
+                { cat: "Doces", items: [{ n: "Nutella", p: 16 }, { n: "Chocolate Branco", p: 14 }, { n: "Chocolate Preto", p: 14 }, { n: "M&M", p: 10 }, { n: "Doce de Leite", p: 10 }, { n: "Goiabada", p: 10 }, { n: "Paçoca", p: 10 }] }
             ],
-            tapioca_extras: ["Leite Condensado", "Orégano", "Manteiga", "Nenhum"],
-            bebidas: [{ name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 }, { name: "Refri 1.5L", price: 12.00 }]
+            tapioca_extras: ["Leite Condensado", "Açúcar c/ Canela", "Granulado", "Orégano", "Cebola", "Tomate", "Azeitona", "Manteiga", "Alho Torrado", "Molho de Alho", "Molho de Pizza", "Nenhum"],
+            bebidas: [
+                { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 }, { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
+                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná 1L", price: 10.00 }, { name: "Pepsi 1.5L", price: 12.00 }, { name: "Guaraná 1.5L", price: 12.00 },
+                { name: "Sukita Uva 2L", price: 12.00 }, { name: "Sukita Laranja 2L", price: 12.00 }
+            ]
         };
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
@@ -191,19 +199,22 @@
             document.getElementById('mode-delivery').classList.toggle('active', tipo === 'DELIVERY');
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA";
+            if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
         }
 
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl uppercase">Montar Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => `
-                <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center">
-                    <div><h4 class="font-black text-white uppercase italic">${item.name}</h4><p class="text-[10px] gold-text font-bold">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p></div>
+                <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3">
+                    <div class="flex-1">
+                        <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
+                        <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
+                    </div>
                     <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Escolher</button>
                 </div>`).join('');
         }
@@ -217,19 +228,15 @@
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
             if(currentItem.p35) {
-                html += `<div class="flex gap-2 mt-4">
-                    <button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button>
-                    <button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button>
-                </div>`;
+                html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
             }
             container.innerHTML = html;
             document.getElementById('item-modal').classList.remove('hidden');
         }
 
         function createPizzaSelect(num, isFixed, def, list) {
-            return `<div class="space-y-2"><label class="text-[10px] gold-text font-black uppercase italic">Sabor ${num}</label>
-                <div class="grid grid-cols-2 gap-2"><select class="flavor-a" ${isFixed?'disabled':''}>${list.map(f=>`<option value="${f}" ${f===def?'selected':''}>${f}</option>`).join('')}</select>
-                <select class="flavor-b"><option value="">(INTEIRA)</option>${list.map(f=>`<option value="${f}">½ ${f}</option>`).join('')}</select></div></div>`;
+            const valDef = list.includes(def) ? def : list[0];
+            return `<div class="space-y-2"><label class="text-[10px] gold-text font-black uppercase italic">Sabor Pizza ${num}</label><div class="grid grid-cols-2 gap-2"><select class="flavor-a" ${isFixed?'disabled':''}>${list.map(f=>`<option value="${f}" ${f===valDef?'selected':''}>${f}</option>`).join('')}</select><select class="flavor-b"><option value="">(INTEIRA)</option>${list.map(f=>`<option value="${f}">½ ${f}</option>`).join('')}</select></div></div>`;
         }
 
         function selectSize(s) { selectedSize = s; document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; }
@@ -237,7 +244,7 @@
         function addToCartFinal() {
             const flavAs = document.querySelectorAll('.flavor-a'); const flavBs = document.querySelectorAll('.flavor-b');
             let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
-            let desc = []; flavAs.forEach((f, i) => { let sA = f.value; let sB = flavBs[i].value; desc.push(sB && sB !== sA ? `½ ${sA}/½ ${sB}` : sA); });
+            let desc = []; flavAs.forEach((f, i) => { let sA = f.value; let sB = flavBs[i].value; desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); });
             cart.push({ name: `${currentItem.p35?selectedSize+'CM ':''}${currentItem.name} (${desc.join(" | ")})`, price });
             updateCartUI(); closeModal();
         }
@@ -246,35 +253,36 @@
             tapRecheios = []; let html = "";
             menuData.tapioca_cats.forEach(group => {
                 html += `<div class="ing-label">${group.cat}</div>`;
-                group.items.forEach(r => { html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" class="ing-btn flex flex-col"><span class="text-white font-bold">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; });
+                group.items.forEach(r => { html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; });
             });
             document.getElementById('tapioca-options').innerHTML = html;
-            document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn">${e}</button>`).join('');
+            document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn">${e}</button>`).join('');
             document.getElementById('tapioca-modal').classList.remove('hidden');
         }
 
         function toggleTapRecheio(n, p, b) { const idx = tapRecheios.findIndex(x=>x.name===n); if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} }
 
-        function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join('+')} (${tapExtra})`, price}); updateCartUI(); closeModal(); }
+        function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [Extra: ${tapExtra}]`, price}); updateCartUI(); closeModal(); }
 
         function updateCartUI() {
             const total = cart.reduce((acc, i) => acc + i.price, 0);
             document.getElementById('cart-total').innerText = total.toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
-            document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `<div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2"><span>${i.name}</span><button onclick="cart.splice(${idx},1);updateCartUI()">✕</button></div>`).join('');
+            document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `<div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2"><span class="uppercase">${i.name}</span><button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button></div>`).join('');
         }
 
-        function finalizeOrder() {
-            if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
+        async function finalizeOrder() {
+            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
             const total = document.getElementById('cart-total').innerText;
-            if(!n || !a || cart.length === 0) { alert("Preencha tudo!"); return; }
+            if(!n || !a || cart.length === 0) { alert("Preencha seu nome e endereço!"); return; }
             
-            let msg = `*NOVO PEDIDO KF SABORES*%0A*CLIENTE:* ${n.toUpperCase()}%0A*ENDEREÇO:* ${a.toUpperCase()}%0A*ITENS:*%0A`;
-            cart.forEach(i => msg += `- ${i.name}%0A`);
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*CLIENTE:* ${n.toUpperCase()}%0A*ENDEREÇO:* ${a.toUpperCase()}%0A%0A*ITENS:*%0A`;
+            cart.forEach(i => msg += `• ${i.name.toUpperCase()} (R$ ${i.price.toFixed(2)})%0A`);
             msg += `%0A*TOTAL: R$ ${total}*`;
             
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({nome:n, endereco:a, total:total, itens: cart.map(i=>i.name).join(" | ")}) });
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
