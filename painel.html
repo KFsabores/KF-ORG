@@ -82,9 +82,8 @@
         let map, drawingManager;
         let zonasDeEntrega = [];
 
-        // FUNÇÕES DO MAPA
         function initMap() {
-            const centro = { lat: -22.9064, lng: -43.6253 }; // Centro aproximado UPA Paciência
+            const centro = { lat: -22.9064, lng: -43.6253 };
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 13,
                 center: centro,
@@ -108,7 +107,6 @@
         }
 
         function toggleMapa() { document.getElementById('painel-mapa').classList.toggle('hidden'); }
-
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
         function parseDataBR(stringData) {
@@ -166,7 +164,7 @@
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
                     telefone: row[8] || "",
-                    taxaEntrega: row[9] || "0,00" // SUPONDO COLUNA J PARA TAXA
+                    taxaEntrega: row[9] || "0,00"
                 }));
 
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
@@ -187,12 +185,13 @@
                 let isRetirada = p.modalidade.includes('RETIRADA');
                 let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (p.status.includes("CONCLUIDO") ? "border-zinc-800 opacity-50" : "border-yellow-500");
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
-                const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
                 const telLimpo = p.telefone.toString().replace(/\D/g, '');
                 const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
 
-                // LOGICA DA TAXA DE ENTREGA
-                let taxaTexto = p.taxaEntrega === "0,00" ? "A COMBINAR" : "R$ " + p.taxaEntrega;
+                // CORREÇÃO DA LÓGICA DE EXIBIÇÃO DO FRETE
+                let valorTaxa = limparValor(p.taxaEntrega);
+                let taxaTexto = (valorTaxa > 0) ? `R$ ${valorTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
+                if (isRetirada) taxaTexto = "RETIRADA";
 
                 container.innerHTML += `
                     <div class="bg-zinc-900 border-2 ${cardBorder} p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'} shadow-xl">
@@ -211,21 +210,21 @@
                             </a>
                         </div>
 
-                        <a href="${linkMaps}" target="_blank" class="text-xs font-bold link-maps mb-4 italic block uppercase">📍 ${p.endereco}</a>
+                        <p class="text-xs font-bold text-zinc-400 mb-4 italic block uppercase">📍 ${p.endereco}</p>
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-bold uppercase">
                             ${p.itens.split('|').map(i => `<div class="mb-1 text-zinc-200">• ${i.trim()}</div>`).join('')}
                         </div>
                         
-                        <div class="flex justify-between text-[10px] font-black uppercase text-zinc-500 mb-2 px-1">
-                            <span>Frete:</span>
-                            <span class="${taxaTexto === 'A COMBINAR' ? 'text-orange-500' : 'text-zinc-300'}">${taxaTexto}</span>
+                        <div class="flex justify-between text-[11px] font-black uppercase mb-4 px-1 border-b border-zinc-800 pb-2">
+                            <span class="text-zinc-500">TAXA DE ENTREGA:</span>
+                            <span class="${taxaTexto.includes('COMBINAR') ? 'text-orange-500' : 'text-[#39FF14]'}">${taxaTexto}</span>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 mb-4">
                             <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">👨‍🍳 Cozinha</button>
                             <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="bg-green-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">✅ Concluir</button>
                         </div>
-                        <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
+                        <div class="flex justify-between items-center pt-2">
                             <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
                             <div class="flex gap-2">
                                 <button onclick="cancelarPedido(${p.linhaOriginal}, this)" class="bg-red-900/40 text-red-500 border border-red-500 font-black px-3 py-3 rounded-xl text-[10px] uppercase">🗑️</button>
@@ -240,13 +239,15 @@
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
-            let fretePrint = p.taxaEntrega === "0,00" ? "A COMBINAR" : "R$ " + p.taxaEntrega;
             
-            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 14px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome}<br>END: ${p.endereco}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>TAXA ENTREGA: ${fretePrint}<br>PAGTO: ${p.pagto}<br><strong>TOTAL: ${p.total}</strong><div class="linha"></div><center>BOM APETITE!</center></div>`;
+            let vTaxa = limparValor(p.taxaEntrega);
+            let fretePrint = (vTaxa > 0) ? `R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
+            if (p.modalidade.includes('RETIRADA')) fretePrint = "RETIRADA";
+
+            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 14px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>END: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>TAXA ENTREGA: ${fretePrint}<br>PAGTO: ${p.pagto.toUpperCase()}<br><strong style="font-size: 14px;">TOTAL: ${p.total}</strong><div class="linha"></div><center>BOM APETITE!</center></div>`;
             setTimeout(() => { window.print(); }, 300);
         }
 
-        // --- MANTENDO DEMAIS FUNÇÕES ORIGINAIS ---
         async function cancelarPedido(linha, btn) { if (confirm("Deseja cancelar?")) { btn.innerText = "⏳"; await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' }); setTimeout(carregarPedidos, 1500); } }
         async function alterarStatus(linha, status, btn) { btn.innerText = "⏳"; await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' }); setTimeout(carregarPedidos, 1500); }
         function toggleEstoque() { const p = document.getElementById('painel-estoque'); p.classList.toggle('hidden'); if(!p.classList.contains('hidden')) carregarEstoque(); }
@@ -273,7 +274,7 @@
             } catch (e) { console.error("Erro estoque"); }
         }
         async function mudarStatusEstoque(item, status, btn) { btn.innerText = "⏳"; await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) }); setTimeout(carregarEstoque, 1000); }
-        function gerarRelatorio(tipo) { /* Sua função original de relatório */ }
+        function gerarRelatorio(tipo) { /* original */ }
         
         document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO TURNOS"; }, { once: true });
         carregarPedidos();
