@@ -20,7 +20,7 @@
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
         .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
-        .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; }
+        .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; transition: all 0.3s ease; }
         .neon-border { border-color: #39FF14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); }
     </style>
 </head>
@@ -192,6 +192,38 @@
                         </div>
                     </div>`;
             });
+            atualizarCronometros();
+        }
+
+        function atualizarCronometros() {
+            const agora = new Date();
+            document.querySelectorAll('[data-hora-pedido]').forEach(el => {
+                const status = el.getAttribute('data-status');
+                const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
+                
+                // Se o status for concluído, ele mantém o badge cinza e para de contar
+                if (status.includes('CONCLU')) {
+                    el.className = "timer-badge bg-zinc-700 opacity-50";
+                    // Se já tiver um tempo final, não mexe mais
+                    if (el.innerText !== "..." && el.innerText !== "calculando..." && el.innerText !== "OK") return;
+                }
+
+                const diff = Math.floor((agora - dataPedido) / 1000);
+                if (diff < 0) { el.innerText = "00:00"; return; }
+
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const tempoTexto = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
+                
+                el.innerText = tempoTexto;
+
+                // Cores apenas para quem NÃO está concluído
+                if (!status.includes('CONCLU')) {
+                    if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
+                    else if (m >= 20) el.className = "timer-badge bg-yellow-600";
+                    else el.className = "timer-badge bg-zinc-700";
+                }
+            });
         }
 
         async function alterarStatus(linha, status, btn) {
@@ -329,23 +361,6 @@
                     </div>
                 </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
-        }
-
-        function atualizarCronometros() {
-            const agora = new Date();
-            document.querySelectorAll('[data-hora-pedido]').forEach(el => {
-                const status = el.getAttribute('data-status');
-                if (status.includes('CONCLU')) { el.innerText = "OK"; return; }
-                const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
-                const diff = Math.floor((agora - dataPedido) / 1000);
-                if (diff < 0) { el.innerText = "00:00"; return; }
-                const h = Math.floor(diff / 3600);
-                const m = Math.floor((diff % 3600) / 60);
-                el.innerText = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
-                if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
-                else if (m >= 20) el.className = "timer-badge bg-yellow-600";
-                else el.className = "timer-badge bg-zinc-700";
-            });
         }
 
         document.body.addEventListener('click', () => {
