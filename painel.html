@@ -42,17 +42,14 @@
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] bg-black/95 p-4 backdrop-blur-sm">
         <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-10 text-center shadow-2xl">
             <h2 class="text-3xl font-black text-[#39FF14] italic uppercase mb-2">CAIXA ATUAL</h2>
-            <p class="text-zinc-500 text-[10px] mb-8 font-bold uppercase tracking-widest">Baseado em pedidos concluídos</p>
             <div id="rel-content" class="mb-8"></div>
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-zinc-700 transition-colors">Fechar Painel</button>
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-zinc-700">Fechar</button>
         </div>
     </div>
 
-    <div id="print-area"></div>
-
     <script>
-        // URL DO SEU SCRIPT ATUALIZADA
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxWxHsDmWlQ84MywvMoVjoVsWoQKln4QOytg1-UrG5W0QajsFEHSObZKPeLszImydXrXA/exec'; 
+        // Use a URL da sua última implantação (Deployment)
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzWxHsDmWlQ84MywvMoVjoVsWoQKln4QOytg1-UrG5W0QajsFEHSObZKPeLszImydXrXA/exec'; 
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
         
         let pedidosLocais = [];
@@ -74,32 +71,33 @@
                     modalidade: (row[7] || 'DELIVERY').toUpperCase()
                 }));
                 renderizarPedidos();
-            } catch (e) { console.error("Erro ao carregar pedidos da planilha"); }
+            } catch (e) { console.error("Erro ao carregar pedidos"); }
         }
 
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
+            // Inverte para os novos aparecerem primeiro
             [...pedidosLocais].reverse().forEach(p => {
                 const isConcluido = p.status.includes('CONCLU');
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
                 
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl border-t-8 ${isConcluido ? 'border-t-zinc-700 opacity-40' : (p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600')} shadow-xl transition-all">
+                    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl border-t-8 ${isConcluido ? 'border-t-zinc-700 opacity-40' : (p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600')} shadow-xl">
                         <div class="flex justify-between items-start mb-4">
-                            <span class="text-[9px] font-black bg-zinc-800 px-2 py-1 rounded text-zinc-400 uppercase tracking-tighter">${p.modalidade}</span>
-                            <span class="text-[9px] font-black ${isConcluido ? 'text-zinc-500' : 'text-[#39FF14]'} uppercase tracking-widest">${isConcluido ? '✓ Finalizado' : '● Ativo'}</span>
+                            <span class="text-[9px] font-black bg-zinc-800 px-2 py-1 rounded text-zinc-400 uppercase">${p.modalidade}</span>
+                            <span class="text-[9px] font-black ${isConcluido ? 'text-zinc-500' : 'text-[#39FF14]'} uppercase">${isConcluido ? '✓ Finalizado' : '● Ativo'}</span>
                         </div>
-                        <h3 class="text-2xl font-black uppercase text-white mb-1 leading-none tracking-tight">${p.nome}</h3>
+                        <h3 class="text-2xl font-black uppercase text-white mb-1 leading-none">${p.nome}</h3>
                         <p class="text-[11px] mb-4 italic text-zinc-400">📍 <a href="${mapsUrl}" target="_blank" class="map-link">${p.endereco}</a></p>
-                        <div class="bg-black/40 p-4 rounded-2xl mb-6 text-[12px] font-bold uppercase border border-zinc-800/50 text-zinc-300 leading-relaxed">
-                            ${p.itens.split('|').join('<br><span class="text-zinc-600">•</span> ')}
+                        <div class="bg-black/40 p-4 rounded-2xl mb-6 text-[12px] font-bold uppercase border border-zinc-800/50 text-zinc-300">
+                            ${p.itens.split('|').join('<br>• ')}
                         </div>
                         <div class="flex justify-between items-center pt-2">
-                            <span class="text-2xl font-black text-[#39FF14] italic tracking-tighter">${p.valorTxt}</span>
+                            <span class="text-2xl font-black text-[#39FF14] italic">${p.valorTxt}</span>
                             ${!isConcluido ? `
-                                <button onclick="alterarStatus(${p.linha}, 'CONCLUIDO')" class="bg-[#39FF14] text-black px-6 py-2.5 rounded-xl font-black text-[10px] uppercase hover:bg-white transition-all shadow-lg shadow-[#39FF14]/10">Finalizar</button>
-                            ` : ''}
+                                <button onclick="alterarStatus(${p.linha}, 'CONCLUIDO')" class="bg-[#39FF14] text-black px-6 py-2.5 rounded-xl font-black text-[10px] uppercase hover:bg-white transition-all shadow-lg">Finalizar</button>
+                            ` : '<button onclick="imprimirPedido(\''+encodeURIComponent(JSON.stringify(p))+'\')" class="bg-zinc-700 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase">🖨️ Reimprimir</button>'}
                         </div>
                     </div>`;
             });
@@ -107,7 +105,7 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<div class='text-center animate-pulse text-orange-500 font-black py-10 uppercase tracking-widest'>Sincronizando Categorias da Coluna C...</div>";
+            container.innerHTML = "<div class='text-center animate-pulse text-orange-500 font-black py-10 uppercase'>Sincronizando Estoque...</div>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoqueArr = await res.json();
@@ -131,7 +129,7 @@
                             <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'} transition-all">
                                 <p class="text-[10px] font-black uppercase mb-4 text-zinc-300 h-8 overflow-hidden leading-tight">${i.nome}</p>
                                 <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                    class="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-colors ${isPausado ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}">
+                                    class="w-full py-2.5 rounded-xl text-[9px] font-black uppercase ${isPausado ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}">
                                     ${isPausado ? 'Ativar' : 'Pausar'}
                                 </button>
                             </div>`;
@@ -139,47 +137,33 @@
                     html += `</div></div>`;
                 });
                 container.innerHTML = html;
-            } catch (e) { container.innerHTML = "<div class='text-red-500 font-bold p-4 text-center'>Erro ao carregar Coluna C. Verifique a URL do Script.</div>"; }
+            } catch (e) { container.innerHTML = "<div class='text-red-500 font-bold p-4 text-center uppercase'>Erro ao carregar categorias. Verifique se o Script foi publicado corretamente como 'Acesso de Qualquer Pessoa'.</div>"; }
         }
 
         function gerarRelatorio() {
             const concluidos = pedidosLocais.filter(p => p.status.includes('CONCLU'));
             let soma = 0;
             concluidos.forEach(p => {
-                // Remove R$, remove ponto de milhar, troca vírgula decimal por ponto
                 let v = p.valorTxt.toString().replace("R$", "").replace(/\./g, "").replace(",", ".");
                 soma += parseFloat(v) || 0;
             });
 
             document.getElementById('rel-content').innerHTML = `
-                <div class="text-5xl font-black text-[#39FF14] mb-4 tracking-tighter italic">R$ ${soma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-                <div class="bg-black/30 p-4 rounded-2xl border border-zinc-800 inline-block px-8">
-                    <p class="text-zinc-500 text-[9px] font-black uppercase mb-1">Volume de Vendas</p>
-                    <p class="text-white font-black text-xl uppercase tracking-tighter">${concluidos.length} Pedidos</p>
-                </div>
+                <div class="text-5xl font-black text-[#39FF14] mb-4 italic">R$ ${soma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <p class="text-zinc-500 text-xs font-bold uppercase">${concluidos.length} PEDIDOS FINALIZADOS</p>
             `;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
 
         async function mudarStatusEstoque(item, status, btn) {
-            const textOrig = btn.innerText;
             btn.innerText = "⏳";
-            btn.disabled = true;
-            try {
-                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
-                setTimeout(carregarEstoque, 1000);
-            } catch (e) { 
-                alert("Erro ao atualizar estoque."); 
-                btn.innerText = textOrig;
-                btn.disabled = false;
-            }
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
+            setTimeout(carregarEstoque, 1000);
         }
 
         async function alterarStatus(row, status) {
-            try {
-                await fetch(`${WEB_APP_URL}?row=${row}&status=${status}`);
-                carregarPedidos();
-            } catch (e) { alert("Erro ao atualizar status do pedido."); }
+            await fetch(`${WEB_APP_URL}?row=${row}&status=${status}`);
+            carregarPedidos();
         }
 
         function toggleEstoque() {
@@ -188,7 +172,6 @@
             if(!p.classList.contains('hidden')) carregarEstoque();
         }
 
-        // Inicialização
         carregarPedidos();
         setInterval(carregarPedidos, 30000);
     </script>
