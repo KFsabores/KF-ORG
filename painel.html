@@ -63,7 +63,7 @@
 
     <script>
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwy0q6ZhZvHEVUU-EmkfUTLmbmDvi5j2t8ydbjTcByjahZAB2xH0s5KrDc2UUew-Hcwiw/exec'; 
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyUAwFYfg4ZiqQnFumpBYk8XDf8r7mYRJuhl1Ivhu5IPlQhkhxa-UgWZcx1nbueJUYyaw/exec'; 
 
         let todosOsPedidos = []; 
         let totalPedidosAnterior = 0;
@@ -134,7 +134,8 @@
                     total: row[5],
                     totalNum: limparValor(row[5]),
                     status: (row[6] || 'PENDENTE').toUpperCase(),
-                    modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase()
+                    modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
+                    telefone: row[8] || "" // <--- LENDO COLUNA I
                 }));
 
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
@@ -160,7 +161,11 @@
                 let isRetirada = p.modalidade.includes('RETIRADA');
                 let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (p.status.includes("CONCLUIDO") ? "border-zinc-800 opacity-50" : "border-yellow-500");
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
-                const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
+                const linkMaps = `https://www.google.com/maps/search/${encodeURIComponent(p.endereco)}`;
+                
+                // Link do Whatsapp
+                const telLimpo = p.telefone.toString().replace(/\D/g, '');
+                const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
 
                 container.innerHTML += `
                     <div class="bg-zinc-900 border-2 ${cardBorder} p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'} shadow-xl">
@@ -171,7 +176,14 @@
                                 <span class="status-badge ${p.status.includes("PREPARANDO") ? 'bg-blue-600' : (p.status.includes("CONCLUIDO") ? 'bg-zinc-700' : 'bg-yellow-600')} text-white">${p.status}</span>
                             </div>
                         </div>
-                        <h3 class="text-2xl font-black italic mb-2 uppercase leading-none">${p.nome}</h3>
+                        <h3 class="text-2xl font-black italic mb-1 uppercase leading-none">${p.nome}</h3>
+                        
+                        <div class="mb-3">
+                            <a href="${linkZap}" target="_blank" class="inline-flex items-center gap-2 bg-green-600/20 text-green-500 px-3 py-1.5 rounded-lg text-[10px] font-black border border-green-600/30 hover:bg-green-600 hover:text-white transition-all">
+                                📞 CONTATO: ${p.telefone || 'N/A'}
+                            </a>
+                        </div>
+
                         <a href="${linkMaps}" target="_blank" class="text-xs font-bold link-maps mb-4 italic block uppercase">📍 ${p.endereco}</a>
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-bold uppercase">
                             ${p.itens.split('|').map(i => `<div class="mb-1 text-zinc-200">• ${i.trim()}</div>`).join('')}
@@ -243,7 +255,7 @@
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
-            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 16px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome}<br>ENDEREÇO: ${p.endereco}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>PAGTO: ${p.pagto}<br>TOTAL: ${p.total}<div class="linha"></div><center><br>BOM APETITE!</center></div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 16px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome}<br>TEL: ${p.telefone}<br>ENDEREÇO: ${p.endereco}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>PAGTO: ${p.pagto}<br>TOTAL: ${p.total}<div class="linha"></div><center><br>BOM APETITE!</center></div>`;
             setTimeout(() => { window.print(); }, 300);
         }
 
