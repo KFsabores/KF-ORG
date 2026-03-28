@@ -24,12 +24,7 @@
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Banner de Fechado Otimizado */
         #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
-        
-        /* Estilo para desativar botões quando a loja fecha */
-        .btn-disabled { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
     </style>
 </head>
 <body class="pb-24">
@@ -133,12 +128,11 @@
         
         let modoAdmin = false;
         
-        // Configuração de Horários
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 }, // Quinta
-            5: { abrir: 2000, fechar: 2500 }, // Sexta
-            6: { abrir: 2000, fechar: 2500 }, // Sábado
-            0: { abrir: 1900, fechar: 2500 }  // Domingo
+            4: { abrir: 2000, fechar: 2400 },
+            5: { abrir: 2000, fechar: 2500 },
+            6: { abrir: 2000, fechar: 2500 },
+            0: { abrir: 1900, fechar: 2500 }
         };
 
         function estaAberto() {
@@ -155,12 +149,10 @@
             const banner = document.getElementById('banner-status');
             const listaH = document.getElementById('horarios-lista');
             const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-            const aberto = estaAberto();
 
-            if (!aberto) {
+            if (!estaAberto()) {
                 banner.classList.remove('hidden');
                 let html = "";
-                // Ordenar para mostrar Quinta a Domingo
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
                     if (h) {
@@ -173,18 +165,11 @@
             } else {
                 banner.classList.add('hidden');
             }
-
-            // Desativa botões de escolha se estiver fechado
-            document.querySelectorAll('button[onclick*="open"]').forEach(btn => {
-                aberto ? btn.classList.remove('btn-disabled') : btn.classList.add('btn-disabled');
-            });
         }
 
         function ativarModoAdmin() {
             const tentativa = prompt("Senha de Acesso Admin:");
-            // Hash MD5 da senha 1231219
             const hashPermitido = "82487469a4781434c7b13491411082d6"; 
-
             if(md5(tentativa) === hashPermitido) {
                 modoAdmin = true;
                 alert("🛠️ MODO ADMIN ATIVADO!");
@@ -194,7 +179,6 @@
             }
         }
 
-        // Dados do Menu
         const menuData = {
             promos: [
                 { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
@@ -287,7 +271,7 @@
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase ${!estaAberto() ? 'btn-disabled' : ''}">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => `
@@ -297,12 +281,11 @@
                         <p class="text-[9px] text-zinc-400 uppercase tracking-wider leading-tight mt-1">${item.desc || ''}</p>
                         <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : '25cm: R$ '+item.p25.toFixed(2)+' | 35cm: R$ '+item.p35.toFixed(2)}</p>
                     </div>
-                    <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shrink-0 ${!estaAberto() ? 'btn-disabled' : ''}">Escolher</button>
+                    <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shrink-0">Escolher</button>
                 </div>`).join('');
         }
 
         function openItemModal(cat, index) {
-            if(!estaAberto()) return;
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') {
                 cart.push({ name: currentItem.name, price: currentItem.price });
@@ -353,7 +336,6 @@
                 if(sB && sB !== sA) desc.push(`½ ${sA} / ½ ${sB}`);
                 else desc.push(`${sA} (Inteira)`);
             });
-            
             let name = "";
             if(!currentItem.pizzas && currentItem.p25) {
                 name = `${selectedSize}CM ${currentItem.name} (${desc.join(" | ")})`;
@@ -361,13 +343,11 @@
                 name = currentItem.name + " (" + desc.join(" | ") + ")";
             }
             if(promoRefri) name += " + " + promoRefri.value;
-            
             cart.push({ name, price });
             updateCartUI(); closeModal();
         }
 
         function openTapiocaModal() {
-            if(!estaAberto()) return;
             tapRecheios = []; tapExtra = "Nenhum";
             let html = "";
             menuData.tapioca_cats.forEach(group => {
@@ -421,7 +401,11 @@
         }
 
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!\nConsulte nossos horários no topo da página."); return; }
+            // Bloqueio apenas na hora de enviar o pedido
+            if (!estaAberto()) { 
+                alert("LOJA FECHADA NO MOMENTO!\nVocê pode montar seu carrinho, mas o envio só é permitido durante nosso horário de funcionamento."); 
+                return; 
+            }
 
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
@@ -473,7 +457,6 @@
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         
-        // Inicialização
         verificarStatusLoja();
         switchCategory('promos');
     </script>
