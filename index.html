@@ -54,6 +54,7 @@
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto relative">
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
+            
             <div id="cart-items" class="space-y-2 mb-4"></div>
             
             <div id="form-fechamento">
@@ -116,7 +117,8 @@
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
         const ENDERECO_TRAILER = "R. das Pitombeiras, 507-575 - Paciência, Rio de Janeiro - RJ, 23585-245";
-        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzhbU6KsTKfKb58jhjTOVki860Z5kYQgJ_ESjOjwh4kJzGmIDaOKu2EXIDQrV44TY-oEQ/exec";
+        // URL ATUALIZADA V5
+        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbw9G28_dGoaU90k6qs9--5FOJNEr6zT2gS1vvcrlqmjJPbYaDnJPilpzjqcgtWYq87yXQ/exec";
         
         let estoqueAtual = {}; 
         let modoAdmin = false;
@@ -124,10 +126,10 @@
         if (urlParams.get('admin') === 'true') { modoAdmin = true; }
         
         const HORARIOS = {
-            4: { abrir: 2000, fechar: 2400 },
-            5: { abrir: 2000, fechar: 2500 },
-            6: { abrir: 2000, fechar: 2500 },
-            0: { abrir: 1900, fechar: 2500 }
+            4: { abrir: 2000, fechar: 2400 }, // Quinta
+            5: { abrir: 2000, fechar: 2500 }, // Sexta
+            6: { abrir: 2000, fechar: 2500 }, // Sábado
+            0: { abrir: 1900, fechar: 2500 }  // Domingo
         };
 
         const menuData = {
@@ -209,7 +211,7 @@
                     const km = dados.distance.value / 1000;
                     distanciaTexto = dados.distance.text;
 
-                    // Lógica de Taxas do seu Mapa
+                    // Lógica de Taxas por KM
                     if (km <= 2.5) taxaEntrega = 4.00;
                     else if (km <= 4.0) taxaEntrega = 6.00;
                     else if (km <= 5.5) taxaEntrega = 8.00;
@@ -264,8 +266,12 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
-            else if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") document.getElementById('cust-addr').value = "";
+            if(tipo === 'RETIRADA') {
+                document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
+                taxaEntrega = 0;
+            } else if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") {
+                document.getElementById('cust-addr').value = "";
+            }
             updateCartUI();
         }
 
@@ -336,7 +342,7 @@
                     const estilo = isPausado ? 'opacity: 0.4; border-color: #333; pointer-events: none;' : '';
                     html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${estilo}" class="ing-btn flex flex-col">
                                 <span class="text-white font-bold uppercase">${r.n}</span>
-                                <span class="${isPausado ? 'text-red-500' : 'gold-text'}">${isPausado ? 'ESGOTADO' : 'R$ '+r.p.toFixed(2)}</span>
+                                <span class="${isPausado ? 'text-zinc-500' : 'gold-text'}">${isPausado ? 'ESGOTADO' : 'R$ '+r.p.toFixed(2)}</span>
                              </button>`; 
                 });
             });
@@ -374,7 +380,7 @@
             const obs = document.getElementById('cust-obs').value;
             const pagto = document.getElementById('pay-method').value;
             const troco = document.getElementById('troco-val').value;
-            const total = document.getElementById('cart-total').innerText;
+            const totalStr = document.getElementById('cart-total').innerText;
             const sub = document.getElementById('cart-subtotal').innerText;
             
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
@@ -394,8 +400,9 @@
             msg += `%0A--------------------------%0A`;
             msg += `*Subtotal:* R$ ${sub}%0A`;
             if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
-            msg += `*💰 TOTAL: R$ ${total}*`;
+            msg += `*💰 TOTAL: R$ ${totalStr}*`;
             
+            // ENVIO PARA O GOOGLE SHEETS (Sincronizado com Script V5)
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
                 mode: 'no-cors', 
@@ -403,10 +410,11 @@
                     nome: n, 
                     telefone: tel,
                     endereco: a, 
-                    total: total, 
+                    total: totalStr, 
                     pagamento: pagto,
                     modalidade: modalidadeAtual,
-                    itens: cart.map(i=>i.name).join(" | ")
+                    itens: cart.map(i=>i.name).join(" | "),
+                    taxa: taxaEntrega.toFixed(2) // ENVIA PARA COLUNA J
                 }) 
             });
 
