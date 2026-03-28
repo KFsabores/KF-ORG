@@ -169,7 +169,9 @@
 
         function ativarModoAdmin() {
             const tentativa = prompt("Senha de Acesso Admin:");
-            const hashPermitido = "82487469a4781434c7b13491411082d6"; 
+            // 
+            const hashPermitido = "d897072480391d1e6704043b355280b0"; 
+
             if(md5(tentativa) === hashPermitido) {
                 modoAdmin = true;
                 alert("🛠️ MODO ADMIN ATIVADO!");
@@ -401,12 +403,10 @@
         }
 
         async function finalizeOrder() {
-            // Bloqueio apenas na hora de enviar o pedido
             if (!estaAberto()) { 
                 alert("LOJA FECHADA NO MOMENTO!\nVocê pode montar seu carrinho, mas o envio só é permitido durante nosso horário de funcionamento."); 
                 return; 
             }
-
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
             const o = document.getElementById('cust-obs').value;
@@ -419,14 +419,12 @@
             if(cart.length === 0) return alert("Seu carrinho está vazio!");
             
             const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
-            
             const dadosParaPlanilha = {
                 nome: n, endereco: a, 
                 itens: itensTexto + (o ? ` [OBS: ${o.toUpperCase()}]` : ""), 
                 pagamento: p + (t ? ' (Troco p/ '+t+')' : ''), 
                 total: "R$ " + total, modalidade: modalidadeAtual
             };
-
             fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
 
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
