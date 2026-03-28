@@ -40,15 +40,17 @@
             </div>
         </div>
 
-        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30">
+        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-orange-500 italic uppercase">Estoque</h2>
+                <h2 class="text-xl font-black text-orange-500 italic uppercase text-xs">Gerenciar Disponibilidade</h2>
                 <button onclick="toggleEstoque()" class="text-zinc-500 font-bold text-sm uppercase">Fechar X</button>
             </div>
             <div id="lista-estoque-categorias" class="space-y-8"></div>
         </div>
 
-        <div id="lista-pedidos" class="grid-custom"></div>
+        <div id="lista-pedidos" class="grid-custom">
+            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase tracking-widest text-xs animate-pulse">Iniciando Sistema...</div>
+        </div>
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4 bg-black/95">
@@ -72,18 +74,25 @@
 
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
+        // PARSE DE DATA CORRIGIDO PARA EVITAR NaN
         function parseDataBR(str) {
             if(!str) return new Date(0);
-            const p = str.split(' ');
-            const d = p[0].split('/');
-            const h = p[1] ? p[1].split(':') : ["00","00"];
-            return new Date(2000 + parseInt(d[2] || 0), d[1]-1, d[0], h[0], h[1]);
+            try {
+                const partes = str.split(' ');
+                const dataPartes = partes[0].split('/');
+                const horaPartes = partes[1] ? partes[1].split(':') : ["00","00"];
+                
+                let dia = parseInt(dataPartes[0]);
+                let mes = parseInt(dataPartes[1]) - 1;
+                let ano = parseInt(dataPartes[2]);
+                if (ano < 100) ano += 2000; // Converte 25 em 2025
+
+                return new Date(ano, mes, dia, parseInt(horaPartes[0]), parseInt(horaPartes[1]));
+            } catch(e) { return new Date(0); }
         }
 
-        // LIMPEZA DE VALOR PARA SOMA CORRETA
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            // Remove R$, espaços, pontos de milhar e troca vírgula por ponto
             let limpo = valorStr.replace("R$", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
             return parseFloat(limpo) || 0;
         }
@@ -153,28 +162,32 @@
             });
         }
 
+        // RELATÓRIO COM FILTRO DE DATA MAIS FORTE
         function gerarRelatorio(tipo) {
             const agora = new Date();
             let titulo = "";
-            let baseFiltro = [];
+            let filtrados = [];
 
             if (tipo === 'dia') {
                 titulo = "Vendas Hoje (Concluídas)";
-                baseFiltro = todosOsPedidos.filter(p => p.objData.toDateString() === agora.toDateString());
+                filtrados = todosOsPedidos.filter(p => {
+                    const hoje = agora.toLocaleDateString('pt-BR');
+                    const dataP = p.objData.toLocaleDateString('pt-BR');
+                    return dataP === hoje && (p.status === "CONCLUIDO" || p.status === "PREPARANDO");
+                });
             } else {
                 titulo = "Vendas 7 Dias (Concluídas)";
-                const seteDias = new Date();
-                seteDias.setDate(agora.getDate() - 7);
-                baseFiltro = todosOsPedidos.filter(p => p.objData >= seteDias);
+                const seteDiasAtras = new Date();
+                seteDiasAtras.setDate(agora.getDate() - 7);
+                filtrados = todosOsPedidos.filter(p => {
+                    return p.objData >= seteDiasAtras && (p.status === "CONCLUIDO" || p.status === "PREPARANDO");
+                });
             }
 
-            // REGRA: Só somar o que foi concluído ou está em preparo (ignora cancelados/vazios)
-            const filtrados = baseFiltro.filter(p => p.status === "CONCLUIDO" || p.status === "PREPARANDO");
-
             const totalGrana = filtrados.reduce((acc, p) => acc + p.totalNum, 0);
-            const pix = filtrados.filter(p => p.pagto.includes('Pix')).length;
-            const cartao = filtrados.filter(p => p.pagto.includes('Cartão')).length;
-            const dinheiro = filtrados.filter(p => p.pagto.includes('Dinheiro')).length;
+            const pix = filtrados.filter(p => p.pagto.toLowerCase().includes('pix')).length;
+            const cartao = filtrados.filter(p => p.pagto.toLowerCase().includes('cart') || p.pagto.toLowerCase().includes('déb')).length;
+            const dinheiro = filtrados.filter(p => p.pagto.toLowerCase().includes('din')).length;
 
             document.getElementById('rel-titulo').innerText = titulo;
             document.getElementById('rel-content').innerHTML = `
@@ -198,7 +211,7 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-center py-10 animate-pulse text-zinc-500 uppercase font-black text-[10px]'>Consultando...</p>";
+            container.innerHTML = "<p class='text-center py-10 text-zinc-500 font-black text-[10px]'>Sincronizando...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoque = await res.json();
@@ -219,8 +232,8 @@
                         htmlFinal += `<div><h3 class="text-[#39FF14] text-[10px] font-black uppercase mb-3 border-b border-zinc-800 pb-1">${titulo}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">${itensDaCat.map(item => { itensProcessados.add(item); const isPausado = estoque[item] === 'PAUSADO'; return `<div class="estoque-item ${isPausado ? 'pausado' : ''} p-3 rounded-xl flex flex-col justify-between gap-2"><span class="text-[9px] font-black uppercase leading-tight">${item}</span><button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-lg text-[8px] font-black uppercase ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">${isPausado ? 'Ativar' : 'Pausar'}</button></div>`; }).join('')}</div></div>`;
                     }
                 }
-                container.innerHTML = htmlFinal || "Nenhum item.";
-            } catch (e) { container.innerHTML = "Erro planilha."; }
+                container.innerHTML = htmlFinal;
+            } catch (e) { container.innerHTML = "Erro."; }
         }
 
         async function mudarStatusEstoque(item, novoStatus, btn) {
