@@ -65,7 +65,6 @@
     <div id="print-area"></div>
 
     <script>
-        // Use a mesma URL do Index (WEB_APP_URL) para evitar conflitos
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyUAwFYfg4ZiqQnFumpBYk8XDf8r7mYRJuhl1Ivhu5IPlQhkhxa-UgWZcx1nbueJUYyaw/exec';
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
@@ -114,10 +113,9 @@
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
                     telefone: row[8] || "",
-                    taxaEntrega: row[9] || "0"
+                    taxaEntrega: row[9] || "0" // Lendo Coluna J
                 }));
 
-                // Somente toca som se houver novo pedido pendente
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
                     const temNovoPendente = todosOsPedidos.some(p => p.status === 'PENDENTE');
                     if(temNovoPendente) ringtone.play().catch(e => {});
@@ -133,7 +131,6 @@
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
             
-            // Ordenação: Pendentes/Preparando primeiro, depois por data
             let pedidosParaExibir = [...todosOsPedidos].sort((a, b) => {
                 const statusA = (a.status.includes("PENDENTE") || a.status.includes("PREPARANDO")) ? 0 : 1;
                 const statusB = (b.status.includes("PENDENTE") || b.status.includes("PREPARANDO")) ? 0 : 1;
@@ -146,8 +143,15 @@
                 const isConcluido = p.status.includes("CONCLUIDO");
                 const cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (isConcluido ? "border-zinc-800 opacity-60" : "border-yellow-500 neon-border");
                 
+                // Lógica da Taxa de Entrega (Coluna J)
                 let vTaxa = limparValor(p.taxaEntrega);
-                let taxaTexto = isRetirada ? "🛍️ RETIRADA EM LOJA" : (vTaxa > 0 ? `🛵 FRETE: R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "🛵 FRETE: A COMBINAR");
+                let taxaTexto = "";
+                if (isRetirada) {
+                    taxaTexto = "🛍️ RETIRADA EM LOJA";
+                } else {
+                    const valorFormatado = vTaxa > 0 ? `R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
+                    taxaTexto = `🛵 TAXA DE ENTREGA: ${valorFormatado}`;
+                }
 
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
                 const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
@@ -168,7 +172,7 @@
                         
                         <div class="flex gap-2 mb-4">
                             <a href="${linkZap}" target="_blank" class="bg-green-600/20 text-green-500 px-3 py-2 rounded-xl text-[10px] font-black border border-green-600/30 hover:bg-green-600 hover:text-white transition-all uppercase">WhatsApp</a>
-                            <a href="${linkMaps}" target="_blank" class="bg-blue-600/20 text-blue-400 px-3 py-2 rounded-xl text-[10px] font-black border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all uppercase">Ver Mapa</a>
+                            <a href="${linkMaps}" target="_blank" class="bg-blue-600/20 text-blue-400 px-3 py-2 rounded-xl text-[10px] font-black border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all uppercase">Mapa</a>
                         </div>
 
                         <p class="text-[11px] font-bold text-zinc-400 mb-4 uppercase italic">📍 ${p.endereco}</p>
@@ -230,6 +234,7 @@
                     ${lista}
                     <div class="linha"></div>
                     PAGTO: ${p.pagto.toUpperCase()}<br>
+                    TAXA DE ENTREGA: R$ ${limparValor(p.taxaEntrega).toFixed(2)}<br>
                     TOTAL: ${p.total}<br>
                     <div class="linha"></div>
                     <center><br>OBRIGADO PELA PREFERÊNCIA!<br>BOM APETITE!</center>
@@ -300,18 +305,10 @@
             
             todosOsPedidos.forEach(p => {
                 if (!p.status.includes('CONCLU')) return;
-                
-                if (tipo === 'dia') {
-                    // Turno começa 17h do dia anterior ou atual
-                    let inicioTurno = new Date(agora);
-                    if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
-                    inicioTurno.setHours(17, 0, 0);
-                    if (p.objData >= inicioTurno) listaFiltrada.push(p);
-                } else {
-                    let umaSemanaAtras = new Date();
-                    umaSemanaAtras.setDate(agora.getDate() - 7);
-                    if (p.objData >= umaSemanaAtras) listaFiltrada.push(p);
-                }
+                let inicioTurno = new Date(agora);
+                if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
+                inicioTurno.setHours(17, 0, 0);
+                if (tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(agora.setDate(agora.getDate()-7)))) listaFiltrada.push(p);
             });
 
             let totalDel = 0, qtdDel = 0, totalRet = 0, qtdRet = 0;
@@ -332,7 +329,7 @@
                         <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
-                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1 tracking-widest">FATURAMENTO TOTAL</p>
+                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">TOTAL GERAL</p>
                         <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                 </div>`;
@@ -344,15 +341,11 @@
             document.querySelectorAll('[data-hora-pedido]').forEach(el => {
                 const status = el.getAttribute('data-status');
                 if (status.includes('CONCLU')) { el.innerText = "OK"; return; }
-
                 const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
                 const diff = Math.floor((agora - dataPedido) / 1000);
-                
                 if (diff < 0) { el.innerText = "00:00"; return; }
                 const h = Math.floor(diff / 3600);
                 const m = Math.floor((diff % 3600) / 60);
-                const s = diff % 60;
-
                 el.innerText = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
                 if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
                 else if (m >= 20) el.className = "timer-badge bg-yellow-600";
@@ -360,14 +353,12 @@
             });
         }
 
-        // Interação para ativar som
         document.body.addEventListener('click', () => {
             pararSom();
             document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
             document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase tracking-widest mt-2";
         }, { once: true });
 
-        // Inícios
         setInterval(carregarPedidos, 15000);
         setInterval(atualizarCronometros, 10000);
         carregarPedidos();
