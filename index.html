@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KF Sabores - Pedido Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #000; color: #fff; }
@@ -24,8 +25,11 @@
         .success-screen { text-align: center; padding: 20px; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Estilo do Banner de Fechado */
-        #banner-fechado { background: rgba(255, 0, 0, 0.1); border: 1px solid #ff4444; color: #ff4444; }
+        /* Banner de Fechado Otimizado */
+        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
+        
+        /* Estilo para desativar botões quando a loja fecha */
+        .btn-disabled { opacity: 0.4; filter: grayscale(1); pointer-events: none; }
     </style>
 </head>
 <body class="pb-24">
@@ -44,8 +48,7 @@
 
     <div id="banner-status" class="hidden p-4 mx-4 mt-4 rounded-2xl border text-center">
         <h2 class="font-black uppercase italic text-sm mb-2">🚫 LOJA FECHADA NO MOMENTO!</h2>
-        <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase">
-            </div>
+        <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase"></div>
     </div>
 
     <nav class="flex overflow-x-auto bg-black p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800 mt-4">
@@ -129,8 +132,8 @@
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx0SYDUEoO73_L0E2RKKYC4Zo2IqpO7kJ8shEdLmZkWF_-6yjUGti3BDoLjfWxL2XVmVw/exec";
         
         let modoAdmin = false;
-        const SENHA_ADMIN = "1233";
-
+        
+        // Configuração de Horários
         const HORARIOS = {
             4: { abrir: 2000, fechar: 2400 }, // Quinta
             5: { abrir: 2000, fechar: 2500 }, // Sexta
@@ -152,30 +155,46 @@
             const banner = document.getElementById('banner-status');
             const listaH = document.getElementById('horarios-lista');
             const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+            const aberto = estaAberto();
 
-            if (!estaAberto()) {
+            if (!aberto) {
                 banner.classList.remove('hidden');
                 let html = "";
-                Object.keys(HORARIOS).forEach(dia => {
+                // Ordenar para mostrar Quinta a Domingo
+                [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
-                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : (h.fechar/100).toFixed(2).replace('.',':'))) : (h.fechar/100).toFixed(2).replace('.',':');
-                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    if (h) {
+                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : (h.fechar/100).toFixed(2).replace('.',':'))) : (h.fechar/100).toFixed(2).replace('.',':');
+                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    }
                 });
                 listaH.innerHTML = html;
             } else {
                 banner.classList.add('hidden');
             }
+
+            // Desativa botões de escolha se estiver fechado
+            document.querySelectorAll('button[onclick*="open"]').forEach(btn => {
+                aberto ? btn.classList.remove('btn-disabled') : btn.classList.add('btn-disabled');
+            });
         }
 
         function ativarModoAdmin() {
-            if(prompt("Senha de Acesso Admin:") === SENHA_ADMIN) {
+            const tentativa = prompt("Senha de Acesso Admin:");
+            // Hash MD5 da senha 1231219
+            const hashPermitido = "82487469a4781434c7b13491411082d6"; 
+
+            if(md5(tentativa) === hashPermitido) {
                 modoAdmin = true;
                 alert("🛠️ MODO ADMIN ATIVADO!");
                 verificarStatusLoja();
+            } else {
+                alert("❌ Senha incorreta!");
             }
         }
 
+        // Dados do Menu
         const menuData = {
             promos: [
                 { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
@@ -268,7 +287,7 @@
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase ${!estaAberto() ? 'btn-disabled' : ''}">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => `
@@ -278,11 +297,12 @@
                         <p class="text-[9px] text-zinc-400 uppercase tracking-wider leading-tight mt-1">${item.desc || ''}</p>
                         <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : '25cm: R$ '+item.p25.toFixed(2)+' | 35cm: R$ '+item.p35.toFixed(2)}</p>
                     </div>
-                    <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shrink-0">Escolher</button>
+                    <button onclick='openItemModal("${cat}", ${index})' class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase shrink-0 ${!estaAberto() ? 'btn-disabled' : ''}">Escolher</button>
                 </div>`).join('');
         }
 
         function openItemModal(cat, index) {
+            if(!estaAberto()) return;
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') {
                 cart.push({ name: currentItem.name, price: currentItem.price });
@@ -340,7 +360,6 @@
             } else {
                 name = currentItem.name + " (" + desc.join(" | ") + ")";
             }
-
             if(promoRefri) name += " + " + promoRefri.value;
             
             cart.push({ name, price });
@@ -348,6 +367,7 @@
         }
 
         function openTapiocaModal() {
+            if(!estaAberto()) return;
             tapRecheios = []; tapExtra = "Nenhum";
             let html = "";
             menuData.tapioca_cats.forEach(group => {
@@ -410,17 +430,17 @@
             const t = document.getElementById('troco-val').value;
             const total = document.getElementById('cart-total').innerText;
 
-            if(!n || !a || cart.length === 0) return alert("Preencha Nome e Endereço!");
+            if(!n) { alert("Por favor, digite seu nome."); document.getElementById('cust-name').focus(); return; }
+            if(modalidadeAtual === 'DELIVERY' && !a) { alert("Por favor, informe o endereço de entrega."); document.getElementById('cust-addr').focus(); return; }
+            if(cart.length === 0) return alert("Seu carrinho está vazio!");
             
             const itensTexto = cart.map(i => i.name.toUpperCase()).join(" | ");
             
             const dadosParaPlanilha = {
-                nome: n, 
-                endereco: a, 
+                nome: n, endereco: a, 
                 itens: itensTexto + (o ? ` [OBS: ${o.toUpperCase()}]` : ""), 
                 pagamento: p + (t ? ' (Troco p/ '+t+')' : ''), 
-                total: "R$ " + total, 
-                modalidade: modalidadeAtual
+                total: "R$ " + total, modalidade: modalidadeAtual
             };
 
             fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify(dadosParaPlanilha) });
@@ -429,34 +449,23 @@
             msg += `*TIPO:* ${modalidadeAtual === 'DELIVERY' ? '🛵 ENTREGA' : '🛍️ RETIRADA NO LOCAL'}%0A%0A`;
             msg += `*👤 CLIENTE:*%0A${n.toUpperCase()}%0A%0A`;
             if(modalidadeAtual === 'DELIVERY') msg += `*📍 ENDEREÇO:*%0A${a.toUpperCase()}%0A%0A`;
-            
             if(o) msg += `*📝 OBSERVAÇÃO:*%0A${o.toUpperCase()}%0A%0A`;
-
             msg += `*------------------------------*%0A`;
             msg += `*🛒 ITENS DO PEDIDO:*%0A`;
             cart.forEach(i => { msg += `%0A• ${i.name.toUpperCase()}%0A  _Valor: R$ ${i.price.toFixed(2)}_%0A`; });
             msg += `%0A*------------------------------*%0A%0A`;
             msg += `*💳 PAGAMENTO:*%0A${p}${t ? ' (Troco para '+t+')' : ''}%0A%0A`;
             msg += `*💰 TOTAL DO PEDIDO:*%0A*R$ ${total}*%0A%0A`;
-            msg += `_Favor confirmar o pedido e o tempo de entrega._`;
 
             const cartContent = document.getElementById('cart-content');
             cartContent.innerHTML = `
                 <div class="success-screen">
-                    <div class="flex justify-center mb-6">
-                        <div class="rounded-full bg-[#39FF14]/20 p-8">
-                            <span class="text-7xl">✅</span>
-                        </div>
-                    </div>
+                    <div class="flex justify-center mb-6"><div class="rounded-full bg-[#39FF14]/20 p-8"><span class="text-7xl">✅</span></div></div>
                     <h2 class="text-3xl font-black neon-text italic uppercase mb-2">Pedido Quase Lá!</h2>
-                    <p class="text-zinc-400 text-xs mb-8 uppercase font-bold tracking-widest leading-relaxed">
-                        Seu pedido foi registrado no sistema.<br>Clique no botão abaixo para enviar o resumo via WhatsApp.
-                    </p>
+                    <p class="text-zinc-400 text-xs mb-8 uppercase font-bold tracking-widest leading-relaxed">Seu pedido foi registrado no sistema.<br>Clique no botão abaixo para enviar o resumo via WhatsApp.</p>
                     <a href="https://wa.me/${WHATSAPP_NUMBER}?text=${msg}" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black uppercase shadow-lg text-center block mb-4">ENVIAR NO WHATSAPP</a>
                     <button onclick="location.reload()" class="w-full bg-zinc-800 text-zinc-500 py-3 rounded-2xl font-black uppercase text-[10px]">FECHAR JANELA</button>
-                </div>
-            `;
-            
+                </div>`;
             cart = [];
             updateCartUI();
         }
