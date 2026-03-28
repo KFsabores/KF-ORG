@@ -6,6 +6,7 @@
     <title>KF Sabores - Pedido Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=places"></script>
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #000; color: #fff; }
         .neon-text { color: #39FF14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.8), 0 0 20px rgba(57, 255, 20, 0.5); }
@@ -64,8 +65,12 @@
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
                 
-                <div id="area-endereco"><input type="text" id="cust-addr" placeholder="Endereço de Entrega"></div>
-                <textarea id="cust-obs" placeholder="Observações (Opcional)"></textarea>
+                <div id="area-endereco">
+                    <input type="text" id="cust-addr" placeholder="Digite endereço e selecione..." onfocus="initAutocomplete()">
+                    <p id="distancia-info" class="text-[10px] gold-text mb-2 italic font-bold text-center"></p>
+                </div>
+
+                <textarea id="cust-obs" placeholder="Ponto de referência ou observação"></textarea>
                 
                 <select id="pay-method" onchange="checkPayment()">
                     <option value="Pix">Pix</option>
@@ -74,8 +79,13 @@
                 </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
                 
-                <div class="text-2xl font-black text-right neon-text my-4 border-t border-zinc-800 pt-4">Total: R$ <span id="cart-total">0.00</span></div>
-                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase">Finalizar Pedido</button>
+                <div class="space-y-1 text-sm border-t border-zinc-800 pt-4 mt-4">
+                    <div class="flex justify-between text-zinc-400"><span>Subtotal:</span><span>R$ <span id="cart-subtotal">0.00</span></span></div>
+                    <div class="flex justify-between text-zinc-400" id="row-taxa"><span>Taxa de Entrega:</span><span>R$ <span id="taxa-valor">0.00</span></span></div>
+                    <div class="flex justify-between text-2xl font-black neon-text pt-2"><span>Total:</span><span>R$ <span id="cart-total">0.00</span></span></div>
+                </div>
+
+                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4">Finalizar Pedido</button>
             </div>
         </div>
     </div>
@@ -105,6 +115,7 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
+        const ENDERECO_TRAILER = "R. das Pitombeiras, 507-575 - Paciência, Rio de Janeiro - RJ, 23585-245";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzhbU6KsTKfKb58jhjTOVki860Z5kYQgJ_ESjOjwh4kJzGmIDaOKu2EXIDQrV44TY-oEQ/exec";
         
         let estoqueAtual = {}; 
@@ -172,7 +183,45 @@
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
         const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos"];
-        let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; let modalidadeAtual = "DELIVERY";
+        let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
+        let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0; let distanciaTexto = "";
+
+        // GOOGLE MAPS FUNCTIONS
+        function initAutocomplete() {
+            const input = document.getElementById('cust-addr');
+            const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (!place.geometry) return;
+                calcularDistancia(place.formatted_address);
+            });
+        }
+
+        function calcularDistancia(enderecoCliente) {
+            const service = new google.maps.DistanceMatrixService();
+            service.getDistanceMatrix({
+                origins: [ENDERECO_TRAILER],
+                destinations: [enderecoCliente],
+                travelMode: 'DRIVING',
+            }, (response, status) => {
+                if (status === 'OK') {
+                    const dados = response.rows[0].elements[0];
+                    const km = dados.distance.value / 1000;
+                    distanciaTexto = dados.distance.text;
+
+                    // Lógica de Taxas do seu Mapa
+                    if (km <= 2.5) taxaEntrega = 4.00;
+                    else if (km <= 4.0) taxaEntrega = 6.00;
+                    else if (km <= 5.5) taxaEntrega = 8.00;
+                    else if (km <= 7.0) taxaEntrega = 9.00;
+                    else if (km <= 9.0) taxaEntrega = 10.00;
+                    else taxaEntrega = 12.00;
+
+                    document.getElementById('distancia-info').innerText = `🛵 Distância: ${distanciaTexto} | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
+                    updateCartUI();
+                }
+            });
+        }
 
         async function carregarEstoqueUmaVez() {
             try {
@@ -214,8 +263,10 @@
             document.getElementById('mode-delivery').classList.toggle('active', tipo === 'DELIVERY');
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
+            document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
             if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
             else if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") document.getElementById('cust-addr').value = "";
+            updateCartUI();
         }
 
         function switchCategory(cat) {
@@ -303,7 +354,12 @@
         function addTapiocaFinal() { if(tapRecheios.length===0)return; const price=Math.max(...tapRecheios.map(r=>r.price)); cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [Extra: ${tapExtra}]`, price}); updateCartUI(); closeModal(); }
 
         function updateCartUI() {
-            const total = cart.reduce((acc, i) => acc + i.price, 0);
+            const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
+            const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
+            const total = subtotal + taxa;
+
+            document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
             document.getElementById('cart-total').innerText = total.toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `<div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2"><span class="uppercase">${i.name}</span><button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button></div>`).join('');
@@ -319,20 +375,26 @@
             const pagto = document.getElementById('pay-method').value;
             const troco = document.getElementById('troco-val').value;
             const total = document.getElementById('cart-total').innerText;
+            const sub = document.getElementById('cart-subtotal').innerText;
             
-            if(!n || !tel || !a || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
             msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A`;
             msg += `*📞 TELEFONE:* ${tel}%0A`;
             msg += `*📍 ENDEREÇO:* ${a.toUpperCase()}%0A`;
             msg += `*🚚 MODALIDADE:* ${modalidadeAtual}%0A`;
+            if(modalidadeAtual === 'DELIVERY') msg += `*📏 DISTÂNCIA:* ${distanciaTexto}%0A`;
             msg += `*💳 PAGTO:* ${pagto}${troco ? ' (Troco p/ ' + troco + ')' : ''}%0A`;
             if(obs) msg += `*📝 OBS:* ${obs}%0A`;
             msg += `%0A*🍕 ITENS:*%0A`;
             
             cart.forEach(i => msg += `• ${i.name.toUpperCase()} (R$ ${i.price.toFixed(2)})%0A`);
-            msg += `%0A*💰 TOTAL: R$ ${total}*`;
+            
+            msg += `%0A--------------------------%0A`;
+            msg += `*Subtotal:* R$ ${sub}%0A`;
+            if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
+            msg += `*💰 TOTAL: R$ ${total}*`;
             
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
@@ -349,7 +411,9 @@
             });
 
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-            cart = []; updateCartUI(); toggleCart();
+            cart = []; taxaEntrega = 0; distanciaTexto = "";
+            document.getElementById('distancia-info').innerText = "";
+            updateCartUI(); toggleCart();
         }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
