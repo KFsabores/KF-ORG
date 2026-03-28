@@ -36,11 +36,6 @@
             </div>
         </div>
 
-        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30">
-            <h2 class="text-xl font-black text-orange-500 mb-6 uppercase italic">Gerenciar Estoque</h2>
-            <div id="lista-estoque-categorias" class="space-y-8"></div>
-        </div>
-
         <div id="lista-pedidos" class="grid-custom"></div>
     </div>
 
@@ -64,11 +59,20 @@
 
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
+        // FUNÇÃO CORRIGIDA PARA CENTAVOS (SOMA BRASILEIRA)
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            // Remove tudo que não é número ou vírgula, depois troca vírgula por ponto
-            let soNumeros = valorStr.toString().replace(/[^\d,]/g, '').replace(',', '.');
-            return parseFloat(soNumeros) || 0;
+            // Remove R$, espaços e pontos de milhar, mantém apenas a vírgula decimal
+            let limpo = valorStr.toString().replace("R$", "").replace(/\s/g, "");
+            
+            // Se houver vírgula e ponto (ex: 1.250,00), remove o ponto
+            if (limpo.includes(",") && limpo.includes(".")) {
+                limpo = limpo.replace(/\./g, "");
+            }
+            // Troca a vírgula por ponto para o JavaScript entender como decimal
+            limpo = limpo.replace(",", ".");
+            
+            return parseFloat(limpo) || 0;
         }
 
         async function carregarPedidos() {
@@ -89,8 +93,7 @@
                     pagto: row[4] || 'N/A',
                     total: row[5],
                     totalNum: limparValor(row[5]),
-                    status: (row[6] || '').toUpperCase(),
-                    modalidade: (row[7] || "DELIVERY").toUpperCase()
+                    status: (row[6] || '').toUpperCase()
                 }));
 
                 if (todosOsPedidos.length > totalPedidosAnterior && totalPedidosAnterior !== 0) {
@@ -104,13 +107,13 @@
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
-            todosOsPedidos.reverse().forEach(p => {
+            [...todosOsPedidos].reverse().forEach(p => {
                 const concluido = p.status.includes("CONCLU");
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col border-t-8 ${p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600'} ${concluido ? 'opacity-40' : ''}">
+                    <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col ${concluido ? 'opacity-40' : 'border-t-8 border-t-green-600'}">
                         <div class="flex justify-between mb-2 text-[9px] font-bold text-zinc-500 uppercase">
                             <span>${p.dataTxt}</span>
-                            <span class="px-2 py-1 rounded ${concluido ? 'bg-[#39FF14] text-black' : 'bg-blue-600 text-white'}">${concluido ? '✅ CONCLUÍDO' : '⏳ PENDENTE'}</span>
+                            <span class="px-2 py-1 rounded ${concluido ? 'bg-[#39FF14] text-black' : 'bg-blue-600 text-white'}">${concluido ? '✅ CONCLUÍDO' : '⏳ NOVO'}</span>
                         </div>
                         <h3 class="text-xl font-black italic uppercase text-[#39FF14]">${p.nome}</h3>
                         <p class="text-[10px] text-zinc-400 mb-3">${p.endereco}</p>
@@ -118,10 +121,10 @@
                             ${p.itens.split('|').join('<br>• ')}
                         </div>
                         <div class="flex gap-2 mb-4">
-                            ${!concluido ? `<button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUÍDO', this)" class="flex-1 bg-green-600/20 text-green-400 py-3 rounded-xl font-black text-[10px] uppercase border border-green-600/30">✅ Finalizar</button>` : ''}
+                            ${!concluido ? `<button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUÍDO', this)" class="flex-1 bg-green-600 text-white py-3 rounded-xl font-black text-[10px] uppercase">Finalizar Pedido</button>` : ''}
                         </div>
                         <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-                            <span class="text-lg font-black italic">R$ ${p.totalNum.toFixed(2)}</span>
+                            <span class="text-lg font-black italic">R$ ${p.totalNum.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                             <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black px-4 py-2 rounded-xl font-black text-[10px]">IMPRIMIR</button>
                         </div>
                     </div>`;
@@ -129,82 +132,38 @@
         }
 
         function gerarRelatorio(tipo) {
-            // Pega o dia de hoje no formato da planilha (DD/MM/YYYY)
             const hojeData = new Date().toLocaleDateString('pt-BR');
-            
             const filtrados = todosOsPedidos.filter(p => {
                 const statusOk = p.status.includes("CONCLU");
-                if (tipo === 'dia') {
-                    return statusOk && p.dataTxt.includes(hojeData);
-                }
-                return statusOk; // Na semana mostra todos os concluídos carregados
+                return tipo === 'dia' ? (statusOk && p.dataTxt.includes(hojeData)) : statusOk;
             });
 
             const totalSoma = filtrados.reduce((acc, p) => acc + p.totalNum, 0);
 
-            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas de Hoje" : "Relatório Geral";
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas de Hoje" : "Vendas da Semana";
             document.getElementById('rel-content').innerHTML = `
-                <div class="flex justify-between border-b border-zinc-800 pb-2"><span>Pedidos Concluídos:</span> <span class="text-white">${filtrados.length}</span></div>
-                <div class="flex justify-between border-b border-zinc-800 pb-2 text-[#39FF14] text-xl font-black"><span>Total:</span> <span>R$ ${totalSoma.toFixed(2)}</span></div>
-                <p class="text-[9px] text-zinc-500 mt-4 text-center italic">Soma baseada na coluna "VALOR" para pedidos "CONCLUÍDO".</p>
+                <div class="flex justify-between border-b border-zinc-800 pb-2"><span>Pedidos:</span> <span class="text-white">${filtrados.length}</span></div>
+                <div class="flex justify-between border-b border-zinc-800 pb-2 text-[#39FF14] text-2xl font-black"><span>Total:</span> <span>R$ ${totalSoma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
             `;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
 
         async function alterarStatus(linha, status, btn) {
-            btn.innerText = "SINC..."; btn.disabled = true;
-            try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
-                setTimeout(carregarPedidos, 1500);
-            } catch (e) { alert("Erro!"); }
-        }
-
-        function toggleEstoque() {
-            const p = document.getElementById('painel-estoque');
-            p.classList.toggle('hidden');
-            if(!p.classList.contains('hidden')) carregarEstoque();
-        }
-
-        async function carregarEstoque() {
-            const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-xs font-black animate-pulse'>BUSCANDO DADOS...</p>";
-            try {
-                const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
-                const estoque = await res.json();
-                let html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
-                Object.keys(estoque).forEach(item => {
-                    const isPausado = estoque[item] === 'PAUSADO';
-                    html += `
-                        <div class="bg-zinc-800 p-3 rounded-2xl border ${isPausado ? 'border-red-600/50 opacity-50' : 'border-zinc-700'}">
-                            <p class="text-[9px] font-black uppercase mb-3 truncate">${item}</p>
-                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">
-                                ${isPausado ? 'Ativar' : 'Pausar'}
-                            </button>
-                        </div>`;
-                });
-                container.innerHTML = html + '</div>';
-            } catch (e) { container.innerHTML = "Erro."; }
-        }
-
-        async function mudarStatusEstoque(item, novoStatus, btn) {
             btn.innerText = "⏳";
-            try {
-                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item: item, status: novoStatus }) });
-                setTimeout(carregarEstoque, 1000);
-            } catch (e) { alert("Erro!"); }
+            await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
+            setTimeout(carregarPedidos, 1500);
         }
 
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
-            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>PAGTO: ${p.pagto.toUpperCase()}<br>TOTAL: R$ ${p.totalNum.toFixed(2)}<div class="linha"></div><center>BOM APETITE!</center></div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>PAGTO: ${p.pagto.toUpperCase()}<br>TOTAL: R$ ${p.totalNum.toFixed(2)}</div>`;
             window.print();
         }
 
-        document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO PEDIDOS"; document.getElementById('status-conexao').classList.replace('text-zinc-500', 'text-[#39FF14]'); }, { once: true });
+        document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO PEDIDOS"; document.getElementById('status-conexao').style.color = "#39FF14"; }, { once: true });
         carregarPedidos();
-        setInterval(carregarPedidos, 25000);
+        setInterval(carregarPedidos, 30000);
     </script>
 </body>
 </html>
