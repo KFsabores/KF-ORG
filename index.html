@@ -43,7 +43,7 @@
     </header>
 
     <div id="banner-status" class="hidden p-4 mx-4 mt-4 rounded-2xl border text-center">
-        <h2 class="font-black uppercase italic text-sm mb-2">🚫 Estamos Fechados Agora</h2>
+        <h2 class="font-black uppercase italic text-sm mb-2">🚫 LOJA FECHADA NO MOMENTO!</h2>
         <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase">
             </div>
     </div>
@@ -401,7 +401,7 @@
         }
 
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("NO MOMENTO NÃO ESTAMOS FUNCIONANDO!\nConsulte nossos horários no topo da página."); return; }
+            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!\nConsulte nossos horários no topo da página."); return; }
 
             const n = document.getElementById('cust-name').value;
             const a = document.getElementById('cust-addr').value;
