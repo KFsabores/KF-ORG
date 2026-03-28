@@ -19,6 +19,9 @@
         .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
         body { background-color: #09090b; color: white; }
         .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .timer-badge { background: #3f3f46; color: #fff; padding: 2px 8px; border-radius: 99px; font-family: monospace; font-size: 11px; }
+        .link-maps { color: #60a5fa; text-decoration: underline; transition: color 0.2s; }
+        .link-maps:hover { color: #93c5fd; }
     </style>
 </head>
 <body class="p-4 md:p-8 font-sans">
@@ -77,20 +80,39 @@
             return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
         }
 
-        // FUNÇÃO DE SOMA REFORMULADA (CORREÇÃO DE MILHAR)
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            // Remove tudo que não for número, ponto ou vírgula
             let apenasNumeros = valorStr.replace(/[^\d,.]/g, '');
-            
-            // Se houver vírgula, transforma em ponto para o JS somar certo
             if (apenasNumeros.includes(',')) {
                 apenasNumeros = apenasNumeros.replace(/\./g, '').replace(',', '.');
             }
-            
             let num = parseFloat(apenasNumeros);
             return isNaN(num) ? 0 : num;
         }
+
+        // FUNÇÃO DO CRONÔMETRO
+        function atualizarCronometros() {
+            const agora = new Date();
+            document.querySelectorAll('[data-hora-pedido]').forEach(el => {
+                const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
+                const diff = Math.floor((agora - dataPedido) / 1000); // Diferença em segundos
+                
+                if (diff < 0) { el.innerText = "00:00"; return; }
+
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const s = diff % 60;
+
+                const tempoFormatado = (h > 0 ? h + ":" : "") + 
+                                       String(m).padStart(2, '0') + ":" + 
+                                       String(s).padStart(2, '0');
+                el.innerText = tempoFormatado;
+
+                // Fica vermelho se passar de 45 minutos
+                if (m >= 45 || h > 0) el.classList.add('text-red-500', 'font-bold');
+            });
+        }
+        setInterval(atualizarCronometros, 1000);
 
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
@@ -113,7 +135,6 @@
                     total: row[5],
                     totalNum: limparValor(row[5]),
                     status: (row[6] || 'PENDENTE').toUpperCase(),
-                    // Melhoria na detecção da modalidade
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase()
                 }));
 
@@ -140,15 +161,21 @@
                 let isRetirada = p.modalidade.includes('RETIRADA');
                 let cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (p.status.includes("CONCLUIDO") ? "border-zinc-800 opacity-50" : "border-yellow-500");
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
+                
+                // Link do Maps
+                const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
 
                 container.innerHTML += `
                     <div class="bg-zinc-900 border-2 ${cardBorder} p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'} shadow-xl">
-                        <div class="flex justify-between items-center mb-4 text-zinc-500 font-bold text-[10px]">
-                            <span>${p.dataFull}</span>
-                            <span class="status-badge ${p.status.includes("PREPARANDO") ? 'bg-blue-600' : (p.status.includes("CONCLUIDO") ? 'bg-zinc-700' : 'bg-yellow-600')} text-white">${p.status}</span>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-zinc-500 font-bold text-[10px]">${p.dataFull}</span>
+                            <div class="flex gap-2">
+                                <span class="timer-badge" data-hora-pedido="${p.objData.toISOString()}">00:00</span>
+                                <span class="status-badge ${p.status.includes("PREPARANDO") ? 'bg-blue-600' : (p.status.includes("CONCLUIDO") ? 'bg-zinc-700' : 'bg-yellow-600')} text-white">${p.status}</span>
+                            </div>
                         </div>
                         <h3 class="text-2xl font-black italic mb-2 uppercase leading-none">${p.nome}</h3>
-                        <p class="text-xs font-bold text-zinc-400 mb-4 italic">📍 ${p.endereco}</p>
+                        <a href="${linkMaps}" target="_blank" class="text-xs font-bold link-maps mb-4 italic block">📍 ${p.endereco}</a>
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-bold uppercase">
                             ${p.itens.split('|').map(i => `<div class="mb-1 text-zinc-200">• ${i.trim()}</div>`).join('')}
                         </div>
@@ -158,19 +185,31 @@
                         </div>
                         <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                             <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
-                            <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black font-black px-4 py-3 rounded-xl text-[10px] uppercase">🖨️ Imprimir</button>
+                            <div class="flex gap-2">
+                                <button onclick="cancelarPedido(${p.linhaOriginal}, this)" class="bg-red-900/50 text-red-500 border border-red-500 font-black px-3 py-3 rounded-xl text-[10px] uppercase hover:bg-red-600 hover:text-white">🗑️ Cancelar</button>
+                                <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black font-black px-4 py-3 rounded-xl text-[10px] uppercase">🖨️ Imprimir</button>
+                            </div>
                         </div>
                     </div>`;
             });
         }
 
+        async function cancelarPedido(linha, btn) {
+            if (confirm("⚠️ TEM CERTEZA? Isso vai apagar o pedido da planilha permanentemente!")) {
+                btn.innerText = "⏳...";
+                btn.disabled = true;
+                // Envia comando para o script deletar a linha
+                await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' });
+                setTimeout(carregarPedidos, 1500);
+            }
+        }
+
+        // Restante das funções de relatório, estoque e som permanecem as mesmas...
         function gerarRelatorio(tipo) {
             const agora = new Date();
             let listaFiltrada = [];
-
             todosOsPedidos.forEach(p => {
                 if (!p.status.includes('CONCLU')) return;
-                
                 if (tipo === 'dia') {
                     let inicioTurno = new Date(agora);
                     if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
@@ -182,13 +221,11 @@
                     if (p.objData >= umaSemanaAtras) listaFiltrada.push(p);
                 }
             });
-
             let totalDel = 0, qtdDel = 0, totalRet = 0, qtdRet = 0;
             listaFiltrada.forEach(p => {
                 if (p.modalidade.includes("RETIRADA")) { totalRet += p.totalNum; qtdRet++; }
                 else { totalDel += p.totalNum; qtdDel++; }
             });
-
             document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Resumo de Hoje" : "Resumo da Semana";
             document.getElementById('rel-content').innerHTML = `
                 <div class="space-y-4">
