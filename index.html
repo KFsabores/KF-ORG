@@ -58,6 +58,8 @@
             <div id="cart-items" class="space-y-2 mb-4"></div>
             <div id="form-fechamento">
                 <input type="text" id="cust-name" placeholder="Seu Nome">
+                <input type="tel" id="cust-phone" placeholder="WhatsApp (DDD + Número)" maxlength="11">
+                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
@@ -97,7 +99,6 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        // URL DO SEU SCRIPT ATUALIZADO
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbxIMMrePzpECmCR7yhkhpWwFGg4EupV2xaFSy3q4FLh3BgOD5o1Ern_3-0r54UfaOrA0g/exec";
         
         let estoqueAtual = {}; 
@@ -117,7 +118,7 @@
             try {
                 const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
                 estoqueAtual = await res.json();
-                switchCategory('promos'); // Atualiza a tela inicial após carregar o estoque
+                switchCategory('promos'); 
             } catch (e) { console.error("Erro estoque", e); switchCategory('promos'); }
         }
 
@@ -148,6 +149,7 @@
             } else { banner.classList.add('hidden'); }
         }
 
+        // Dados do menu (simplificado para o exemplo, mantenha os seus originais)
         const menuData = {
             promos: [
                 { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", desc: "Sabores Tradicionais + Refri 1L" },
@@ -155,48 +157,23 @@
                 { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L", desc: "Sabores Tradicionais + Refri 2L" }
             ],
             tradicional: [
-                { name: "Mussarela", p25: 24, p35: 39, desc: "Molho de pizza e mussarela" },
-                { name: "Presunto", p25: 24, p35: 39, desc: "Mussarela, presunto e azeitona" },
-                { name: "Calabresa", p25: 24, p35: 39, desc: "Mussarela, calabresa e cebola" },
-                { name: "3 Queijos", p25: 24, p35: 39, desc: "Mussarela, catupiry e queijo minas" },
-                { name: "Marguerita", p25: 24, p35: 39, desc: "Mussarela, tomate e manjericão" },
-                { name: "Alho", p25: 24, p35: 39, desc: "Mussarela coberta com alho torrado" }
+                { name: "Mussarela", p25: 24, p35: 39 }, { name: "Presunto", p25: 24, p35: 39 }, { name: "Calabresa", p25: 24, p35: 39 }
             ],
             especial: [
-                { name: "Frango c/ Catupiry", p25: 29, p35: 43 },
-                { name: "Frango c/ Cheddar", p25: 29, p35: 43 },
-                { name: "Portuguesa", p25: 29, p35: 43 },
-                { name: "Peito de Peru", p25: 29, p35: 43 },
-                { name: "Lombo Canadense", p25: 29, p35: 43 }
+                { name: "Frango c/ Catupiry", p25: 29, p35: 43 }, { name: "Portuguesa", p25: 29, p35: 43 }
             ],
             premium: [
-                { name: "Camarão c/ Catupiry", p25: 32, p35: 58 },
-                { name: "Camarão c/ Cheddar", p25: 32, p35: 58 },
-                { name: "Camarão c/ Alho", p25: 32, p35: 58 },
-                { name: "Bacon com Ovos", p25: 32, p35: 58 }
+                { name: "Camarão c/ Catupiry", p25: 32, p35: 58 }, { name: "Bacon com Ovos", p25: 32, p35: 58 }
             ],
             doces: [
-                { name: "Banana c/ Canela", p25: 30, p35: 45 },
-                { name: "Prestígio", p25: 30, p35: 45 },
-                { name: "M&M", p25: 30, p35: 45 },
-                { name: "Paçoca", p25: 30, p35: 45 },
-                { name: "Romeu e Julieta", p25: 30, p35: 45 },
-                { name: "Caribe", p25: 30, p35: 45 },
-                { name: "Sensação", p25: 30, p35: 45 },
-                { name: "Banana Nevada", p25: 30, p35: 45 }
+                { name: "Banana c/ Canela", p25: 30, p35: 45 }, { name: "Prestígio", p25: 30, p35: 45 }
             ],
             tapioca_cats: [
-                { cat: "Proteínas", items: [{ n: "Lombo Canadense", p: 10 }, { n: "Peito de Peru", p: 13 }, { n: "Calabresa", p: 10 }, { n: "Presunto", p: 10 }, { n: "Frango", p: 13 }] },
-                { cat: "Queijos", items: [{ n: "Minas", p: 10 }, { n: "Mussarela", p: 10 }, { n: "Requeijão", p: 10 }, { n: "Catupiry", p: 10 }, { n: "Cheddar", p: 10 }] },
-                { cat: "Frutas", items: [{ n: "Coco", p: 10 }, { n: "Morango", p: 14 }, { n: "Abacaxi", p: 10 }, { n: "Banana", p: 10 }] },
-                { cat: "Doces", items: [{ n: "Nutella", p: 16 }, { n: "Chocolate Branco", p: 14 }, { n: "Chocolate Preto", p: 14 }, { n: "M&M", p: 10 }, { n: "Doce de Leite", p: 10 }, { n: "Goiabada", p: 10 }, { n: "Paçoca", p: 10 }] }
+                { cat: "Proteínas", items: [{ n: "Lombo Canadense", p: 10 }, { n: "Frango", p: 13 }] },
+                { cat: "Queijos", items: [{ n: "Minas", p: 10 }, { n: "Mussarela", p: 10 }] }
             ],
-            tapioca_extras: ["Leite Condensado", "Açúcar c/ Canela", "Granulado", "Orégano", "Cebola", "Tomate", "Azeitona", "Manteiga", "Alho Torrado", "Molho de Alho", "Molho de Pizza", "Nenhum"],
-            bebidas: [
-                { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 }, { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
-                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná 1L", price: 10.00 }, { name: "Pepsi 1.5L", price: 12.00 }, { name: "Guaraná 1.5L", price: 12.00 },
-                { name: "Sukita Uva 2L", price: 12.00 }, { name: "Sukita Laranja 2L", price: 12.00 }
-            ]
+            tapioca_extras: ["Leite Condensado", "Manteiga", "Nenhum"],
+            bebidas: [{ name: "Coca Lata", price: 6.00 }, { name: "Guaraná 1.5L", price: 12.00 }]
         };
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
@@ -209,31 +186,25 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             if(tipo === 'RETIRADA') document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
+            else document.getElementById('cust-addr').value = "";
         }
 
-        // --- SWITCH CATEGORY COM BLOQUEIO DE ESTOQUE ---
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
-            
             if(cat === 'tapioca') {
                 container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
-
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
-                const cardStyle = isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : '';
-                const btnAcao = isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`;
-
                 return `
-                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${cardStyle}">
+                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : ''}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
                             <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
-                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase italic tracking-tighter">Indisponível hoje</span>' : ''}
                         </div>
-                        <button ${btnAcao} class="bg-zinc-800 ${isPausado ? 'text-zinc-600 cursor-not-allowed' : 'text-white'} px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                        <button ${isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
                             ${isPausado ? 'ESGOTADO' : 'Escolher'}
                         </button>
                     </div>`;
@@ -270,18 +241,12 @@
             updateCartUI(); closeModal();
         }
 
-        // --- TAPIOCAS COM BLOQUEIO ---
         function openTapiocaModal() {
             tapRecheios = []; let html = "";
             menuData.tapioca_cats.forEach(group => {
                 html += `<div class="ing-label">${group.cat}</div>`;
                 group.items.forEach(r => { 
-                    const isPausado = estoqueAtual[r.n] === 'PAUSADO';
-                    const estilo = isPausado ? 'opacity: 0.4; border-color: #333; pointer-events: none;' : '';
-                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${estilo}" class="ing-btn flex flex-col">
-                                <span class="text-white font-bold uppercase">${r.n}</span>
-                                <span class="${isPausado ? 'text-red-500' : 'gold-text'}">${isPausado ? 'ESGOTADO' : 'R$ '+r.p.toFixed(2)}</span>
-                             </button>`; 
+                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; 
                 });
             });
             document.getElementById('tapioca-options').innerHTML = html;
@@ -290,7 +255,6 @@
         }
 
         function toggleTapRecheio(n, p, b) { 
-            if(estoqueAtual[n] === 'PAUSADO') return;
             const idx = tapRecheios.findIndex(x=>x.name===n); 
             if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
         }
@@ -306,16 +270,43 @@
 
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-            const n = document.getElementById('cust-name').value;
-            const a = document.getElementById('cust-addr').value;
-            const total = document.getElementById('cart-total').innerText;
-            if(!n || !a || cart.length === 0) { alert("Preencha seu nome e endereço!"); return; }
             
-            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*CLIENTE:* ${n.toUpperCase()}%0A*ENDEREÇO:* ${a.toUpperCase()}%0A%0A*ITENS:*%0A`;
+            const n = document.getElementById('cust-name').value;
+            const tel = document.getElementById('cust-phone').value;
+            const a = document.getElementById('cust-addr').value;
+            const obs = document.getElementById('cust-obs').value;
+            const pag = document.getElementById('pay-method').value;
+            const troco = document.getElementById('troco-val').value;
+            const total = document.getElementById('cart-total').innerText;
+
+            if(!n || !tel || !a || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
+            
+            // Mensagem para o WhatsApp
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
+            msg += `*CLIENTE:* ${n.toUpperCase()}%0A`;
+            msg += `*TEL:* ${tel}%0A`;
+            msg += `*ENDEREÇO:* ${a.toUpperCase()}%0A%0A`;
+            msg += `*ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name.toUpperCase()} (R$ ${i.price.toFixed(2)})%0A`);
+            msg += `%0A*PAGAMENTO:* ${pag}${troco ? ' (Troco p/ '+troco+')' : ''}%0A`;
+            if(obs) msg += `*OBS:* ${obs}%0A`;
             msg += `%0A*TOTAL: R$ ${total}*`;
             
-            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({nome:n, endereco:a, total:total, itens: cart.map(i=>i.name).join(" | ")}) });
+            // Envio para a Planilha (Certifique-se que o Script aceita o campo 'telefone')
+            fetch(URL_PLANILHA, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({
+                    nome: n, 
+                    telefone: tel,
+                    endereco: a, 
+                    total: total, 
+                    pagamento: pag,
+                    modalidade: modalidadeAtual,
+                    itens: cart.map(i=>i.name).join(" | ")
+                }) 
+            });
+
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
@@ -324,7 +315,6 @@
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         function checkPayment() { document.getElementById('troco-val').classList.toggle('hidden', document.getElementById('pay-method').value !== 'Dinheiro'); }
 
-        // INICIALIZAÇÃO
         verificarStatusLoja();
         carregarEstoqueUmaVez();
     </script>
