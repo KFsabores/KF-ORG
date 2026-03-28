@@ -36,7 +36,7 @@
                 <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500">📊 Hoje</button>
                 <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500">📅 Semana</button>
                 <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500">📦 Estoque</button>
-                <a href="https://script.google.com/macros/s/AKfycbzWxHsDmWlQ84MywvMoVjoVsWoQKln4QOytg1-UrG5W0QajsFEHSObZKPeLszImydXrXA/exec" target="_blank" class="bg-zinc-700 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600">⚙️ SITE ADM</a>
+                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-zinc-700 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600">⚙️ SITE ADM</a>
             </div>
         </div>
 
@@ -77,6 +77,16 @@
             return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
         }
 
+        // NOVA FUNÇÃO DE LIMPEZA DE VALOR MOETÁRIO
+        function limparValor(valorStr) {
+            if (!valorStr) return 0;
+            // 1. Remove "R$", espaços e pontos de milhar
+            let limpo = valorStr.replace("R$", "").replace(/\s/g, "").replace(/\./g, "");
+            // 2. Troca a vírgula decimal por ponto para o sistema entender
+            limpo = limpo.replace(",", ".");
+            return parseFloat(limpo) || 0;
+        }
+
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             try {
@@ -96,13 +106,13 @@
                     itens: row[3],
                     pagto: row[4],
                     total: row[5],
-                    totalNum: parseFloat((row[5] || "0").replace("R$", "").replace(/\./g, "").replace(",", ".").trim()),
+                    totalNum: limparValor(row[5]), // Usando a nova função aqui
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase()
                 }));
 
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
-                    ringtone.play().catch(e => console.log("Som bloqueado"));
+                    ringtone.play().catch(e => {});
                 }
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
@@ -156,13 +166,11 @@
                 if (!p.status.includes('CONCLU')) return;
                 
                 if (tipo === 'dia') {
-                    // Considera o turno (das 17h de ontem até 04h de hoje se for madrugada)
                     let inicioTurno = new Date(agora);
                     if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
                     inicioTurno.setHours(17, 0, 0);
                     if (p.objData >= inicioTurno) listaFiltrada.push(p);
                 } else {
-                    // Ciclo da Semana (Últimos 7 dias)
                     let umaSemanaAtras = new Date();
                     umaSemanaAtras.setDate(agora.getDate() - 7);
                     if (p.objData >= umaSemanaAtras) listaFiltrada.push(p);
@@ -175,20 +183,20 @@
                 else { totalDel += p.totalNum; qtdDel++; }
             });
 
-            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas Turno Hoje" : "Vendas dos Últimos 7 Dias";
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas Turno Hoje" : "Vendas 7 Dias";
             document.getElementById('rel-content').innerHTML = `
                 <div class="space-y-4">
                     <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-green-600">
                         <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p>
-                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600">
                         <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p>
-                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
                         <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">Total Geral</p>
-                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                     </div>
                 </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
