@@ -6,150 +6,100 @@
     <title>PAINEL KF - Gestão Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; display: block !important; }
-            #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; }
-        }
-        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 13px; line-height: 1.2; color: #000; font-weight: bold; }
-        .linha { border-bottom: 1px dashed #000; margin: 4px 0; }
-        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
-        body { background-color: #09090b; color: white; }
-        .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 8px; font-weight: 900; text-transform: uppercase; }
+        @media print { body * { visibility: hidden; } #print-area, #print-area * { visibility: visible; display: block !important; } #print-area { position: absolute; left: 0; top: 0; width: 48mm; } }
+        body { background-color: #09090b; color: white; font-family: 'Inter', sans-serif; }
         .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
-        .cat-title { color: #39FF14; font-weight: 900; text-transform: uppercase; font-size: 14px; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; font-style: italic; }
-        /* Estilo do link do mapa */
-        .map-link { color: #60a5fa; text-decoration: underline; transition: color 0.2s; }
-        .map-link:hover { color: #3b82f6; }
+        .cat-title { color: #39FF14; font-weight: 900; text-transform: uppercase; font-size: 14px; margin-bottom: 1rem; italic; display: flex; align-items: center; gap: 8px; }
+        .map-link { color: #60a5fa; text-decoration: underline; font-weight: bold; }
+        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+        .btn-status { transition: all 0.2s; }
+        .btn-status:hover { transform: translateY(-2px); }
     </style>
 </head>
-<body class="p-4 font-sans">
-
-    <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto" loop></audio>
+<body class="p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl gap-4">
             <div>
-                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
-                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase mt-2 italic">⚠️ Clique para ativar o som 📞</p>
+                <h1 class="text-4xl font-black text-[#39FF14] italic uppercase tracking-tighter leading-none">KF SABORES</h1>
+                <p class="text-zinc-500 text-[10px] font-bold uppercase mt-2">🕒 MONITORAMENTO EM TEMPO REAL</p>
             </div>
             <div class="flex flex-wrap gap-2 justify-center">
-                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px]">📊 Hoje</button>
-                <button onclick="gerarRelatorio('semana')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px]">📅 Semana</button>
-                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px]">📦 Estoque</button>
-                <button onclick="window.open('https://kfsabores.github.io/KF-ORG/?admin=true', '_blank')" class="bg-zinc-700 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px]">⚙️ SITE ADM</button>
-                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px]">🔄 Sinc</button>
+                <button onclick="gerarRelatorio()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-blue-500 btn-status">📊 Relatório</button>
+                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase shadow-lg hover:bg-orange-500 btn-status">📦 Estoque</button>
+                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase border border-zinc-700 hover:bg-zinc-700 btn-status">🔄 Sincronizar</button>
             </div>
         </div>
 
-        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30 shadow-2xl">
-            <div class="flex justify-between items-center mb-6 p-4 border-b border-zinc-800">
-                <h2 class="text-xl font-black text-orange-500 uppercase italic">Gestão de Cardápio</h2>
-                <button onclick="toggleEstoque()" class="bg-zinc-800 px-4 py-1 rounded-full text-zinc-400 font-bold uppercase text-[10px]">Fechar</button>
-            </div>
-            <div id="lista-estoque-categorias" class="p-4 space-y-2"></div>
+        <div id="painel-estoque" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border border-orange-500/30 shadow-2xl">
+            <h2 class="text-2xl font-black text-orange-500 uppercase italic mb-8 text-center tracking-widest">Controle de Disponibilidade</h2>
+            <div id="lista-estoque-categorias" class="space-y-6"></div>
         </div>
 
         <div id="lista-pedidos" class="grid-custom"></div>
     </div>
 
-    <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4 bg-black/95">
-        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
-            <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6">Relatório</h2>
-            <div id="rel-content" class="space-y-4 font-bold uppercase text-zinc-300"></div>
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs">Fechar</button>
+    <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] bg-black/95 p-4 backdrop-blur-sm">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-10 text-center shadow-2xl">
+            <h2 class="text-3xl font-black text-[#39FF14] italic uppercase mb-2">CAIXA ATUAL</h2>
+            <p class="text-zinc-500 text-[10px] mb-8 font-bold uppercase tracking-widest">Baseado em pedidos concluídos</p>
+            <div id="rel-content" class="mb-8"></div>
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-zinc-700 transition-colors">Fechar Painel</button>
         </div>
     </div>
 
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxIMMrePzpECmCR7yhkhpWwFGg4EupV2xaFSy3q4FLh3BgOD5o1Ern_3-0r54UfaOrA0g/exec'; 
+        // URL DO SEU SCRIPT ATUALIZADA
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxWxHsDmWlQ84MywvMoVjoVsWoQKln4QOytg1-UrG5W0QajsFEHSObZKPeLszImydXrXA/exec'; 
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
-
-        let todosOsPedidos = [];
-        let totalPedidosAnterior = 0;
-        const ringtone = document.getElementById('notificacao-som');
-
-        function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
-
-        function limparValor(v) {
-            if (!v) return 0;
-            let limpo = v.toString().replace("R$", "").replace(/\s/g, "");
-            if (limpo.includes(",") && limpo.includes(".")) limpo = limpo.replace(/\./g, "");
-            limpo = limpo.replace(",", ".");
-            return parseFloat(limpo) || 0;
-        }
+        
+        let pedidosLocais = [];
 
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             try {
-                const response = await fetch(url);
-                const csvData = await response.text();
-                const rows = csvData.split('\n').map(row => 
-                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
-                );
+                const res = await fetch(url);
+                const csv = await res.text();
+                const rows = csv.split('\n').map(r => r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
                 
-                todosOsPedidos = rows.slice(1).filter(r => r[1]).map((row, idx) => ({
-                    linhaOriginal: idx + 2,
-                    dataTxt: row[0],
+                pedidosLocais = rows.slice(1).filter(r => r[1]).map((row, idx) => ({
+                    linha: idx + 2,
                     nome: row[1],
                     endereco: row[2],
                     itens: row[3],
-                    pagto: row[4] || 'N/A',
-                    total: row[5],
-                    totalNum: limparValor(row[5]),
+                    valorTxt: row[5],
                     status: (row[6] || '').toUpperCase(),
-                    modalidade: (row[7] || "DELIVERY").toUpperCase()
+                    modalidade: (row[7] || 'DELIVERY').toUpperCase()
                 }));
-
-                if (todosOsPedidos.length > totalPedidosAnterior && totalPedidosAnterior !== 0) {
-                    ringtone.play().catch(() => {});
-                }
-                totalPedidosAnterior = todosOsPedidos.length;
                 renderizarPedidos();
-            } catch (e) { console.error("Erro carga:", e); }
+            } catch (e) { console.error("Erro ao carregar pedidos da planilha"); }
         }
 
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
-            [...todosOsPedidos].reverse().forEach(p => {
-                const concluido = p.status.includes("CONCLU");
-                const preparando = p.status.includes("PREPARA");
-                const isRetirada = p.modalidade.includes("RETIRADA");
-                
-                let corBorda = isRetirada ? 'border-t-orange-600' : 'border-t-green-600';
-                let statusTxt = concluido ? '✅ FINALIZADO' : (preparando ? '👨‍🍳 NA COZINHA' : '⏳ NOVO');
-                let statusCor = concluido ? 'bg-[#39FF14] text-black' : (preparando ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400');
-
-                // Cria o link do Google Maps
+            [...pedidosLocais].reverse().forEach(p => {
+                const isConcluido = p.status.includes('CONCLU');
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
-
+                
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col border-t-8 ${corBorda} ${concluido ? 'opacity-40' : ''}">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex flex-col">
-                                <span class="text-[9px] font-bold text-zinc-500 uppercase">${p.dataTxt}</span>
-                                <span class="text-[10px] font-black ${isRetirada ? 'text-orange-500' : 'text-green-500'}">${p.modalidade}</span>
-                            </div>
-                            <span class="status-badge ${statusCor}">${statusTxt}</span>
+                    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl border-t-8 ${isConcluido ? 'border-t-zinc-700 opacity-40' : (p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600')} shadow-xl transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[9px] font-black bg-zinc-800 px-2 py-1 rounded text-zinc-400 uppercase tracking-tighter">${p.modalidade}</span>
+                            <span class="text-[9px] font-black ${isConcluido ? 'text-zinc-500' : 'text-[#39FF14]'} uppercase tracking-widest">${isConcluido ? '✓ Finalizado' : '● Ativo'}</span>
                         </div>
-                        <h3 class="text-xl font-black italic uppercase text-white mb-1">${p.nome}</h3>
-                        <p class="text-[10px] font-bold mb-3 italic truncate">
-                            📍 <a href="${mapsUrl}" target="_blank" class="map-link">${p.endereco}</a>
-                        </p>
-                        <div class="bg-black/40 p-3 rounded-xl mb-4 text-[11px] font-bold uppercase border border-zinc-800/50">
-                            ${p.itens.split('|').join('<br>• ')}
+                        <h3 class="text-2xl font-black uppercase text-white mb-1 leading-none tracking-tight">${p.nome}</h3>
+                        <p class="text-[11px] mb-4 italic text-zinc-400">📍 <a href="${mapsUrl}" target="_blank" class="map-link">${p.endereco}</a></p>
+                        <div class="bg-black/40 p-4 rounded-2xl mb-6 text-[12px] font-bold uppercase border border-zinc-800/50 text-zinc-300 leading-relaxed">
+                            ${p.itens.split('|').join('<br><span class="text-zinc-600">•</span> ')}
                         </div>
-                        ${!concluido ? `
-                        <div class="grid grid-cols-2 gap-2 mb-4">
-                            <button onclick="alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600/10 text-blue-400 py-3 rounded-xl font-black text-[9px] uppercase border border-blue-600/30">Cozinha</button>
-                            <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUÍDO', this)" class="bg-green-600 text-white py-3 rounded-xl font-black text-[9px] uppercase">Finalizar</button>
-                        </div>` : ''}
-                        <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-                            <span class="text-lg font-black italic text-[#39FF14]">R$ ${p.totalNum.toFixed(2)}</span>
-                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black px-4 py-2 rounded-xl font-black text-[10px]">🖨️ IMPRIMIR</button>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-2xl font-black text-[#39FF14] italic tracking-tighter">${p.valorTxt}</span>
+                            ${!isConcluido ? `
+                                <button onclick="alterarStatus(${p.linha}, 'CONCLUIDO')" class="bg-[#39FF14] text-black px-6 py-2.5 rounded-xl font-black text-[10px] uppercase hover:bg-white transition-all shadow-lg shadow-[#39FF14]/10">Finalizar</button>
+                            ` : ''}
                         </div>
                     </div>`;
             });
@@ -157,75 +107,79 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-center p-10 animate-pulse text-[#39FF14] font-black uppercase italic'>Organizando por Seções...</p>";
+            container.innerHTML = "<div class='text-center animate-pulse text-orange-500 font-black py-10 uppercase tracking-widest'>Sincronizando Categorias da Coluna C...</div>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
-                const estoque = await res.json();
+                const estoqueArr = await res.json();
                 
-                const categoriasDef = [
-                    { id: "🔥 PROMOS", keys: ["2 Pizzas", "Combo", "Promo", "Dobradinha"] },
-                    { id: "🍫 PIZZAS DOCES", keys: ["Chocolate", "Nutella", "Morango", "M&M", "Banana", "Romeu", "Doce"] },
-                    { id: "💎 PREMIUM", keys: ["Camarão", "Filé", "Picanha", "Trufa", "Premium", "Gorgonzola"] },
-                    { id: "🌟 ESPECIAL", keys: ["Catu", "Cheddar", "Pesto", "Aliche", "Especial", "Pepperoni", "Carne Seca"] },
-                    { id: "🍕 TRADICIONAL", keys: ["Mussarela", "Calabresa", "Lombo", "Frango", "Milho", "Portuguesa", "Marguerita", "Napo", "Baiana", "Atum", "Palmito"] },
-                    { id: "🌮 TAPIOCAS", keys: ["Tapioca", "Goma", "Recheio"] },
-                    { id: "🥤 BEBIDAS", keys: ["Coca", "Refri", "Água", "Suco", "Guaraná", "Fanta", "2L", "600ml", "Lata", "H2O"] }
-                ];
-
-                let itensRestantes = Object.keys(estoque);
-                let htmlFinal = "";
-
-                categoriasDef.forEach(cat => {
-                    const itensDaCat = itensRestantes.filter(item => 
-                        cat.keys.some(key => item.toLowerCase().includes(key.toLowerCase()))
-                    );
-                    if (itensDaCat.length > 0) {
-                        itensRestantes = itensRestantes.filter(item => !itensDaCat.includes(item));
-                        htmlFinal += `<div class="cat-card"><h3 class="cat-title">${cat.id}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
-                        itensDaCat.forEach(item => {
-                            const isPausado = estoque[item] === 'PAUSADO';
-                            htmlFinal += `
-                                <div class="bg-black/40 p-3 rounded-2xl border ${isPausado ? 'border-red-600 opacity-50' : 'border-zinc-800'}">
-                                    <p class="text-[9px] font-black uppercase mb-3 truncate text-zinc-300">${item}</p>
-                                    <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                        class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">
-                                        ${isPausado ? 'Ativar' : 'Pausar'}
-                                    </button>
-                                </div>`;
-                        });
-                        htmlFinal += `</div></div>`;
-                    }
+                const grupos = {};
+                estoqueArr.forEach(i => {
+                    const cat = (i.categoria || "OUTROS").toUpperCase();
+                    if (!grupos[cat]) grupos[cat] = [];
+                    grupos[cat].push(i);
                 });
-                
-                if (itensRestantes.length > 0) {
-                    htmlFinal += `<div class="cat-card"><h3 class="cat-title text-zinc-500 italic">📦 OUTROS</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
-                    itensRestantes.forEach(item => {
-                        const isPausado = estoque[item] === 'PAUSADO';
-                        htmlFinal += `<div class="bg-black/40 p-3 rounded-2xl border ${isPausado ? 'border-red-600' : 'border-zinc-800'}">
-                            <p class="text-[9px] font-black uppercase mb-3 truncate text-zinc-300">${item}</p>
-                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">${isPausado ? 'Ativar' : 'Pausar'}</button>
-                        </div>`;
+
+                let html = "";
+                Object.keys(grupos).sort().forEach(cat => {
+                    const icon = cat.includes('PIZZA') ? '🍕' : (cat.includes('TAPIOCA') ? '🌮' : '📦');
+                    html += `<div class="cat-card">
+                        <h3 class="cat-title">${icon} ${cat}</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">`;
+                    grupos[cat].forEach(i => {
+                        const isPausado = i.status === 'PAUSADO';
+                        html += `
+                            <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'} transition-all">
+                                <p class="text-[10px] font-black uppercase mb-4 text-zinc-300 h-8 overflow-hidden leading-tight">${i.nome}</p>
+                                <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                                    class="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-tighter transition-colors ${isPausado ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'}">
+                                    ${isPausado ? 'Ativar' : 'Pausar'}
+                                </button>
+                            </div>`;
                     });
-                    htmlFinal += `</div></div>`;
-                }
-                container.innerHTML = htmlFinal;
-            } catch (e) { container.innerHTML = "Erro ao carregar estoque."; }
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) { container.innerHTML = "<div class='text-red-500 font-bold p-4 text-center'>Erro ao carregar Coluna C. Verifique a URL do Script.</div>"; }
         }
 
-        async function mudarStatusEstoque(item, novoStatus, btn) {
+        function gerarRelatorio() {
+            const concluidos = pedidosLocais.filter(p => p.status.includes('CONCLU'));
+            let soma = 0;
+            concluidos.forEach(p => {
+                // Remove R$, remove ponto de milhar, troca vírgula decimal por ponto
+                let v = p.valorTxt.toString().replace("R$", "").replace(/\./g, "").replace(",", ".");
+                soma += parseFloat(v) || 0;
+            });
+
+            document.getElementById('rel-content').innerHTML = `
+                <div class="text-5xl font-black text-[#39FF14] mb-4 tracking-tighter italic">R$ ${soma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <div class="bg-black/30 p-4 rounded-2xl border border-zinc-800 inline-block px-8">
+                    <p class="text-zinc-500 text-[9px] font-black uppercase mb-1">Volume de Vendas</p>
+                    <p class="text-white font-black text-xl uppercase tracking-tighter">${concluidos.length} Pedidos</p>
+                </div>
+            `;
+            document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        async function mudarStatusEstoque(item, status, btn) {
+            const textOrig = btn.innerText;
             btn.innerText = "⏳";
+            btn.disabled = true;
             try {
-                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item: item, status: novoStatus }) });
+                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
                 setTimeout(carregarEstoque, 1000);
-            } catch (e) { alert("Erro!"); }
+            } catch (e) { 
+                alert("Erro ao atualizar estoque."); 
+                btn.innerText = textOrig;
+                btn.disabled = false;
+            }
         }
 
-        async function alterarStatus(linha, status, btn) {
-            btn.innerText = "⏳";
+        async function alterarStatus(row, status) {
             try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
-                setTimeout(carregarPedidos, 1200);
-            } catch (e) { alert("Erro!"); }
+                await fetch(`${WEB_APP_URL}?row=${row}&status=${status}`);
+                carregarPedidos();
+            } catch (e) { alert("Erro ao atualizar status do pedido."); }
         }
 
         function toggleEstoque() {
@@ -234,36 +188,7 @@
             if(!p.classList.contains('hidden')) carregarEstoque();
         }
 
-        function gerarRelatorio(tipo) {
-            const hojeData = new Date().toLocaleDateString('pt-BR');
-            const filtrados = todosOsPedidos.filter(p => p.status.includes("CONCLU") && (tipo === 'dia' ? p.dataTxt.includes(hojeData) : true));
-            const delivery = filtrados.filter(p => p.modalidade.includes("DELIVERY"));
-            const retirada = filtrados.filter(p => p.modalidade.includes("RETIRADA"));
-            const total = filtrados.reduce((a, b) => a + b.totalNum, 0);
-
-            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Caixa Hoje" : "Caixa Semana";
-            document.getElementById('rel-content').innerHTML = `
-                <div class="bg-black/20 p-4 rounded-2xl border-l-4 border-l-green-500 mb-2 flex justify-between items-center">
-                    <span class="text-xs">🛵 DELIVERY (${delivery.length})</span>
-                    <span class="text-white">R$ ${delivery.reduce((a,b)=>a+b.totalNum,0).toFixed(2)}</span>
-                </div>
-                <div class="bg-black/20 p-4 rounded-2xl border-l-4 border-l-orange-500 flex justify-between items-center">
-                    <span class="text-xs">🛍️ RETIRADA (${retirada.length})</span>
-                    <span class="text-white">R$ ${retirada.reduce((a,b)=>a+b.totalNum,0).toFixed(2)}</span>
-                </div>
-                <div class="text-3xl font-black text-[#39FF14] mt-6 italic">R$ ${total.toFixed(2)}</div>
-            `;
-            document.getElementById('modal-relatorio').classList.remove('hidden');
-        }
-
-        function imprimir(dados) {
-            const p = JSON.parse(decodeURIComponent(dados));
-            const area = document.getElementById('print-area');
-            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>MODALIDADE: ${p.modalidade}<br>TOTAL: R$ ${p.totalNum.toFixed(2)}</div>`;
-            window.print();
-        }
-
-        document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO TURNOS"; document.getElementById('status-conexao').style.color = "#39FF14"; }, { once: true });
+        // Inicialização
         carregarPedidos();
         setInterval(carregarPedidos, 30000);
     </script>
