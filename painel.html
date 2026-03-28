@@ -3,54 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão Pro & Estoque</title>
+    <title>PAINEL KF - Gestão Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; display: block !important; }
-            #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; color: #000; }
-            @page { margin: 0; size: auto; }
+            #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; }
         }
-        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 13px; line-height: 1.3; color: #000; font-weight: bold; padding: 2px; }
-        .linha { border-bottom: 2px dashed #000; margin: 5px 0; }
-        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 1.5rem; }
-        .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 900; text-transform: uppercase; }
-        body { background-color: #09090b; }
-        .estoque-item { transition: 0.3s; border: 1px solid #27272a; background: rgba(255,255,255,0.03); }
-        .estoque-item.pausado { opacity: 0.5; border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 13px; line-height: 1.2; color: #000; font-weight: bold; }
+        .linha { border-bottom: 1px dashed #000; margin: 4px 0; }
+        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
+        body { background-color: #09090b; color: white; }
     </style>
 </head>
-<body class="text-white min-h-screen p-4 font-sans">
+<body class="p-4 font-sans">
 
     <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto" loop></audio>
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
-                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
-                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique para ativar o receptor 📞</p>
+                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase">KF SABORES</h1>
+                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase mt-2 italic">⚠️ Clique para ativar o receptor 📞</p>
             </div>
-            <div class="flex flex-wrap gap-2 justify-center md:justify-end">
+            <div class="flex flex-wrap gap-2 justify-center">
                 <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px]">📊 Vendas Hoje</button>
                 <button onclick="gerarRelatorio('semana')" class="bg-indigo-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px]">📅 Vendas Semana</button>
                 <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px]">📦 Estoque</button>
                 <button onclick="window.open('https://kfsabores.github.io/KF-ORG/?admin=true', '_blank')" class="bg-zinc-700 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px]">⚙️ SITE ADM</button>
-                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white hover:bg-[#39FF14] hover:text-black px-4 py-3 rounded-xl font-black transition-all border border-zinc-700 uppercase text-[10px]">🔄 Sinc</button>
+                <button onclick="carregarPedidos()" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px]">🔄 Sinc</button>
             </div>
         </div>
 
-        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-orange-500 italic uppercase text-xs">Gerenciar Disponibilidade</h2>
-                <button onclick="toggleEstoque()" class="text-zinc-500 font-bold text-sm uppercase">Fechar X</button>
-            </div>
+        <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30">
+            <h2 class="text-xl font-black text-orange-500 mb-6 uppercase italic">Gerenciar Estoque</h2>
             <div id="lista-estoque-categorias" class="space-y-8"></div>
         </div>
 
-        <div id="lista-pedidos" class="grid-custom">
-            <div class="col-span-full text-center py-20 italic text-zinc-600 font-bold uppercase tracking-widest text-xs animate-pulse">Iniciando Sistema...</div>
-        </div>
+        <div id="lista-pedidos" class="grid-custom"></div>
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[100] p-4 bg-black/95">
@@ -69,32 +60,15 @@
 
         let todosOsPedidos = [];
         let totalPedidosAnterior = 0;
-        let primeiraCarga = true;
         const ringtone = document.getElementById('notificacao-som');
 
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
-        // PARSE DE DATA CORRIGIDO PARA EVITAR NaN
-        function parseDataBR(str) {
-            if(!str) return new Date(0);
-            try {
-                const partes = str.split(' ');
-                const dataPartes = partes[0].split('/');
-                const horaPartes = partes[1] ? partes[1].split(':') : ["00","00"];
-                
-                let dia = parseInt(dataPartes[0]);
-                let mes = parseInt(dataPartes[1]) - 1;
-                let ano = parseInt(dataPartes[2]);
-                if (ano < 100) ano += 2000; // Converte 25 em 2025
-
-                return new Date(ano, mes, dia, parseInt(horaPartes[0]), parseInt(horaPartes[1]));
-            } catch(e) { return new Date(0); }
-        }
-
         function limparValor(valorStr) {
             if (!valorStr) return 0;
-            let limpo = valorStr.replace("R$", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
-            return parseFloat(limpo) || 0;
+            // Remove tudo que não é número ou vírgula, depois troca vírgula por ponto
+            let soNumeros = valorStr.toString().replace(/[^\d,]/g, '').replace(',', '.');
+            return parseFloat(soNumeros) || 0;
         }
 
         async function carregarPedidos() {
@@ -105,25 +79,24 @@
                 const rows = csvData.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
-                const pedidosRaw = rows.slice(1).filter(r => r[1]);
-                todosOsPedidos = pedidosRaw.map((row, idx) => ({
+                
+                todosOsPedidos = rows.slice(1).filter(r => r[1]).map((row, idx) => ({
                     linhaOriginal: idx + 2,
-                    dataFull: row[0],
-                    objData: parseDataBR(row[0]),
+                    dataTxt: row[0],
                     nome: row[1],
                     endereco: row[2],
                     itens: row[3],
-                    pagto: row[4],
+                    pagto: row[4] || 'N/A',
                     total: row[5],
                     totalNum: limparValor(row[5]),
-                    status: (row[6] || 'PENDENTE').toUpperCase(),
+                    status: (row[6] || '').toUpperCase(),
                     modalidade: (row[7] || "DELIVERY").toUpperCase()
                 }));
-                if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
+
+                if (todosOsPedidos.length > totalPedidosAnterior && totalPedidosAnterior !== 0) {
                     ringtone.play().catch(() => {});
                 }
                 totalPedidosAnterior = todosOsPedidos.length;
-                primeiraCarga = false;
                 renderizarPedidos();
             } catch (e) { console.error("Erro carga:", e); }
         }
@@ -131,76 +104,59 @@
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
-            const ordenados = [...todosOsPedidos].sort((a,b) => {
-                const sA = a.status.includes("CONCLUIDO") ? 1 : 0;
-                const sB = b.status.includes("CONCLUIDO") ? 1 : 0;
-                return sA - sB || b.linhaOriginal - a.linhaOriginal;
-            });
-            ordenados.forEach(p => {
-                let isRetirada = p.modalidade.includes('RETIRADA');
-                let statusStyle = p.status.includes("PREPARANDO") ? "bg-blue-600" : (p.status.includes("CONCLUIDO") ? "bg-[#39FF14] text-black" : "bg-zinc-800 text-zinc-400");
+            todosOsPedidos.reverse().forEach(p => {
+                const concluido = p.status.includes("CONCLU");
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-green-600'}">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-[10px] font-bold text-zinc-600">${p.dataFull}</span>
-                            <span class="status-badge ${statusStyle}">${p.status}</span>
+                    <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl flex flex-col border-t-8 ${p.modalidade.includes('RETIRADA') ? 'border-t-orange-600' : 'border-t-green-600'} ${concluido ? 'opacity-40' : ''}">
+                        <div class="flex justify-between mb-2 text-[9px] font-bold text-zinc-500 uppercase">
+                            <span>${p.dataTxt}</span>
+                            <span class="px-2 py-1 rounded ${concluido ? 'bg-[#39FF14] text-black' : 'bg-blue-600 text-white'}">${concluido ? '✅ CONCLUÍDO' : '⏳ PENDENTE'}</span>
                         </div>
-                        <h3 class="text-2xl font-black text-white italic mb-2 uppercase">${p.nome}</h3>
-                        <p class="text-sm font-bold text-zinc-400 uppercase mb-4">📍 ${p.endereco}</p>
-                        <div class="bg-black/40 p-4 rounded-2xl mb-4 flex-grow text-xs uppercase font-bold">
-                            ${p.itens.split('|').map(i => `<div class="mb-1">• ${i.trim()}</div>`).join('')}
+                        <h3 class="text-xl font-black italic uppercase text-[#39FF14]">${p.nome}</h3>
+                        <p class="text-[10px] text-zinc-400 mb-3">${p.endereco}</p>
+                        <div class="bg-black/30 p-3 rounded-xl mb-4 text-[10px] font-bold uppercase leading-tight">
+                            ${p.itens.split('|').join('<br>• ')}
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mb-4">
-                            <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600/20 text-blue-400 font-black py-3 rounded-xl text-[10px] uppercase">👨‍🍳 Cozinha</button>
-                            <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="bg-green-600/20 text-green-400 font-black py-3 rounded-xl text-[10px] uppercase">✅ Concluir</button>
+                        <div class="flex gap-2 mb-4">
+                            ${!concluido ? `<button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUÍDO', this)" class="flex-1 bg-green-600/20 text-green-400 py-3 rounded-xl font-black text-[10px] uppercase border border-green-600/30">✅ Finalizar</button>` : ''}
                         </div>
-                        <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
-                            <span class="text-xl font-black text-[#39FF14]">${p.total}</span>
-                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black font-black px-4 py-2 rounded-lg text-[10px] uppercase">🖨️ Imprimir</button>
+                        <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
+                            <span class="text-lg font-black italic">R$ ${p.totalNum.toFixed(2)}</span>
+                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black px-4 py-2 rounded-xl font-black text-[10px]">IMPRIMIR</button>
                         </div>
                     </div>`;
             });
         }
 
-        // RELATÓRIO COM FILTRO DE DATA MAIS FORTE
         function gerarRelatorio(tipo) {
-            const agora = new Date();
-            let titulo = "";
-            let filtrados = [];
+            // Pega o dia de hoje no formato da planilha (DD/MM/YYYY)
+            const hojeData = new Date().toLocaleDateString('pt-BR');
+            
+            const filtrados = todosOsPedidos.filter(p => {
+                const statusOk = p.status.includes("CONCLU");
+                if (tipo === 'dia') {
+                    return statusOk && p.dataTxt.includes(hojeData);
+                }
+                return statusOk; // Na semana mostra todos os concluídos carregados
+            });
 
-            if (tipo === 'dia') {
-                titulo = "Vendas Hoje (Concluídas)";
-                filtrados = todosOsPedidos.filter(p => {
-                    const hoje = agora.toLocaleDateString('pt-BR');
-                    const dataP = p.objData.toLocaleDateString('pt-BR');
-                    return dataP === hoje && (p.status === "CONCLUIDO" || p.status === "PREPARANDO");
-                });
-            } else {
-                titulo = "Vendas 7 Dias (Concluídas)";
-                const seteDiasAtras = new Date();
-                seteDiasAtras.setDate(agora.getDate() - 7);
-                filtrados = todosOsPedidos.filter(p => {
-                    return p.objData >= seteDiasAtras && (p.status === "CONCLUIDO" || p.status === "PREPARANDO");
-                });
-            }
+            const totalSoma = filtrados.reduce((acc, p) => acc + p.totalNum, 0);
 
-            const totalGrana = filtrados.reduce((acc, p) => acc + p.totalNum, 0);
-            const pix = filtrados.filter(p => p.pagto.toLowerCase().includes('pix')).length;
-            const cartao = filtrados.filter(p => p.pagto.toLowerCase().includes('cart') || p.pagto.toLowerCase().includes('déb')).length;
-            const dinheiro = filtrados.filter(p => p.pagto.toLowerCase().includes('din')).length;
-
-            document.getElementById('rel-titulo').innerText = titulo;
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Vendas de Hoje" : "Relatório Geral";
             document.getElementById('rel-content').innerHTML = `
-                <div class="flex justify-between border-b border-zinc-800 pb-2"><span>Pedidos Válidos:</span> <span class="text-white">${filtrados.length}</span></div>
-                <div class="flex justify-between border-b border-zinc-800 pb-2"><span>Faturamento:</span> <span class="text-[#39FF14]">R$ ${totalGrana.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
-                <div class="pt-4 space-y-1">
-                    <p class="text-[10px] text-zinc-500 mb-2 font-black italic">Formas de Pagamento:</p>
-                    <div class="flex justify-between"><span>Pix:</span> <span>${pix}</span></div>
-                    <div class="flex justify-between"><span>Cartão:</span> <span>${cartao}</span></div>
-                    <div class="flex justify-between"><span>Dinheiro:</span> <span>${dinheiro}</span></div>
-                </div>
+                <div class="flex justify-between border-b border-zinc-800 pb-2"><span>Pedidos Concluídos:</span> <span class="text-white">${filtrados.length}</span></div>
+                <div class="flex justify-between border-b border-zinc-800 pb-2 text-[#39FF14] text-xl font-black"><span>Total:</span> <span>R$ ${totalSoma.toFixed(2)}</span></div>
+                <p class="text-[9px] text-zinc-500 mt-4 text-center italic">Soma baseada na coluna "VALOR" para pedidos "CONCLUÍDO".</p>
             `;
             document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        async function alterarStatus(linha, status, btn) {
+            btn.innerText = "SINC..."; btn.disabled = true;
+            try {
+                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
+                setTimeout(carregarPedidos, 1500);
+            } catch (e) { alert("Erro!"); }
         }
 
         function toggleEstoque() {
@@ -211,62 +167,44 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-center py-10 text-zinc-500 font-black text-[10px]'>Sincronizando...</p>";
+            container.innerHTML = "<p class='text-xs font-black animate-pulse'>BUSCANDO DADOS...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoque = await res.json();
-                const cats = {
-                    "🍕 Pizzas Tradicionais": ["Mussarela", "Presunto", "Calabresa", "3 Queijos", "Marguerita", "Alho"],
-                    "🌟 Pizzas Especiais": ["Frango c/ Catupiry", "Frango c/ Cheddar", "Portuguesa", "Peito de Peru", "Lombo Canadense"],
-                    "💎 Pizzas Premium": ["Camarão", "Bacon com Ovos"],
-                    "🍫 Pizzas Doces": ["Banana", "Prestígio", "M&M", "Paçoca", "Romeu", "Caribe", "Sensação"],
-                    "🌮 Tapiocas": ["Minas", "Requeijão", "Nutella", "Chocolate", "Doce de Leite", "Goiabada", "Coco", "Morango", "Abacaxi", "Frango", "Tapioca"],
-                    "🥤 Bebidas": ["Água", "Guaracamp", "Coca", "Guaraná", "Pepsi", "Sukita"],
-                    "🔥 Promoções": ["Refri", "Promo", "1L", "2L"]
-                };
-                let htmlFinal = "";
-                const itensProcessados = new Set();
-                for (let titulo in cats) {
-                    const itensDaCat = Object.keys(estoque).filter(item => cats[titulo].some(key => item.toLowerCase().includes(key.toLowerCase())));
-                    if (itensDaCat.length > 0) {
-                        htmlFinal += `<div><h3 class="text-[#39FF14] text-[10px] font-black uppercase mb-3 border-b border-zinc-800 pb-1">${titulo}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">${itensDaCat.map(item => { itensProcessados.add(item); const isPausado = estoque[item] === 'PAUSADO'; return `<div class="estoque-item ${isPausado ? 'pausado' : ''} p-3 rounded-xl flex flex-col justify-between gap-2"><span class="text-[9px] font-black uppercase leading-tight">${item}</span><button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-lg text-[8px] font-black uppercase ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}">${isPausado ? 'Ativar' : 'Pausar'}</button></div>`; }).join('')}</div></div>`;
-                    }
-                }
-                container.innerHTML = htmlFinal;
+                let html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
+                Object.keys(estoque).forEach(item => {
+                    const isPausado = estoque[item] === 'PAUSADO';
+                    html += `
+                        <div class="bg-zinc-800 p-3 rounded-2xl border ${isPausado ? 'border-red-600/50 opacity-50' : 'border-zinc-700'}">
+                            <p class="text-[9px] font-black uppercase mb-3 truncate">${item}</p>
+                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                                class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">
+                                ${isPausado ? 'Ativar' : 'Pausar'}
+                            </button>
+                        </div>`;
+                });
+                container.innerHTML = html + '</div>';
             } catch (e) { container.innerHTML = "Erro."; }
         }
 
         async function mudarStatusEstoque(item, novoStatus, btn) {
-            btn.innerText = "⏳"; btn.disabled = true;
-            try {
-                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item: item, status: novoStatus }) });
-                setTimeout(carregarEstoque, 800);
-            } catch (e) { alert("Erro!"); btn.disabled = false; }
-        }
-
-        async function alterarStatus(linha, status, btn) {
             btn.innerText = "⏳";
             try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
-                setTimeout(carregarPedidos, 1000);
-            } catch (e) { console.log("Erro status"); }
+                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item: item, status: novoStatus }) });
+                setTimeout(carregarEstoque, 1000);
+            } catch (e) { alert("Erro!"); }
         }
 
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
-            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 16px;">KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome}<br>ENDEREÇO: ${p.endereco}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').map(i=>`• ${i.trim().toUpperCase()}<br>`).join('')}<div class="linha"></div>PAGTO: ${p.pagto}<br>TOTAL: ${p.total}<div class="linha"></div><center><br>BOM APETITE!</center></div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>PAGTO: ${p.pagto.toUpperCase()}<br>TOTAL: R$ ${p.totalNum.toFixed(2)}<div class="linha"></div><center>BOM APETITE!</center></div>`;
             window.print();
         }
 
-        document.body.addEventListener('click', () => {
-            pararSom();
-            document.getElementById('status-conexao').innerText = "📞 MONITORANDO TURNOS";
-            document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase mt-2";
-        }, { once: true });
-
+        document.body.addEventListener('click', () => { pararSom(); document.getElementById('status-conexao').innerText = "📞 MONITORANDO PEDIDOS"; document.getElementById('status-conexao').classList.replace('text-zinc-500', 'text-[#39FF14]'); }, { once: true });
         carregarPedidos();
-        setInterval(carregarPedidos, 20000);
+        setInterval(carregarPedidos, 25000);
     </script>
 </body>
 </html>
