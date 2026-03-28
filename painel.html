@@ -16,7 +16,8 @@
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1rem; }
         body { background-color: #09090b; color: white; }
         .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 8px; font-weight: 900; text-transform: uppercase; }
-        .cat-title { border-left: 4px solid #39FF14; padding-left: 10px; margin-bottom: 15px; color: #39FF14; font-weight: 900; text-transform: uppercase; font-size: 12px; italic; }
+        .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .cat-title { color: #39FF14; font-weight: 900; text-transform: uppercase; font-size: 14px; margin-bottom: 1rem; display: flex; items-center: center; gap: 8px; italic; }
     </style>
 </head>
 <body class="p-4 font-sans">
@@ -39,11 +40,11 @@
         </div>
 
         <div id="painel-estoque" class="hidden mb-8 bg-zinc-900 p-6 rounded-3xl border border-orange-500/30 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-black text-orange-500 uppercase italic">Gerenciar Itens</h2>
-                <button onclick="toggleEstoque()" class="text-zinc-500 hover:text-white font-bold uppercase text-[10px]">Fechar X</button>
+            <div class="flex justify-between items-center mb-6 p-4 border-b border-zinc-800">
+                <h2 class="text-xl font-black text-orange-500 uppercase italic">Gestão de Cardápio</h2>
+                <button onclick="toggleEstoque()" class="bg-zinc-800 px-4 py-1 rounded-full text-zinc-400 font-bold uppercase text-[10px]">Fechar</button>
             </div>
-            <div id="lista-estoque-categorias" class="space-y-8"></div>
+            <div id="lista-estoque-categorias" class="p-4 space-y-2"></div>
         </div>
 
         <div id="lista-pedidos" class="grid-custom"></div>
@@ -69,9 +70,9 @@
 
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
-        function limparValor(valorStr) {
-            if (!valorStr) return 0;
-            let limpo = valorStr.toString().replace("R$", "").replace(/\s/g, "");
+        function limparValor(v) {
+            if (!v) return 0;
+            let limpo = v.toString().replace("R$", "").replace(/\s/g, "");
             if (limpo.includes(",") && limpo.includes(".")) limpo = limpo.replace(/\./g, "");
             limpo = limpo.replace(",", ".");
             return parseFloat(limpo) || 0;
@@ -116,7 +117,7 @@
                 const isRetirada = p.modalidade.includes("RETIRADA");
                 
                 let corBorda = isRetirada ? 'border-t-orange-600' : 'border-t-green-600';
-                let statusTxt = concluido ? '✅ FINALIZADO' : (preparando ? '👨‍🍳 NA COZINHA' : '⏳ NOVO PEDIDO');
+                let statusTxt = concluido ? '✅ FINALIZADO' : (preparando ? '👨‍🍳 NA COZINHA' : '⏳ NOVO');
                 let statusCor = concluido ? 'bg-[#39FF14] text-black' : (preparando ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-400');
 
                 container.innerHTML += `
@@ -129,8 +130,8 @@
                             <span class="status-badge ${statusCor}">${statusTxt}</span>
                         </div>
                         <h3 class="text-xl font-black italic uppercase text-white mb-1">${p.nome}</h3>
-                        <p class="text-[10px] font-bold text-zinc-400 mb-3 italic">📍 ${p.endereco}</p>
-                        <div class="bg-black/40 p-3 rounded-xl mb-4 text-[11px] font-bold uppercase leading-tight border border-zinc-800/50">
+                        <p class="text-[10px] font-bold text-zinc-400 mb-3 italic truncate">📍 ${p.endereco}</p>
+                        <div class="bg-black/40 p-3 rounded-xl mb-4 text-[11px] font-bold uppercase border border-zinc-800/50">
                             ${p.itens.split('|').join('<br>• ')}
                         </div>
                         ${!concluido ? `
@@ -139,7 +140,7 @@
                             <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUÍDO', this)" class="bg-green-600 text-white py-3 rounded-xl font-black text-[9px] uppercase">Finalizar</button>
                         </div>` : ''}
                         <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-                            <span class="text-lg font-black italic text-[#39FF14]">R$ ${p.totalNum.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                            <span class="text-lg font-black italic text-[#39FF14]">R$ ${p.totalNum.toFixed(2)}</span>
                             <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-zinc-100 text-black px-4 py-2 rounded-xl font-black text-[10px]">🖨️ IMPRIMIR</button>
                         </div>
                     </div>`;
@@ -148,32 +149,39 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "Carregando...";
+            container.innerHTML = "<p class='text-center p-10 animate-pulse'>Sincronizando Categorias...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoque = await res.json();
                 
+                // DEFINIÇÃO DAS CATEGORIAS CONFORME SOLICITADO
                 const categorias = {
-                    "🍕 Pizzas": ["Pizza", "Mussarela", "Calabresa", "Lombo", "Frango", "Bacon"],
-                    "🌮 Tapiocas": ["Tapioca"],
-                    "🥤 Bebidas": ["Refri", "Água", "Coca", "Guaraná", "1L", "2L", "Suco"],
-                    "🎁 Outros": []
+                    "🔥 PROMOS": ["2 Pizzas", "Combo", "Promo"],
+                    "🍕 TRADICIONAL": ["Mussarela", "Calabresa", "Lombo", "Frango", "Milho", "Portuguesa", "Marguerita", "Napo", "Baiana"],
+                    "🌟 ESPECIAL": ["Catu", "Cheddar", "Pesto", "Aliche", "Especial"],
+                    "💎 PREMIUM": ["Camarão", "Filé", "Trufa", "Picanha", "Premium"],
+                    "🍫 PIZZAS DOCES": ["Doce", "Chocolate", "Nutella", "Morango", "M&M", "Banana"],
+                    "🌮 INGREDIENTES TAPIOCAS": ["Tapioca", "Goma", "Recheio Tapioca"],
+                    "🥤 BEBIDAS": ["Coca", "Refri", "Água", "Suco", "Guaraná", "Fanta", "2L", "600ml", "Lata"]
                 };
 
                 let htmlFinal = "";
+                let itensJaAdicionados = new Set();
+
                 for (let cat in categorias) {
                     const itensDaCat = Object.keys(estoque).filter(item => {
-                        if (cat === "🎁 Outros") return !Object.values(categorias).flat().some(k => item.toLowerCase().includes(k.toLowerCase()));
-                        return categorias[cat].some(key => item.toLowerCase().includes(key.toLowerCase()));
+                        const matches = categorias[cat].some(key => item.toLowerCase().includes(key.toLowerCase()));
+                        if (matches) itensJaAdicionados.add(item);
+                        return matches;
                     });
 
                     if (itensDaCat.length > 0) {
-                        htmlFinal += `<div><h3 class="cat-title">${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+                        htmlFinal += `<div class="cat-card"><h3 class="cat-title">${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
                         itensDaCat.forEach(item => {
                             const isPausado = estoque[item] === 'PAUSADO';
                             htmlFinal += `
-                                <div class="bg-zinc-800 p-3 rounded-2xl border ${isPausado ? 'border-red-600 opacity-50' : 'border-zinc-700'}">
-                                    <p class="text-[9px] font-black uppercase mb-3 truncate">${item}</p>
+                                <div class="bg-black/40 p-3 rounded-2xl border ${isPausado ? 'border-red-600 opacity-50' : 'border-zinc-800'}">
+                                    <p class="text-[9px] font-black uppercase mb-3 truncate text-zinc-300">${item}</p>
                                     <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
                                         class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">
                                         ${isPausado ? 'Ativar' : 'Pausar'}
@@ -183,6 +191,21 @@
                         htmlFinal += `</div></div>`;
                     }
                 }
+                
+                // Itens que não entraram em nenhuma categoria
+                const outros = Object.keys(estoque).filter(item => !itensJaAdicionados.has(item));
+                if (outros.length > 0) {
+                    htmlFinal += `<div class="cat-card"><h3 class="cat-title text-zinc-500 italic">📦 DIVERSOS</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+                    outros.forEach(item => {
+                        const isPausado = estoque[item] === 'PAUSADO';
+                        htmlFinal += `<div class="bg-black/40 p-3 rounded-2xl border ${isPausado ? 'border-red-600' : 'border-zinc-800'}">
+                            <p class="text-[9px] font-black uppercase mb-3 truncate text-zinc-300">${item}</p>
+                            <button onclick="mudarStatusEstoque('${item}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-lg text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">${isPausado ? 'Ativar' : 'Pausar'}</button>
+                        </div>`;
+                    });
+                    htmlFinal += `</div></div>`;
+                }
+
                 container.innerHTML = htmlFinal;
             } catch (e) { container.innerHTML = "Erro ao carregar estoque."; }
         }
@@ -196,7 +219,7 @@
         }
 
         async function alterarStatus(linha, status, btn) {
-            btn.innerText = "...";
+            btn.innerText = "⏳";
             try {
                 await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`);
                 setTimeout(carregarPedidos, 1200);
@@ -226,7 +249,7 @@
                     <span class="text-xs">🛍️ RETIRADA (${retirada.length})</span>
                     <span class="text-white">R$ ${retirada.reduce((a,b)=>a+b.totalNum,0).toFixed(2)}</span>
                 </div>
-                <div class="text-3xl font-black text-[#39FF14] mt-6">R$ ${total.toFixed(2)}</div>
+                <div class="text-3xl font-black text-[#39FF14] mt-6 italic">R$ ${total.toFixed(2)}</div>
             `;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
@@ -234,7 +257,7 @@
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
-            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>TOTAL: R$ ${p.totalNum.toFixed(2)}</div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong>KF SABORES</strong><br>${p.dataTxt}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>ENDEREÇO: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${p.itens.split('|').join('<br>• ')}<div class="linha"></div>MODALIDADE: ${p.modalidade}<br>TOTAL: R$ ${p.totalNum.toFixed(2)}</div>`;
             window.print();
         }
 
