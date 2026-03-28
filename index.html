@@ -168,9 +168,18 @@
             ],
             tapioca_extras: ["Leite Condensado", "Açúcar c/ Canela", "Granulado", "Orégano", "Cebola", "Tomate", "Azeitona", "Manteiga", "Alho Torrado", "Molho de Alho", "Molho de Pizza", "Nenhum"],
             bebidas: [
-                { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 }, { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
-                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná 1L", price: 10.00 }, { name: "Pepsi 1.5L", price: 12.00 }, { name: "Guaraná 1.5L", price: 12.00 },
-                { name: "Sukita Uva 2L", price: 12.00 }, { name: "Sukita Laranja 2L", price: 12.00 }
+                { name: "Água", price: 2.50 }, 
+                { name: "Água c/ Gás", price: 3.50 }, 
+                { name: "Guaracamp", price: 2.50 }, 
+                { name: "Coca Lata", price: 6.00 },
+                { name: "Coca Lata Zero", price: 6.00 }, 
+                { name: "Guaraná 1L", price: 10.00 },
+                { name: "Pepsi 1.5L", price: 12.00 }, 
+                { name: "Guaraná 1.5L", price: 12.00 },
+                { name: "Guaraná ZERO 1.5L", price: 12.00 },
+                { name: "Sukita Uva 2L", price: 12.00 }, 
+                { name: "Sukita Laranja 2L", price: 12.00 },
+                { name: "Sukita Limão 2L", price: 12.00 }
             ]
         };
 
@@ -180,7 +189,7 @@
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0; let distanciaTexto = "";
 
-        // --- MAPS ---
+        // MAPS
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -214,7 +223,6 @@
             });
         }
 
-        // --- SISTEMA ---
         async function carregarEstoqueUmaVez() {
             try {
                 const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
@@ -236,9 +244,9 @@
         function verificarStatusLoja() {
             const banner = document.getElementById('banner-status');
             const listaH = document.getElementById('horarios-lista');
-            const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
             if (!estaAberto()) {
                 banner.classList.remove('hidden');
+                const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
                 let html = "";
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
@@ -305,14 +313,11 @@
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
 
-            // LOGICA DE FILTRO DE BEBIDAS REVISADA
             if(cat === 'promos' && currentItem.refri) {
                 let bebidasFiltradas = [];
                 if(currentItem.refri === "2L") {
-                    // Para promo de 35cm, aceita 1.5L e 2L
                     bebidasFiltradas = menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L"));
                 } else {
-                    // Para promo de 1L (25cm)
                     bebidasFiltradas = menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
                 }
 
