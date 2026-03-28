@@ -113,7 +113,7 @@
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
                     telefone: row[8] || "",
-                    taxaEntrega: row[9] || "0" // Lendo Coluna J
+                    taxaEntrega: row[9] || "0"
                 }));
 
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
@@ -143,15 +143,10 @@
                 const isConcluido = p.status.includes("CONCLUIDO");
                 const cardBorder = p.status.includes("PREPARANDO") ? "border-blue-500" : (isConcluido ? "border-zinc-800 opacity-60" : "border-yellow-500 neon-border");
                 
-                // Lógica da Taxa de Entrega (Coluna J)
                 let vTaxa = limparValor(p.taxaEntrega);
-                let taxaTexto = "";
-                if (isRetirada) {
-                    taxaTexto = "🛍️ RETIRADA EM LOJA";
-                } else {
-                    const valorFormatado = vTaxa > 0 ? `R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : "A COMBINAR";
-                    taxaTexto = `🛵 TAXA DE ENTREGA: ${valorFormatado}`;
-                }
+                let taxaTexto = isRetirada 
+                    ? "🛍️ RETIRADA EM LOJA" 
+                    : `🛵 TAXA DE ENTREGA: R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
                 const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
