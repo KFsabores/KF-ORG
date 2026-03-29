@@ -35,13 +35,15 @@
                 <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o som 📞</p>
             </div>
             
-            <div class="flex flex-wrap gap-2 justify-center">
-                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all">📊 Hoje</button>
-                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all">📅 Semana</button>
-                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all">📦 Estoque</button>
-               <a href="configuracoes_taxas.html" target="_blank" class="btn btn-warning btn-lg fw-bold shadow-sm m-2">
-  <i class="fas fa-map-marked-alt"></i> CONFIGURAR TAXAS
-</a>
+            <div class="flex flex-wrap gap-2 justify-center items-center">
+                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg">📊 Hoje</button>
+                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all shadow-lg">📅 Semana</button>
+                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg">📦 Estoque</button>
+                
+                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all shadow-lg border border-zinc-700 flex items-center gap-2">
+                   🗺️ TAXAS
+                </a>
+
                 <button onclick="location.reload()" class="bg-zinc-700 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600">🔄 Atualizar</button>
             </div>
         </div>
@@ -204,10 +206,8 @@
                 const status = el.getAttribute('data-status');
                 const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
                 
-                // Se o status for concluído, ele mantém o badge cinza e para de contar
                 if (status.includes('CONCLU')) {
                     el.className = "timer-badge bg-zinc-700 opacity-50";
-                    // Se já tiver um tempo final, não mexe mais
                     if (el.innerText !== "..." && el.innerText !== "calculando..." && el.innerText !== "OK") return;
                 }
 
@@ -220,7 +220,6 @@
                 
                 el.innerText = tempoTexto;
 
-                // Cores apenas para quem NÃO está concluído
                 if (!status.includes('CONCLU')) {
                     if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
                     else if (m >= 20) el.className = "timer-badge bg-yellow-600";
