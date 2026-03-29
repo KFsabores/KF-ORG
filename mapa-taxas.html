@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editor de Áreas - KF Sabores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_AQUI&libraries=drawing,geometry"></script>
+    <style>
+        #map { height: 600px; width: 100%; border-radius: 20px; }
+        .controles { position: absolute; top: 10px; left: 10px; z-index: 5; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-zinc-950 p-6 text-white">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-2xl font-black mb-4 uppercase italic text-[#39FF14]">Editor de Geofencing (Taxas por Área)</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="md:col-span-3 relative">
+                <div id="map"></div>
+            </div>
+
+            <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                <h2 class="font-bold mb-4 uppercase text-xs text-zinc-400">Áreas Desenhadas</h2>
+                <div id="lista-areas" class="space-y-3">
+                    </div>
+                <button onclick="salvarConfiguracoes()" class="w-full mt-6 bg-[#39FF14] text-black font-black py-3 rounded-xl uppercase text-xs">Salvar na Planilha</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let drawingManager;
+        let poligonos = [];
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -22.9068, lng: -43.1729 }, // Coordenadas da sua cidade
+                zoom: 13,
+                styles: [ /* Seu estilo Dark Mode aqui */ ]
+            });
+
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: ['polygon']
+                },
+                polygonOptions: {
+                    editable: true,
+                    draggable: true,
+                    fillOpacity: 0.5
+                }
+            });
+            drawingManager.setMap(map);
+
+            // Evento disparado quando você termina de desenhar um polígono
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                const corAleatoria = '#' + Math.floor(Math.random()*16777215).toString(16);
+                polygon.setOptions({ fillColor: corAleatoria, strokeColor: corAleatoria });
+                
+                const id = Date.now();
+                poligonos.push({ id: id, obj: polygon, preco: 0 });
+                atualizarListaSidebar();
+            });
+        }
+
+        function atualizarListaSidebar() {
+            const container = document.getElementById('lista-areas');
+            container.innerHTML = poligonos.map(p => `
+                <div class="p-3 bg-zinc-800 rounded-lg border-l-4" style="border-color: ${p.obj.fillColor}">
+                    <input type="number" placeholder="Preço R$" onchange="atualizarPreco(${p.id}, this.value)" 
+                        class="bg-transparent border-b border-zinc-700 w-full text-white font-bold outline-none mb-2">
+                    <button onclick="removerArea(${p.id})" class="text-[10px] text-red-500 uppercase font-bold">Remover</button>
+                </div>
+            `).join('');
+        }
+
+        function atualizarPreco(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.preco = parseFloat(valor);
+        }
+
+        async function salvarConfiguracoes() {
+            const dadosParaSalvar = poligonos.map(p => {
+                const path = p.obj.getPath().getArray().map(latLng => ({
+                    lat: latLng.lat(),
+                    lng: latLng.lng()
+                }));
+                return { preco: p.preco, cor: p.obj.fillColor, pontos: path };
+            });
+
+            console.log("JSON pronto para enviar para o Google Script:", dadosParaSalvar);
+            // Aqui você faz o fetch para o seu WEB_APP_URL salvando na aba CONFIG_TAXAS
+            alert("Configurações enviadas para processamento!");
+        }
+
+        google.maps.event.addDomListener(window, 'load', initMap);
+    </script>
+</body>
+</html>
