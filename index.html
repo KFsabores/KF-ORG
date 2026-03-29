@@ -227,29 +227,29 @@
         function verificarLocalizacao(loc) {
             let zonaAchada = null;
             
-            // 1. Percorre as zonas que você desenhou no mapa-taxas
+            // zonasEntrega é o array que veio do B1 da planilha
             zonasEntrega.forEach(zona => {
-                // Converte a string de coordenadas da planilha em objeto para o Google Maps
-                const pontosLimpos = JSON.parse(zona.coordenadas); 
-                const poly = new google.maps.Polygon({ paths: pontosLimpos });
+                // Cria o polígono usando a lista de pontos (lat/lng)
+                const poly = new google.maps.Polygon({ paths: zona.pontos });
 
                 if (google.maps.geometry.poly.containsLocation(loc, poly)) {
                     zonaAchada = zona;
                 }
             });
 
+            const infoDistancia = document.getElementById('distancia-info');
+
             if (zonaAchada) {
-                // 2. Aplica o preço que você definiu para aquela área
-                taxaEntrega = parseFloat(zonaAchada.valor); 
-                document.getElementById('distancia-info').innerText = `🛵 Área: ${zonaAchada.nome} | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
-                document.getElementById('distancia-info').style.color = "#39FF14"; // Verde neon
+                taxaEntrega = parseFloat(zonaAchada.preco); 
+                infoDistancia.innerText = `🛵 ENTREGA PARA: ${zonaAchada.nome.toUpperCase()} | TAXA: R$ ${taxaEntrega.toFixed(2)}`;
+                infoDistancia.style.color = "#39FF14"; // Verde Neon
             } else {
                 taxaEntrega = 0;
-                document.getElementById('distancia-info').innerText = `⚠️ Fora da área de entrega automática.`;
-                document.getElementById('distancia-info').style.color = "#ff4444"; // Vermelho
-                alert("Este endereço está fora da nossa zona de entrega. Verifique com o atendente.");
+                infoDistancia.innerText = `⚠️ FORA DA ÁREA DE ENTREGA PADRÃO`;
+                infoDistancia.style.color = "#ff4444"; // Vermelho
+                alert("Atenção: Seu endereço está fora da nossa zona de entrega automática. O valor será combinado no WhatsApp.");
             }
-            updateCartUI(); // Atualiza o valor total no carrinho
+            updateCartUI();
         }
 
         // --- LÓGICA DA LOJA (ESTADO E CATEGORIAS) ---
