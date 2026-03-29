@@ -107,12 +107,14 @@
     </button>
 
     <script>
+        // --- CONFIGURAÇÕES TÉCNICAS ---
         const WHATSAPP_NUMBER = "5521997437285";
-        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbwh9yv04Db69lZ50bslcRqidmjP0Eu8NTPeEUf4EI4I0VtwzUEKbaknsAGRoYy0Oxqxeg/exec";
+        const ENDERECO_TRAILER = "R. das Pitombeiras, 507-575 - Paciência, Rio de Janeiro - RJ, 23585-245";
+        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx5vSO0JUFs7h-oFwNolt1UuYjIeTRHJh105As8oWaOsrEBCQfxMGcDMEvTlx6Wpm3n/exec";
         
         let estoqueAtual = {}; 
+        let zonasEntrega = [];
         let modoAdmin = false;
-        let zonasEntrega = []; // Armazena os polígonos da planilha
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('admin') === 'true') { modoAdmin = true; }
         
@@ -189,58 +191,60 @@
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
 
-        // --- INICIALIZAÇÃO E GEOFENCING ---
-        async function carregarZonasEntrega() {
-            try {
-                const res = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                zonasEntrega = await res.json();
-                console.log("Logística KF: Zonas de entrega carregadas.");
-            } catch (e) { console.error("Erro ao carregar zonas", e); }
+        // --- INICIALIZAÇÃO E ESTOQUE ---
+        async function init() {
+            verificarStatusLoja();
+            await carregarEstoqueEZonas();
         }
 
+        async function carregarEstoqueEZonas() {
+            try {
+                // Carrega Estoque
+                const resEstoque = await fetch(`${URL_PLANILHA}?action=getEstoque`);
+                estoqueAtual = await resEstoque.json();
+                
+                // Carrega Zonas do Mapa
+                const resMapa = await fetch(`${URL_PLANILHA}?action=getMapa`);
+                zonasEntrega = await resMapa.json();
+
+                switchCategory('promos');
+            } catch (e) { console.error("Erro ao carregar dados", e); }
+        }
+
+        // --- MAPAS E TAXAS (GEOFENCING) ---
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
                 if (!place.geometry) return;
-                verificarLocalizacaoNoMapa(place.geometry.location);
+                verificarLocalizacao(place.geometry.location);
             });
         }
 
-        function verificarLocalizacaoNoMapa(location) {
-            let encontrada = false;
-            let menorTaxa = 999;
-
+        function verificarLocalizacao(loc) {
+            let zonaAchada = null;
+            
+            // Verifica se o ponto está dentro de algum polígono desenhado no mapa-taxas
             zonasEntrega.forEach(zona => {
-                const poligono = new google.maps.Polygon({ paths: zona.pontos });
-                if (google.maps.geometry.poly.containsLocation(location, poligono)) {
-                    encontrada = true;
-                    if (zona.preco < menorTaxa) menorTaxa = zona.preco;
+                const poly = new google.maps.Polygon({ paths: zona.pontos });
+                if (google.maps.geometry.poly.containsLocation(loc, poly)) {
+                    zonaAchada = zona;
                 }
             });
 
-            if (encontrada) {
-                taxaEntrega = menorTaxa;
-                document.getElementById('distancia-info').innerText = `🛵 Localizado! Taxa de Entrega: R$ ${taxaEntrega.toFixed(2)}`;
-                document.getElementById('distancia-info').style.color = "#39FF14";
+            if (zonaAchada) {
+                taxaEntrega = zonaAchada.preco;
+                document.getElementById('distancia-info').innerText = `🛵 Área Identificada | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
             } else {
                 taxaEntrega = 0;
-                document.getElementById('distancia-info').innerText = "❌ Ops! Não entregamos nesta localização.";
-                document.getElementById('distancia-info').style.color = "#ff4444";
-                alert("Desculpe, seu endereço está fora da nossa área de entrega em Paciência.");
+                document.getElementById('distancia-info').innerText = `⚠️ Endereço fora da área de entrega padrão.`;
+                alert("Atenção: Este endereço parece estar fora da nossa zona de entrega automática. Consulte no WhatsApp.");
             }
             updateCartUI();
         }
 
-        async function carregarEstoqueUmaVez() {
-            try {
-                const res = await fetch(`${URL_PLANILHA}?action=getEstoque`);
-                estoqueAtual = await res.json();
-            } catch (e) { console.error("Erro estoque", e); }
-            switchCategory('promos');
-        }
-
+        // --- LÓGICA DA LOJA (ESTADO E CATEGORIAS) ---
         function estaAberto() {
             if (modoAdmin) return true;
             const agora = new Date();
@@ -309,6 +313,7 @@
             }).join('');
         }
 
+        // --- MODAIS E SELEÇÕES ---
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { 
@@ -378,6 +383,7 @@
             closeModal();
         }
 
+        // --- TAPIOCA ---
         function openTapiocaModal() {
             tapRecheios = []; let html = "";
             menuData.tapioca_cats.forEach(group => {
@@ -409,6 +415,7 @@
             updateCartUI(); closeModal(); 
         }
 
+        // --- CARRINHO E ENVIO ---
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
@@ -429,14 +436,7 @@
             const pagto = document.getElementById('pay-method').value;
             const troco = document.getElementById('troco-val').value;
             const totalStr = document.getElementById('cart-total').innerText;
-
-            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { 
-                alert("Preencha Nome, Telefone e Endereço!"); return; 
-            }
-            
-            if(modalidadeAtual === 'DELIVERY' && taxaEntrega === 0) {
-                alert("Não podemos entregar neste endereço."); return;
-            }
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
             msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A`;
@@ -452,6 +452,7 @@
             if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
             msg += `*💰 TOTAL: R$ ${totalStr}*`;
             
+            // Salva na Planilha
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
                 mode: 'no-cors', 
@@ -460,6 +461,7 @@
                     modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
                 }) 
             });
+
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
@@ -468,10 +470,8 @@
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
         function checkPayment() { document.getElementById('troco-val').classList.toggle('hidden', document.getElementById('pay-method').value !== 'Dinheiro'); }
 
-        // Inicializar
-        verificarStatusLoja();
-        carregarEstoqueUmaVez();
-        carregarZonasEntrega(); // Busca o mapa de Paciência da planilha
+        // Inicia o sistema
+        init();
     </script>
 </body>
 </html>
