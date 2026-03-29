@@ -35,17 +35,20 @@
                 <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o som 📞</p>
             </div>
             
-            <div class="flex flex-wrap gap-2 justify-center items-center">
-                <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg">📊 Hoje</button>
-                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all shadow-lg">📅 Semana</button>
-                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg">📦 Estoque</button>
-                
-                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all shadow-lg border border-zinc-700 flex items-center gap-2">
-                   🗺️ TAXAS
-                </a>
+           <div class="flex flex-wrap gap-2 justify-center items-center">
+    <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg">📊 Hoje</button>
+    <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all shadow-lg">📅 Semana</button>
+    <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg">📦 Estoque</button>
+    
+    <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg border border-emerald-500 flex items-center gap-2">
+       🌐 ABRIR SITE
+    </a>
 
-                <button onclick="location.reload()" class="bg-zinc-700 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600">🔄 Atualizar</button>
-            </div>
+    <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all shadow-lg border border-zinc-700 flex items-center gap-2">
+       🗺️ TAXAS
+    </a>
+
+    </div>
         </div>
 
         <div id="painel-estoque" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border-2 border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.1)]">
