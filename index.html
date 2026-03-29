@@ -210,14 +210,16 @@
                 switchCategory('promos');
             } catch (e) { console.error("Erro ao carregar dados", e); }
         }
-
         // --- MAPAS E TAXAS (GEOFENCING) ---
-        function initAutocomplete() {
+       function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
+            
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
                 if (!place.geometry) return;
+                
+                // Envia a localização selecionada para a função de taxa
                 verificarLocalizacao(place.geometry.location);
             });
         }
@@ -225,23 +227,29 @@
         function verificarLocalizacao(loc) {
             let zonaAchada = null;
             
-            // Verifica se o ponto está dentro de algum polígono desenhado no mapa-taxas
+            // 1. Percorre as zonas que você desenhou no mapa-taxas
             zonasEntrega.forEach(zona => {
-                const poly = new google.maps.Polygon({ paths: zona.pontos });
+                // Converte a string de coordenadas da planilha em objeto para o Google Maps
+                const pontosLimpos = JSON.parse(zona.coordenadas); 
+                const poly = new google.maps.Polygon({ paths: pontosLimpos });
+
                 if (google.maps.geometry.poly.containsLocation(loc, poly)) {
                     zonaAchada = zona;
                 }
             });
 
             if (zonaAchada) {
-                taxaEntrega = zonaAchada.preco;
-                document.getElementById('distancia-info').innerText = `🛵 Área Identificada | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
+                // 2. Aplica o preço que você definiu para aquela área
+                taxaEntrega = parseFloat(zonaAchada.valor); 
+                document.getElementById('distancia-info').innerText = `🛵 Área: ${zonaAchada.nome} | Taxa: R$ ${taxaEntrega.toFixed(2)}`;
+                document.getElementById('distancia-info').style.color = "#39FF14"; // Verde neon
             } else {
                 taxaEntrega = 0;
-                document.getElementById('distancia-info').innerText = `⚠️ Endereço fora da área de entrega padrão.`;
-                alert("Atenção: Este endereço parece estar fora da nossa zona de entrega automática. Consulte no WhatsApp.");
+                document.getElementById('distancia-info').innerText = `⚠️ Fora da área de entrega automática.`;
+                document.getElementById('distancia-info').style.color = "#ff4444"; // Vermelho
+                alert("Este endereço está fora da nossa zona de entrega. Verifique com o atendente.");
             }
-            updateCartUI();
+            updateCartUI(); // Atualiza o valor total no carrinho
         }
 
         // --- LÓGICA DA LOJA (ESTADO E CATEGORIAS) ---
