@@ -211,33 +211,50 @@
             } catch (e) { console.error("Erro ao carregar dados", e); }
         }
         // --- MAPAS E TAXAS (GEOFENCING) ---
-       function initAutocomplete() {
+       // --- MAPAS E TAXAS (GEOFENCING ATUALIZADO) ---
+        function initAutocomplete() {
             const input = document.getElementById('cust-addr');
+            // Impede que o formulário seja enviado ao apertar Enter no endereço
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+
             const autocomplete = new google.maps.places.Autocomplete(input);
             
-            autocomplete.addListener('place_changed', () => {
+            autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
                 if (!place.geometry) return;
                 
-                // Envia a localização selecionada para a função de taxa
-                verificarLocalizacao(place.geometry.location);
+                // Chamamos a função e esperamos ela terminar
+                await verificarLocalizacao(place.geometry.location);
             });
         }
 
-        function verificarLocalizacao(loc) {
+        async function verificarLocalizacao(loc) {
             let zonaAchada = null;
+            const infoDistancia = document.getElementById('distancia-info');
             
-            // zonasEntrega é o array que veio do B1 da planilha
-            zonasEntrega.forEach(zona => {
-                // Cria o polígono usando a lista de pontos (lat/lng)
-                const poly = new google.maps.Polygon({ paths: zona.pontos });
+            infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
+            infoDistancia.style.color = "#FFD700";
 
-                if (google.maps.geometry.poly.containsLocation(loc, poly)) {
-                    zonaAchada = zona;
+            // Se por algum motivo as zonas não carregaram no init(), buscamos agora
+            if (!zonasEntrega || zonasEntrega.length === 0) {
+                try {
+                    const resMapa = await fetch(`${URL_PLANILHA}?action=getMapa`);
+                    zonasEntrega = await resMapa.json();
+                } catch (e) {
+                    console.error("Erro ao carregar mapa:", e);
+                }
+            }
+
+            // Percorre as zonas salvas
+            zonasEntrega.forEach(zona => {
+                // O script salva como 'pontos', garantimos que existam
+                if (zona.pontos) {
+                    const poly = new google.maps.Polygon({ paths: zona.pontos });
+                    if (google.maps.geometry.poly.containsLocation(loc, poly)) {
+                        zonaAchada = zona;
+                    }
                 }
             });
-
-            const infoDistancia = document.getElementById('distancia-info');
 
             if (zonaAchada) {
                 taxaEntrega = parseFloat(zonaAchada.preco); 
@@ -249,6 +266,8 @@
                 infoDistancia.style.color = "#ff4444"; // Vermelho
                 alert("Atenção: Seu endereço está fora da nossa zona de entrega automática. O valor será combinado no WhatsApp.");
             }
+
+            // ATUALIZA O CARRINHO IMEDIATAMENTE APÓS DESCOBRIR A TAXA
             updateCartUI();
         }
 
