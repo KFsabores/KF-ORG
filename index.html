@@ -197,10 +197,12 @@
 
         async function carregarEstoqueEZonas() {
             try {
-                const resEstoque = await fetch(`${URL_PLANILHA}?action=getEstoque`);
-                estoqueAtual = await resEstoque.json();
-                const resMapa = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                zonasEntrega = await resMapa.json();
+                const [resE, resM] = await Promise.all([
+                    fetch(`${URL_PLANILHA}?action=getEstoque`),
+                    fetch(`${URL_PLANILHA}?action=getMapa`)
+                ]);
+                estoqueAtual = await resE.json();
+                zonasEntrega = await resM.json();
                 switchCategory('promos');
             } catch (e) { console.error("Erro ao carregar dados", e); }
         }
@@ -209,54 +211,56 @@
             const input = document.getElementById('cust-addr');
             input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
             const autocomplete = new google.maps.places.Autocomplete(input);
-            autocomplete.setFields(['geometry', 'formatted_address']);
             
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
-                if (!place.geometry) return;
+                if (!place || !place.geometry) return;
                 await verificarLocalizacao(place.geometry.location);
             });
         }
 
         async function verificarLocalizacao(loc) {
-            let zonaAchada = null;
             const infoDistancia = document.getElementById('distancia-info');
-            
-            // Início do cálculo
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
             infoDistancia.style.color = "#FFD700";
             taxaEntrega = 0;
             updateCartUI();
 
+            // Garante que temos as zonas
             if (!zonasEntrega || zonasEntrega.length === 0) {
                 try {
-                    const resMapa = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                    zonasEntrega = await resMapa.json();
-                } catch (e) { console.error("Erro ao carregar mapa:", e); }
+                    const res = await fetch(`${URL_PLANILHA}?action=getMapa`);
+                    zonasEntrega = await res.json();
+                } catch(e) { console.error(e); }
             }
 
-            zonasEntrega.forEach(zona => {
+            let zonaAchada = null;
+            
+            for (const zona of zonasEntrega) {
                 if (zona.pontos && Array.isArray(zona.pontos)) {
+                    // Limpeza de coordenadas para evitar erros de string/espaço
                     const caminhosFormatados = zona.pontos.map(p => ({
-                        lat: parseFloat(p.lat),
-                        lng: parseFloat(p.lng)
+                        lat: parseFloat(String(p.lat).trim()),
+                        lng: parseFloat(String(p.lng).trim())
                     }));
+
                     const poly = new google.maps.Polygon({ paths: caminhosFormatados });
                     if (google.maps.geometry.poly.containsLocation(loc, poly)) {
                         zonaAchada = zona;
+                        break; // Para no primeiro que achar
                     }
                 }
-            });
+            }
 
             if (zonaAchada) {
                 taxaEntrega = parseFloat(zonaAchada.preco); 
-                infoDistancia.innerText = `🛵 ENTREGA PARA: ${zonaAchada.nome.toUpperCase()} | TAXA: R$ ${taxaEntrega.toFixed(2)}`;
+                infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | TAXA: R$ ${taxaEntrega.toFixed(2)}`;
                 infoDistancia.style.color = "#39FF14";
             } else {
                 taxaEntrega = 0;
                 infoDistancia.innerText = `⚠️ FORA DA ÁREA DE ENTREGA PADRÃO`;
                 infoDistancia.style.color = "#ff4444";
-                alert("Atenção: Seu endereço está fora da zona automática. Valor a combinar no WhatsApp.");
+                alert("Atenção: Endereço fora da zona automática. O valor da entrega será combinado pelo WhatsApp.");
             }
             updateCartUI();
         }
@@ -280,9 +284,11 @@
                 let html = "";
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
-                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    if(h){
+                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
+                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    }
                 });
                 listaH.innerHTML = html;
             } else { banner.classList.add('hidden'); }
@@ -297,8 +303,8 @@
             if(tipo === 'RETIRADA') {
                 document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
                 taxaEntrega = 0;
-            } else if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") {
-                document.getElementById('cust-addr').value = "";
+            } else {
+                if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") document.getElementById('cust-addr').value = "";
             }
             updateCartUI();
         }
