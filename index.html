@@ -189,17 +189,20 @@
 
         async function init() {
             verificarStatusLoja();
-            await carregarEstoqueEZonas();
-        }
-
-        async function carregarEstoqueEZonas() {
-            try {
-                const resE = await fetch(`${URL_PLANILHA}?action=getEstoque`);
-                estoqueAtual = await resE.json();
-                const resM = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                zonasEntrega = await resM.json();
-                switchCategory('promos');
-            } catch (e) { console.error("Erro carga inicial", e); }
+            // Carregamento instantâneo
+            switchCategory('promos');
+            
+            // Busca dados da planilha em paralelo
+            Promise.all([
+                fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
+                fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
+            ]).then(([estoque, mapa]) => {
+                estoqueAtual = estoque;
+                zonasEntrega = mapa;
+                // Atualiza visual se houver itens pausados
+                const catAtiva = document.querySelector('.category-btn.active').innerText.toLowerCase().split(' ')[1] || 'promos';
+                switchCategory(catAtiva.includes('promo') ? 'promos' : catAtiva);
+            }).catch(e => console.error("Erro na carga:", e));
         }
 
         function initAutocomplete() {
@@ -220,7 +223,6 @@
 
             try {
                 let dadosTratados = zonasEntrega;
-                // Caso o JSON esteja vindo como string dentro de um array (comum em leituras de planilha de uma única linha)
                 if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') {
                     dadosTratados = JSON.parse(zonasEntrega[0]);
                 } else if (typeof zonasEntrega === 'string') {
@@ -252,8 +254,7 @@
                     infoDistancia.style.color = "#ff4444";
                 }
             } catch(e) { 
-                console.error("Erro no Mapa:", e); 
-                infoDistancia.innerText = "⚠️ VALOR A COFIRMAR NO WHATSAPP";
+                infoDistancia.innerText = "⚠️ VALOR A COMBINAR NO WHATSAPP";
             }
             updateCartUI();
         }
@@ -418,16 +419,12 @@
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
-            const subtotalStr = document.getElementById('cart-subtotal').innerText;
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📞 TEL:* ${tel}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
-            msg += `%0A--------------------------%0A`;
-            msg += `*Subtotal:* R$ ${subtotalStr}%0A`;
-            if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
-            msg += `*💰 TOTAL: R$ ${totalStr}*`;
+            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
