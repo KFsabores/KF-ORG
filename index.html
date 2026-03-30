@@ -205,11 +205,11 @@
             } catch (e) { console.error("Erro ao carregar dados", e); }
         }
 
-        // --- MAPAS E TAXAS (CORRIGIDO PARA LER O JSON DA CÉLULA B1) ---
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
             const autocomplete = new google.maps.places.Autocomplete(input);
+            autocomplete.setFields(['geometry', 'formatted_address']);
             
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
@@ -221,8 +221,12 @@
         async function verificarLocalizacao(loc) {
             let zonaAchada = null;
             const infoDistancia = document.getElementById('distancia-info');
+            
+            // Início do cálculo
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
             infoDistancia.style.color = "#FFD700";
+            taxaEntrega = 0;
+            updateCartUI();
 
             if (!zonasEntrega || zonasEntrega.length === 0) {
                 try {
@@ -231,18 +235,13 @@
                 } catch (e) { console.error("Erro ao carregar mapa:", e); }
             }
 
-            // PERCORRE AS ZONAS DO JSON
             zonasEntrega.forEach(zona => {
                 if (zona.pontos && Array.isArray(zona.pontos)) {
-                    // CONVERSÃO CRÍTICA: Transforma lat/lng de texto em Números decimais
                     const caminhosFormatados = zona.pontos.map(p => ({
                         lat: parseFloat(p.lat),
                         lng: parseFloat(p.lng)
                     }));
-
                     const poly = new google.maps.Polygon({ paths: caminhosFormatados });
-                    
-                    // TESTE DE COLISÃO
                     if (google.maps.geometry.poly.containsLocation(loc, poly)) {
                         zonaAchada = zona;
                     }
@@ -262,7 +261,6 @@
             updateCartUI();
         }
 
-        // --- RESTANTE DAS FUNÇÕES (Status, Modalidade, Carrinho, etc) ---
         function estaAberto() {
             if (modoAdmin) return true;
             const agora = new Date();
