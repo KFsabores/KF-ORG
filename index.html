@@ -55,29 +55,36 @@
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
             <div id="cart-items" class="space-y-2 mb-4"></div>
+            
             <div id="form-fechamento">
                 <input type="text" id="cust-name" placeholder="Seu Nome">
                 <input type="tel" id="cust-phone" placeholder="WhatsApp (Ex: 21997437285)">
+                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
+
                 <div id="area-endereco">
                     <input type="text" id="cust-addr" placeholder="Digite endereço e selecione..." onfocus="initAutocomplete()">
                     <p id="distancia-info" class="text-[10px] gold-text mb-2 italic font-bold text-center"></p>
                 </div>
+
                 <textarea id="cust-obs" placeholder="Ponto de referência ou observação"></textarea>
+                
                 <select id="pay-method" onchange="checkPayment()">
                     <option value="Pix">Pix</option>
                     <option value="Cartão">Cartão</option>
                     <option value="Dinheiro">Dinheiro</option>
                 </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
+
                 <div class="space-y-1 text-sm border-t border-zinc-800 pt-4 mt-4">
                     <div class="flex justify-between text-zinc-400"><span>Subtotal:</span><span>R$ <span id="cart-subtotal">0.00</span></span></div>
                     <div class="flex justify-between text-zinc-400" id="row-taxa"><span>Taxa de Entrega:</span><span>R$ <span id="taxa-valor">0.00</span></span></div>
                     <div class="flex justify-between text-2xl font-black neon-text pt-2"><span>Total:</span><span>R$ <span id="cart-total">0.00</span></span></div>
                 </div>
+                
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4">Finalizar Pedido</button>
             </div>
         </div>
@@ -211,22 +218,21 @@
             taxaEntrega = 0;
             updateCartUI();
 
-            // Timeout de segurança: se em 4s não calcular, libera o botão
-            const seguranca = setTimeout(() => {
-                if (infoDistancia.innerText === "⌛ CALCULANDO TAXA...") {
-                    infoDistancia.innerText = "⚠️ VALOR DA TAXA A COMBINAR";
-                    infoDistancia.style.color = "#FFD700";
-                    updateCartUI();
+            try {
+                let dadosTratados = zonasEntrega;
+                // Caso o JSON esteja vindo como string dentro de um array (comum em leituras de planilha de uma única linha)
+                if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') {
+                    dadosTratados = JSON.parse(zonasEntrega[0]);
+                } else if (typeof zonasEntrega === 'string') {
+                    dadosTratados = JSON.parse(zonasEntrega);
                 }
-            }, 4000);
 
-            let zonaAchada = null;
-            for (const zona of zonasEntrega) {
-                try {
+                let zonaAchada = null;
+                for (const zona of dadosTratados) {
                     if (zona.pontos && Array.isArray(zona.pontos)) {
                         const caminhos = zona.pontos.map(p => ({
-                            lat: parseFloat(String(p.lat).replace(',', '.')),
-                            lng: parseFloat(String(p.lng).replace(',', '.'))
+                            lat: parseFloat(String(p.lat).trim().replace(',', '.')),
+                            lng: parseFloat(String(p.lng).trim().replace(',', '.'))
                         }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
                         if (google.maps.geometry.poly.containsLocation(loc, poly)) {
@@ -234,19 +240,39 @@
                             break;
                         }
                     }
-                } catch(e) { console.warn("Erro em zona:", zona.nome); }
-            }
+                }
 
-            clearTimeout(seguranca);
-            if (zonaAchada) {
-                taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
-                infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
-                infoDistancia.style.color = "#39FF14";
-            } else {
-                infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
-                infoDistancia.style.color = "#ff4444";
+                if (zonaAchada) {
+                    taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
+                    infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
+                    infoDistancia.style.color = "#39FF14";
+                } else {
+                    taxaEntrega = 0;
+                    infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
+                    infoDistancia.style.color = "#ff4444";
+                }
+            } catch(e) { 
+                console.error("Erro no Mapa:", e); 
+                infoDistancia.innerText = "⚠️ VALOR A COMBINAR NO WHATSAPP";
             }
             updateCartUI();
+        }
+
+        function updateCartUI() {
+            const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
+            const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
+            const total = subtotal + taxa;
+
+            document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+            document.getElementById('cart-count').innerText = cart.length;
+            
+            document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
+                <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
+                    <span class="uppercase">${i.name}</span>
+                    <button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button>
+                </div>`).join('');
         }
 
         function estaAberto() {
@@ -267,9 +293,11 @@
                 let html = "";
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
-                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    if(h){
+                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
+                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                    }
                 });
                 document.getElementById('horarios-lista').innerHTML = html;
             } else { banner.classList.add('hidden'); }
@@ -384,28 +412,22 @@
             updateCartUI(); closeModal(); 
         }
 
-        function updateCartUI() {
-            const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
-            const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
-            document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
-            document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
-            document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
-            document.getElementById('cart-count').innerText = cart.length;
-            document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `<div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2"><span class="uppercase">${i.name}</span><button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button></div>`).join('');
-        }
-
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
+            const subtotalStr = document.getElementById('cart-subtotal').innerText;
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📞 TEL:* ${tel}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
-            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
+            msg += `%0A--------------------------%0A`;
+            msg += `*Subtotal:* R$ ${subtotalStr}%0A`;
+            if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
+            msg += `*💰 TOTAL: R$ ${totalStr}*`;
             
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
