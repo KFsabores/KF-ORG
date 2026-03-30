@@ -108,7 +108,6 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        const ENDERECO_TRAILER = "R. das Pitombeiras, 507-575 - Paciência, Rio de Janeiro - RJ, 23585-245";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx5vSO0JUFs7h-oFwNolt1UuYjIeTRHJh105As8oWaOsrEBCQfxMGcDMEvTlx6Wpm3n/exec";
         
         let estoqueAtual = {}; 
@@ -169,18 +168,9 @@
             ],
             tapioca_extras: ["Leite Condensado", "Açúcar c/ Canela", "Granulado", "Orégano", "Cebola", "Tomate", "Azeitona", "Manteiga", "Alho Torrado", "Molho de Alho", "Molho de Pizza", "Nenhum"],
             bebidas: [
-                { name: "Água", price: 2.50 }, 
-                { name: "Água c/ Gás", price: 3.50 }, 
-                { name: "Guaracamp", price: 2.50 }, 
-                { name: "Coca Lata", price: 6.00 },
-                { name: "Coca Lata Zero", price: 6.00 }, 
-                { name: "Guaraná 1L", price: 10.00 },
-                { name: "Pepsi 1.5L", price: 12.00 }, 
-                { name: "Guaraná 1.5L", price: 12.00 },
-                { name: "Guaraná ZERO 1.5L", price: 12.00 },
-                { name: "Sukita Uva 2L", price: 12.00 }, 
-                { name: "Sukita Laranja 2L", price: 12.00 },
-                { name: "Sukita Limão 2L", price: 12.00 }
+                { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 }, { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
+                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná 1L", price: 10.00 }, { name: "Pepsi 1.5L", price: 12.00 }, { name: "Guaraná 1.5L", price: 12.00 },
+                { name: "Guaraná ZERO 1.5L", price: 12.00 }, { name: "Sukita Uva 2L", price: 12.00 }, { name: "Sukita Laranja 2L", price: 12.00 }, { name: "Sukita Limão 2L", price: 12.00 }
             ]
         };
 
@@ -197,25 +187,20 @@
 
         async function carregarEstoqueEZonas() {
             try {
-                const [resE, resM] = await Promise.all([
-                    fetch(`${URL_PLANILHA}?action=getEstoque`),
-                    fetch(`${URL_PLANILHA}?action=getMapa`)
-                ]);
+                const resE = await fetch(`${URL_PLANILHA}?action=getEstoque`);
                 estoqueAtual = await resE.json();
+                const resM = await fetch(`${URL_PLANILHA}?action=getMapa`);
                 zonasEntrega = await resM.json();
                 switchCategory('promos');
-            } catch (e) { console.error("Erro ao carregar dados", e); }
+            } catch (e) { console.error("Erro carga inicial", e); }
         }
 
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
             const autocomplete = new google.maps.places.Autocomplete(input);
-            
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
-                if (!place || !place.geometry) return;
-                await verificarLocalizacao(place.geometry.location);
+                if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
         }
 
@@ -226,41 +211,40 @@
             taxaEntrega = 0;
             updateCartUI();
 
-            // Garante que temos as zonas
-            if (!zonasEntrega || zonasEntrega.length === 0) {
-                try {
-                    const res = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                    zonasEntrega = await res.json();
-                } catch(e) { console.error(e); }
-            }
+            // Timeout de segurança: se em 4s não calcular, libera o botão
+            const seguranca = setTimeout(() => {
+                if (infoDistancia.innerText === "⌛ CALCULANDO TAXA...") {
+                    infoDistancia.innerText = "⚠️ VALOR DA TAXA A COMBINAR";
+                    infoDistancia.style.color = "#FFD700";
+                    updateCartUI();
+                }
+            }, 4000);
 
             let zonaAchada = null;
-            
             for (const zona of zonasEntrega) {
-                if (zona.pontos && Array.isArray(zona.pontos)) {
-                    // Limpeza de coordenadas para evitar erros de string/espaço
-                    const caminhosFormatados = zona.pontos.map(p => ({
-                        lat: parseFloat(String(p.lat).trim()),
-                        lng: parseFloat(String(p.lng).trim())
-                    }));
-
-                    const poly = new google.maps.Polygon({ paths: caminhosFormatados });
-                    if (google.maps.geometry.poly.containsLocation(loc, poly)) {
-                        zonaAchada = zona;
-                        break; // Para no primeiro que achar
+                try {
+                    if (zona.pontos && Array.isArray(zona.pontos)) {
+                        const caminhos = zona.pontos.map(p => ({
+                            lat: parseFloat(String(p.lat).replace(',', '.')),
+                            lng: parseFloat(String(p.lng).replace(',', '.'))
+                        }));
+                        const poly = new google.maps.Polygon({ paths: caminhos });
+                        if (google.maps.geometry.poly.containsLocation(loc, poly)) {
+                            zonaAchada = zona;
+                            break;
+                        }
                     }
-                }
+                } catch(e) { console.warn("Erro em zona:", zona.nome); }
             }
 
+            clearTimeout(seguranca);
             if (zonaAchada) {
-                taxaEntrega = parseFloat(zonaAchada.preco); 
-                infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | TAXA: R$ ${taxaEntrega.toFixed(2)}`;
+                taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
+                infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
                 infoDistancia.style.color = "#39FF14";
             } else {
-                taxaEntrega = 0;
-                infoDistancia.innerText = `⚠️ FORA DA ÁREA DE ENTREGA PADRÃO`;
+                infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
                 infoDistancia.style.color = "#ff4444";
-                alert("Atenção: Endereço fora da zona automática. O valor da entrega será combinado pelo WhatsApp.");
             }
             updateCartUI();
         }
@@ -277,20 +261,17 @@
 
         function verificarStatusLoja() {
             const banner = document.getElementById('banner-status');
-            const listaH = document.getElementById('horarios-lista');
             if (!estaAberto()) {
                 banner.classList.remove('hidden');
                 const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
                 let html = "";
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
-                    if(h){
-                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
-                    }
+                    const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
+                    const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
+                    html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
                 });
-                listaH.innerHTML = html;
+                document.getElementById('horarios-lista').innerHTML = html;
             } else { banner.classList.add('hidden'); }
         }
 
@@ -303,8 +284,6 @@
             if(tipo === 'RETIRADA') {
                 document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
                 taxaEntrega = 0;
-            } else {
-                if(document.getElementById('cust-addr').value === "RETIRADA NA LOJA") document.getElementById('cust-addr').value = "";
             }
             updateCartUI();
         }
@@ -318,17 +297,15 @@
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
-                const cardStyle = isPausado ? 'opacity: 0.6; filter: grayscale(0.8);' : '';
-                const btnAcao = isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`;
                 let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
                 return `
-                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${cardStyle}">
+                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5' : ''}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
                             <p class="text-[10px] gold-text font-bold mt-2">${precoTexto}</p>
-                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase italic tracking-tighter">Indisponível hoje</span>' : ''}
+                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase">Indisponível</span>' : ''}
                         </div>
-                        <button ${btnAcao} class="bg-zinc-800 ${isPausado ? 'text-zinc-600 cursor-not-allowed' : 'text-white'} px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                        <button ${isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
                             ${isPausado ? 'ESGOTADO' : 'Escolher'}
                         </button>
                     </div>`;
@@ -337,19 +314,15 @@
 
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
-            if(cat === 'bebidas') { 
-                cart.push({ name: currentItem.name, price: currentItem.price }); 
-                updateCartUI(); 
-                return; 
-            }
+            if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
             document.getElementById('modal-title').innerText = currentItem.name;
             const container = document.getElementById('modal-options');
             let list = (cat === 'promos') ? SABORES_PROMO : SABORES_PIZZA;
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
             if(cat === 'promos' && currentItem.refri) {
-                let bebidasFiltradas = currentItem.refri === "2L" ? menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L")) : menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
-                html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select" class="mt-1">${bebidasFiltradas.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
+                let bebidasF = currentItem.refri === "2L" ? menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L")) : menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
+                html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select" class="mt-1">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
             }
             if(currentItem.p35) {
                 html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
@@ -391,8 +364,7 @@
                 html += `<div class="ing-label">${group.cat}</div>`;
                 group.items.forEach(r => { 
                     const isPausado = estoqueAtual[r.n] === 'PAUSADO';
-                    const estilo = isPausado ? 'opacity: 0.4; border-color: #333; pointer-events: none;' : '';
-                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${estilo}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="${isPausado ? 'text-zinc-500' : 'gold-text'}">${isPausado ? 'ESGOTADO' : 'R$ '+r.p.toFixed(2)}</span></button>`; 
+                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; 
                 });
             });
             document.getElementById('tapioca-options').innerHTML = html;
@@ -401,7 +373,6 @@
         }
 
         function toggleTapRecheio(n, p, b) { 
-            if(estoqueAtual[n] === 'PAUSADO') return;
             const idx = tapRecheios.findIndex(x=>x.name===n); 
             if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
         }
@@ -416,10 +387,9 @@
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
-            const total = subtotal + taxa;
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
-            document.getElementById('cart-total').innerText = total.toFixed(2);
+            document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `<div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2"><span class="uppercase">${i.name}</span><button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button></div>`).join('');
         }
@@ -429,35 +399,22 @@
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
-            const obs = document.getElementById('cust-obs').value;
-            const pagto = document.getElementById('pay-method').value;
-            const troco = document.getElementById('troco-val').value;
             const totalStr = document.getElementById('cart-total').innerText;
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A`;
-            msg += `*📞 TELEFONE:* ${tel}%0A`;
-            msg += `*📍 ENDEREÇO:* ${a.toUpperCase()}%0A`;
-            msg += `*🚚 MODALIDADE:* ${modalidadeAtual}%0A`;
-            msg += `*💳 PAGTO:* ${pagto}${troco ? ' (Troco p/ ' + troco + ')' : ''}%0A`;
-            if(obs) msg += `*📝 OBS:* ${obs}%0A`;
-            msg += `%0A*🍕 ITENS:*%0A`;
-            cart.forEach(i => msg += `• ${i.name} (R$ ${i.price.toFixed(2)})%0A`);
-            msg += `%0A--------------------------%0A`;
-            msg += `*Subtotal:* R$ ${document.getElementById('cart-subtotal').innerText}%0A`;
-            if(modalidadeAtual === 'DELIVERY') msg += `*Taxa Entrega:* R$ ${taxaEntrega.toFixed(2)}%0A`;
-            msg += `*💰 TOTAL: R$ ${totalStr}*`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
+            cart.forEach(i => msg += `• ${i.name}%0A`);
+            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
             fetch(URL_PLANILHA, { 
                 method: 'POST', 
                 mode: 'no-cors', 
                 body: JSON.stringify({
-                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto,
+                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: document.getElementById('pay-method').value,
                     modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
                 }) 
             });
-
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
