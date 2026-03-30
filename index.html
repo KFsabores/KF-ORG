@@ -137,35 +137,24 @@
                 { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L" }
             ],
             tradicional: [
-                { name: "Mussarela", p25: 24, p35: 39 },
-                { name: "Presunto", p25: 24, p35: 39 },
-                { name: "Calabresa", p25: 24, p35: 39 },
-                { name: "3 Queijos", p25: 24, p35: 39 },
-                { name: "Marguerita", p25: 24, p35: 39 },
-                { name: "Alho", p25: 24, p35: 39 }
+                { name: "Mussarela", p25: 24, p35: 39 }, { name: "Presunto", p25: 24, p35: 39 },
+                { name: "Calabresa", p25: 24, p35: 39 }, { name: "3 Queijos", p25: 24, p35: 39 },
+                { name: "Marguerita", p25: 24, p35: 39 }, { name: "Alho", p25: 24, p35: 39 }
             ],
             especial: [
-                { name: "Frango c/ Catupiry", p25: 29, p35: 43 },
-                { name: "Frango c/ Cheddar", p25: 29, p35: 43 },
-                { name: "Portuguesa", p25: 29, p35: 43 },
-                { name: "Peito de Peru", p25: 29, p35: 43 },
+                { name: "Frango c/ Catupiry", p25: 29, p35: 43 }, { name: "Frango c/ Cheddar", p25: 29, p35: 43 },
+                { name: "Portuguesa", p25: 29, p35: 43 }, { name: "Peito de Peru", p25: 29, p35: 43 },
                 { name: "Lombo Canadense", p25: 29, p35: 43 }
             ],
             premium: [
-                { name: "Camarão c/ Catupiry", p25: 32, p35: 58 },
-                { name: "Camarão c/ Cheddar", p25: 32, p35: 58 },
-                { name: "Camarão c/ Alho", p25: 32, p35: 58 },
-                { name: "Bacon com Ovos", p25: 32, p35: 58 }
+                { name: "Camarão c/ Catupiry", p25: 32, p35: 58 }, { name: "Camarão c/ Cheddar", p25: 32, p35: 58 },
+                { name: "Camarão c/ Alho", p25: 32, p35: 58 }, { name: "Bacon com Ovos", p25: 32, p35: 58 }
             ],
             doces: [
-                { name: "Banana c/ Canela", p25: 30, p35: 45 },
-                { name: "Prestígio", p25: 30, p35: 45 },
-                { name: "M&M", p25: 30, p35: 45 },
-                { name: "Paçoca", p25: 30, p35: 45 },
-                { name: "Romeu e Julieta", p25: 30, p35: 45 },
-                { name: "Caribe", p25: 30, p35: 45 },
-                { name: "Sensação", p25: 30, p35: 45 },
-                { name: "Banana Nevada", p25: 30, p35: 45 }
+                { name: "Banana c/ Canela", p25: 30, p35: 45 }, { name: "Prestígio", p25: 30, p35: 45 },
+                { name: "M&M", p25: 30, p35: 45 }, { name: "Paçoca", p25: 30, p35: 45 },
+                { name: "Romeu e Julieta", p25: 30, p35: 45 }, { name: "Caribe", p25: 30, p35: 45 },
+                { name: "Sensação", p25: 30, p35: 45 }, { name: "Banana Nevada", p25: 30, p35: 45 }
             ],
             tapioca_cats: [
                 { cat: "Proteínas", items: [{ n: "Lombo Canadense", p: 10 }, { n: "Peito de Peru", p: 13 }, { n: "Calabresa", p: 10 }, { n: "Presunto", p: 10 }, { n: "Frango", p: 13 }] },
@@ -189,28 +178,43 @@
 
         async function init() {
             verificarStatusLoja();
-            // Carregamento instantâneo
             switchCategory('promos');
-            
-            // Busca dados da planilha em paralelo
             Promise.all([
                 fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
                 fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
             ]).then(([estoque, mapa]) => {
-                estoqueAtual = estoque;
-                zonasEntrega = mapa;
-                // Atualiza visual se houver itens pausados
+                estoqueAtual = estoque; zonasEntrega = mapa;
                 const catAtiva = document.querySelector('.category-btn.active').innerText.toLowerCase().split(' ')[1] || 'promos';
                 switchCategory(catAtiva.includes('promo') ? 'promos' : catAtiva);
             }).catch(e => console.error("Erro na carga:", e));
         }
 
+        // AUTOCOMPLETE TURBINADO COM GEOCODER
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
+            
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => { geocodificarEndereco(input.value); }, 400);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); }
+            });
+        }
+
+        async function geocodificarEndereco(endereco) {
+            if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: endereco }, (results, status) => {
+                if (status === "OK" && results[0].geometry) {
+                    verificarLocalizacao(results[0].geometry.location);
+                }
             });
         }
 
@@ -238,8 +242,7 @@
                         }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
                         if (google.maps.geometry.poly.containsLocation(loc, poly)) {
-                            zonaAchada = zona;
-                            break;
+                            zonaAchada = zona; break;
                         }
                     }
                 }
@@ -263,12 +266,10 @@
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
             const total = subtotal + taxa;
-
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
             document.getElementById('cart-total').innerText = total.toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
-            
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
                 <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
                     <span class="uppercase">${i.name}</span>
@@ -427,8 +428,7 @@
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
             fetch(URL_PLANILHA, { 
-                method: 'POST', 
-                mode: 'no-cors', 
+                method: 'POST', mode: 'no-cors', 
                 body: JSON.stringify({
                     nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: document.getElementById('pay-method').value,
                     modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
