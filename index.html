@@ -179,20 +179,14 @@
         async function init() {
             verificarStatusLoja();
             switchCategory('promos');
-            
-            // CORREÇÃO AQUI: Usamos a URL completa do Google Script para evitar erros de diretório
-            try {
-                const resEstoque = await fetch(`${URL_PLANILHA}?action=getEstoque`);
-                estoqueAtual = await resEstoque.json();
-                
-                const resMapa = await fetch(`${URL_PLANILHA}?action=getMapa`);
-                zonasEntrega = await resMapa.json();
-                
-                console.log("Sistema carregado com sucesso!");
-                switchCategory('promos');
-            } catch (e) {
-                console.error("Erro na carga inicial:", e);
-            }
+            Promise.all([
+                fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
+                fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
+            ]).then(([estoque, mapa]) => {
+                estoqueAtual = estoque; zonasEntrega = mapa;
+                const catAtiva = document.querySelector('.category-btn.active').innerText.toLowerCase().split(' ')[1] || 'promos';
+                switchCategory(catAtiva.includes('promo') ? 'promos' : catAtiva);
+            }).catch(e => console.error("Erro na carga:", e));
         }
 
         // AUTOCOMPLETE TURBINADO COM GEOCODER
