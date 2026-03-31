@@ -10,41 +10,56 @@
     <style>
         body { 
             font-family: 'Montserrat', sans-serif; 
-            /* Alteração do Fundo do Site */
+            /* Configuração otimizada para o fundo */
             background-image: url('https://i.postimg.cc/V6tsZRGB/fundo-site.png');
             background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+            background-position: center top;
             background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-color: #000;
             color: #fff; 
         }
-        /* Ajuste para garantir que o conteúdo se destaque sobre o novo fundo */
-        header, nav, #items-container {
-            position: relative;
-            z-index: 10;
+
+        /* Melhora a legibilidade em cima de fundos com baixa resolução */
+        .bg-blur-card {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
-        
+
         .neon-text { color: #39FF14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.8), 0 0 20px rgba(57, 255, 20, 0.5); }
         .neon-border { border-color: #39FF14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); }
         .gold-text { color: #FFD700; text-shadow: 0 0 3px rgba(255, 215, 0, 0.6); }
-        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.7); }
+        
+        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.85); }
         .category-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.2); }
+        
         select, input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 10px !important; padding: 12px !important; color: white !important; width: 100%; outline: none; margin-bottom: 8px; font-size: 14px; }
         textarea { resize: none; height: 70px; }
+        
         .ing-label { grid-column: 1 / -1; background: #1a1a1a; padding: 6px 12px; border-left: 4px solid #39FF14; font-size: 10px; font-weight: 900; color: #FFD700; margin-top: 15px; text-transform: uppercase; }
         .ing-btn { border: 1px solid #333; padding: 10px; border-radius: 12px; font-size: 10px; text-align: left; background: #0a0a0a; transition: 0.2s; }
         .ing-btn.selected { border-color: #39FF14; background: rgba(57, 255, 20, 0.1); }
+        
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; backdrop-filter: blur(5px); }
+        
+        #banner-status { background: rgba(255, 68, 68, 0.2); border: 1px solid #ff4444; color: #ff4444; backdrop-filter: blur(10px); }
+
+        /* Ajuste para mobile para não esticar o fundo */
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll;
+            }
+        }
     </style>
 </head>
 <body class="pb-24">
 
-    <header class="bg-black/80 backdrop-blur-sm py-4 flex flex-col items-center border-b border-zinc-800">
+    <header class="bg-black/90 backdrop-blur-md py-4 flex flex-col items-center border-b border-zinc-800 sticky top-0 z-[60]">
         <div class="w-full max-w-lg px-4">
-            <img src="https://i.postimg.cc/Vs2JzSPy/Imagem1.png" alt="KF Sabores" class="w-full h-auto drop-shadow-[0_0_15px_rgba(57,255,20,0.5)]">
+            <img src="https://i.postimg.cc/Vs2JzSPy/Imagem1.png" alt="KF Sabores" class="w-full h-auto drop-shadow-[0_0_15px_rgba(57,255,20,0.4)]">
         </div>
     </header>
 
@@ -53,7 +68,7 @@
         <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase"></div>
     </div>
 
-    <nav class="flex overflow-x-auto bg-black/90 backdrop-blur-md p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800">
+    <nav class="flex overflow-x-auto bg-black/95 p-3 gap-2 sticky top-[73px] z-50 border-b border-zinc-800">
         <button onclick="switchCategory('promos')" class="category-btn active px-4 py-2 rounded-full shrink-0">🔥 Promos</button>
         <button onclick="switchCategory('tradicional')" class="category-btn px-4 py-2 rounded-full shrink-0">🍕 Tradicional</button>
         <button onclick="switchCategory('especial')" class="category-btn px-4 py-2 rounded-full shrink-0">🌟 Especial</button>
@@ -65,7 +80,7 @@
 
     <main id="items-container" class="p-4 space-y-4 max-w-lg mx-auto"></main>
 
-    <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
+    <div id="cart-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[90]">
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto relative">
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
@@ -100,7 +115,7 @@
                     <div class="flex justify-between text-2xl font-black neon-text pt-2"><span>Total:</span><span>R$ <span id="cart-total">0.00</span></span></div>
                 </div>
                 
-                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4">Finalizar Pedido</button>
+                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4 shadow-lg">Finalizar Pedido</button>
             </div>
         </div>
     </div>
@@ -124,7 +139,7 @@
         </div>
     </div>
 
-    <button onclick="toggleCart()" class="fixed bottom-6 right-6 bg-[#39FF14] text-black px-6 py-4 rounded-full shadow-[0_0_20px_#39FF14] z-50 flex items-center gap-3">
+    <button onclick="toggleCart()" class="fixed bottom-6 right-6 bg-[#39FF14] text-black px-6 py-4 rounded-full shadow-[0_0_25px_rgba(57,255,20,0.6)] z-50 flex items-center gap-3 active:scale-95 transition-transform">
         <span class="text-xl">🛒</span><span id="cart-count" class="font-black text-lg">0</span>
     </button>
 
@@ -199,93 +214,64 @@
                 fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
             ]).then(([estoque, mapa]) => {
                 estoqueAtual = estoque; zonasEntrega = mapa;
-                const catAtiva = document.querySelector('.category-btn.active').innerText.toLowerCase().split(' ')[1] || 'promos';
-                switchCategory(catAtiva.includes('promo') ? 'promos' : catAtiva);
+                switchCategory('promos');
             }).catch(e => console.error("Erro na carga:", e));
         }
 
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
-            
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
-
-            input.addEventListener('blur', () => {
-                setTimeout(() => { geocodificarEndereco(input.value); }, 400);
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); }
-            });
+            input.addEventListener('blur', () => { setTimeout(() => { geocodificarEndereco(input.value); }, 400); });
         }
 
         async function geocodificarEndereco(endereco) {
             if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: endereco }, (results, status) => {
-                if (status === "OK" && results[0].geometry) {
-                    verificarLocalizacao(results[0].geometry.location);
-                }
+                if (status === "OK" && results[0].geometry) verificarLocalizacao(results[0].geometry.location);
             });
         }
 
         async function verificarLocalizacao(loc) {
             const infoDistancia = document.getElementById('distancia-info');
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
-            infoDistancia.style.color = "#FFD700";
             taxaEntrega = 0;
             updateCartUI();
 
             try {
-                let dadosTratados = zonasEntrega;
-                if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') {
-                    dadosTratados = JSON.parse(zonasEntrega[0]);
-                } else if (typeof zonasEntrega === 'string') {
-                    dadosTratados = JSON.parse(zonasEntrega);
-                }
-
+                let dadosTratados = Array.isArray(zonasEntrega) ? (typeof zonasEntrega[0] === 'string' ? JSON.parse(zonasEntrega[0]) : zonasEntrega) : JSON.parse(zonasEntrega);
                 let zonaAchada = null;
                 for (const zona of dadosTratados) {
-                    if (zona.pontos && Array.isArray(zona.pontos)) {
-                        const caminhos = zona.pontos.map(p => ({
-                            lat: parseFloat(String(p.lat).trim().replace(',', '.')),
-                            lng: parseFloat(String(p.lng).trim().replace(',', '.'))
-                        }));
-                        const poly = new google.maps.Polygon({ paths: caminhos });
-                        if (google.maps.geometry.poly.containsLocation(loc, poly)) {
-                            zonaAchada = zona; break;
-                        }
+                    if (zona.pontos) {
+                        const paths = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).replace(',','.')), lng: parseFloat(String(p.lng).replace(',','.')) }));
+                        if (google.maps.geometry.poly.containsLocation(loc, new google.maps.Polygon({ paths }))) { zonaAchada = zona; break; }
                     }
                 }
-
                 if (zonaAchada) {
                     taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
                     infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
                     infoDistancia.style.color = "#39FF14";
                 } else {
-                    taxaEntrega = 0;
                     infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
                     infoDistancia.style.color = "#ff4444";
                 }
-            } catch(e) { 
-                infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR NO WHATSAPP";
-            }
+            } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR"; }
             updateCartUI();
         }
 
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
-            const total = subtotal + taxa;
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
-            document.getElementById('cart-total').innerText = total.toFixed(2);
+            document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
-                <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
+                <div class="flex justify-between bg-black/80 p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
                     <span class="uppercase">${i.name}</span>
                     <button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button>
                 </div>`).join('');
@@ -305,18 +291,14 @@
             const banner = document.getElementById('banner-status');
             if (!estaAberto()) {
                 banner.classList.remove('hidden');
-                const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
                 let html = "";
-                [4, 5, 6, 0].forEach(dia => {
-                    const h = HORARIOS[dia];
-                    if(h){
-                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
-                    }
+                const dias = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+                [4, 5, 6, 0].forEach(d => {
+                    const h = HORARIOS[d];
+                    if(h) html += `<span>${dias[d]}</span> <span class="text-white">${(h.abrir/100).toFixed(2).replace('.',':')} às ${h.fechar>=2400?'Madrugada':(h.fechar/100).toFixed(2).replace('.',':')}</span>`;
                 });
                 document.getElementById('horarios-lista').innerHTML = html;
-            } else { banner.classList.add('hidden'); }
+            } else banner.classList.add('hidden');
         }
 
         function setModalidade(tipo) {
@@ -325,10 +307,7 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') {
-                document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
-                taxaEntrega = 0;
-            }
+            if(tipo === 'RETIRADA') { document.getElementById('cust-addr').value = "RETIRADA NA LOJA"; taxaEntrega = 0; }
             updateCartUI();
         }
 
@@ -336,18 +315,16 @@
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-black/60 backdrop-blur-sm p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-black/80 backdrop-blur-md p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase shadow-[0_0_15px_rgba(57,255,20,0.5)]">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
-                let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
                 return `
-                    <div class="bg-black/60 backdrop-blur-sm p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5' : ''}">
+                    <div class="bg-black/75 backdrop-blur-sm p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3 shadow-xl" style="${isPausado ? 'opacity: 0.5' : ''}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                            <p class="text-[10px] gold-text font-bold mt-2">${precoTexto}</p>
-                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase">Indisponível</span>' : ''}
+                            <p class="text-[10px] gold-text font-bold mt-2">${item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2)}</p>
                         </div>
                         <button ${isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
                             ${isPausado ? 'ESGOTADO' : 'Escolher'}
@@ -360,7 +337,6 @@
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
             document.getElementById('modal-title').innerText = currentItem.name;
-            const container = document.getElementById('modal-options');
             let list = (cat === 'promos') ? SABORES_PROMO : SABORES_PIZZA;
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
@@ -368,86 +344,45 @@
                 let bebidasF = currentItem.refri === "2L" ? menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L")) : menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
                 html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select" class="mt-1">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
             }
-            if(currentItem.p35) {
-                html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
-            }
-            container.innerHTML = html;
+            if(currentItem.p35) html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
+            document.getElementById('modal-options').innerHTML = html;
             document.getElementById('item-modal').classList.remove('hidden');
         }
 
-        function createPizzaSelect(num, isFixed, def, list) {
-            const valDef = list.includes(def) ? def : list[0];
-            return `<div class="space-y-2"><label class="text-[10px] gold-text font-black uppercase italic">Sabor Pizza ${num}</label><div class="grid grid-cols-2 gap-2"><select class="flavor-a" ${isFixed?'disabled':''}>${list.map(f=>`<option value="${f}" ${f===valDef?'selected':''}>${f}</option>`).join('')}</select><select class="flavor-b"><option value="">(INTEIRA)</option>${list.map(f=>`<option value="${f}">½ ${f}</option>`).join('')}</select></div></div>`;
+        function createPizzaSelect(num, isF, def, list) {
+            return `<div class="space-y-2"><label class="text-[10px] gold-text font-black uppercase italic">Sabor Pizza ${num}</label><div class="grid grid-cols-2 gap-2"><select class="flavor-a" ${isF?'disabled':''}>${list.map(f=>`<option value="${f}" ${f===def?'selected':''}>${f}</option>`).join('')}</select><select class="flavor-b"><option value="">(INTEIRA)</option>${list.map(f=>`<option value="${f}">½ ${f}</option>`).join('')}</select></div></div>`;
         }
 
-        function selectSize(s) { 
-            selectedSize = s; 
-            document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
-            document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
-        }
+        function selectSize(s) { selectedSize = s; document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; }
 
         function addToCartFinal() {
-            const flavAs = document.querySelectorAll('.flavor-a'); 
-            const flavBs = document.querySelectorAll('.flavor-b');
-            const refriSelect = document.getElementById('promo-refri-select');
-            let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
-            let desc = []; 
-            flavAs.forEach((f, i) => { 
-                let sA = f.value; let sB = flavBs[i].value; 
-                desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); 
-            });
-            let finalName = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
-            if(refriSelect) finalName += ` + BEBIDA: ${refriSelect.value}`;
-            cart.push({ name: finalName.toUpperCase(), price });
+            const flavAs = document.querySelectorAll('.flavor-a'), flavBs = document.querySelectorAll('.flavor-b'), refriS = document.getElementById('promo-refri-select');
+            let desc = []; flavAs.forEach((f, i) => { let sA = f.value, sB = flavBs[i].value; desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); });
+            let finalN = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
+            if(refriS) finalN += ` + BEBIDA: ${refriS.value}`;
+            cart.push({ name: finalN.toUpperCase(), price: currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35) });
             updateCartUI(); closeModal();
         }
 
         function openTapiocaModal() {
             tapRecheios = []; let html = "";
-            menuData.tapioca_cats.forEach(group => {
-                html += `<div class="ing-label">${group.cat}</div>`;
-                group.items.forEach(r => { 
-                    const isPausado = estoqueAtual[r.n] === 'PAUSADO';
-                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; 
-                });
+            menuData.tapioca_cats.forEach(g => {
+                html += `<div class="ing-label">${g.cat}</div>`;
+                g.items.forEach(r => { html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${estoqueAtual[r.n]==='PAUSADO'?'opacity:0.4;pointer-events:none':''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; });
             });
             document.getElementById('tapioca-options').innerHTML = html;
             document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn">${e}</button>`).join('');
             document.getElementById('tapioca-modal').classList.remove('hidden');
         }
 
-        function toggleTapRecheio(n, p, b) { 
-            const idx = tapRecheios.findIndex(x=>x.name===n); 
-            if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
-        }
-
-        function addTapiocaFinal() { 
-            if(tapRecheios.length===0)return; 
-            const price = Math.max(...tapRecheios.map(r=>r.price)); 
-            cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price}); 
-            updateCartUI(); closeModal(); 
-        }
+        function toggleTapRecheio(n, p, b) { const idx = tapRecheios.findIndex(x=>x.name===n); if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} }
+        function addTapiocaFinal() { if(tapRecheios.length===0)return; cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price: Math.max(...tapRecheios.map(r=>r.price))}); updateCartUI(); closeModal(); }
 
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-            const n = document.getElementById('cust-name').value;
-            const tel = document.getElementById('cust-phone').value;
-            const a = document.getElementById('cust-addr').value;
-            const totalStr = document.getElementById('cart-total').innerText;
-            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
-            
-            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
-            cart.forEach(i => msg += `• ${i.name}%0A`);
-            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
-            
-            fetch(URL_PLANILHA, { 
-                method: 'POST', mode: 'no-cors', 
-                body: JSON.stringify({
-                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: document.getElementById('pay-method').value,
-                    modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
-                }) 
-            });
+            const n = document.getElementById('cust-name').value, tel = document.getElementById('cust-phone').value, a = document.getElementById('cust-addr').value, totalS = document.getElementById('cart-total').innerText;
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) return alert("Preencha todos os campos!");
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A${cart.map(i => '• ' + i.name).join('%0A')}%0A%0A*💰 TOTAL: R$ ${totalS}*`;
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalS, pagamento: document.getElementById('pay-method').value, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2) }) });
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
