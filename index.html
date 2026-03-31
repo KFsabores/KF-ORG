@@ -8,12 +8,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap" rel="stylesheet">
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=places,geometry"></script>
     <style>
-        body { font-family: 'Montserrat', sans-serif; background-color: #000; color: #fff; }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            /* Alteração do Fundo do Site */
+            background-image: url('https://i.postimg.cc/V6tsZRGB/fundo-site.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #fff; 
+        }
+        /* Ajuste para garantir que o conteúdo se destaque sobre o novo fundo */
+        header, nav, #items-container {
+            position: relative;
+            z-index: 10;
+        }
+        
         .neon-text { color: #39FF14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.8), 0 0 20px rgba(57, 255, 20, 0.5); }
         .neon-border { border-color: #39FF14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); }
         .gold-text { color: #FFD700; text-shadow: 0 0 3px rgba(255, 215, 0, 0.6); }
-        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; }
-        .category-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
+        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; background: rgba(0,0,0,0.7); }
+        .category-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.2); }
         select, input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 10px !important; padding: 12px !important; color: white !important; width: 100%; outline: none; margin-bottom: 8px; font-size: 14px; }
         textarea { resize: none; height: 70px; }
         .ing-label { grid-column: 1 / -1; background: #1a1a1a; padding: 6px 12px; border-left: 4px solid #39FF14; font-size: 10px; font-weight: 900; color: #FFD700; margin-top: 15px; text-transform: uppercase; }
@@ -22,14 +37,14 @@
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
+        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; backdrop-filter: blur(5px); }
     </style>
 </head>
 <body class="pb-24">
 
-    <header class="bg-black py-4 flex flex-col items-center border-b border-zinc-800">
+    <header class="bg-black/80 backdrop-blur-sm py-4 flex flex-col items-center border-b border-zinc-800">
         <div class="w-full max-w-lg px-4">
-            <img src="https://i.postimg.cc/BbRBN8Hh/logo-novo-KF.jpg" alt="KF Sabores" class="w-full h-auto drop-shadow-[0_0_10px_rgba(57,255,20,0.3)]">
+            <img src="https://i.postimg.cc/Vs2JzSPy/Imagem1.png" alt="KF Sabores" class="w-full h-auto drop-shadow-[0_0_15px_rgba(57,255,20,0.5)]">
         </div>
     </header>
 
@@ -38,7 +53,7 @@
         <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase"></div>
     </div>
 
-    <nav class="flex overflow-x-auto bg-black p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800">
+    <nav class="flex overflow-x-auto bg-black/90 backdrop-blur-md p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800">
         <button onclick="switchCategory('promos')" class="category-btn active px-4 py-2 rounded-full shrink-0">🔥 Promos</button>
         <button onclick="switchCategory('tradicional')" class="category-btn px-4 py-2 rounded-full shrink-0">🍕 Tradicional</button>
         <button onclick="switchCategory('especial')" class="category-btn px-4 py-2 rounded-full shrink-0">🌟 Especial</button>
@@ -189,7 +204,6 @@
             }).catch(e => console.error("Erro na carga:", e));
         }
 
-        // AUTOCOMPLETE TURBINADO COM GEOCODER
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -322,14 +336,14 @@
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-black/60 backdrop-blur-sm p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
                 let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
                 return `
-                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5' : ''}">
+                    <div class="bg-black/60 backdrop-blur-sm p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5' : ''}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
                             <p class="text-[10px] gold-text font-bold mt-2">${precoTexto}</p>
