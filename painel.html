@@ -143,15 +143,14 @@
                 const isConcluido = p.status.includes("CONCLUIDO");
                 const isPreparando = p.status.includes("PREPARANDO");
 
-                // Bordas coloridas inteiras baseadas no status
-                // Bordas coloridas inteiras baseadas no status
-let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"; // Padrão: Pendente (Amarelo)
-
-if (isPreparando) {
-    borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]"; // Preparando (Azul)
-} else if (isConcluido) {
-    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.3)]"; // Concluído (Verde)
-}
+                // LÓGICA DE CORES DA BORDA CORRIGIDA
+                let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"; // Padrão: Pendente
+                
+                if (isConcluido) {
+                    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.3)]";
+                } else if (isPreparando) {
+                    borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
+                }
 
                 let vTaxa = limparValor(p.taxaEntrega);
                 let vTotalGeral = p.totalNum;
@@ -179,8 +178,8 @@ if (isPreparando) {
 
                         <p class="text-[11px] font-bold text-zinc-400 mb-4 uppercase italic">📍 ${p.endereco}</p>
 
-                        <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-[11px] font-bold uppercase leading-relaxed">
-                            ${p.itens.split('|').map(i => `<div class="mb-2 text-zinc-200 border-b border-zinc-800/50 pb-1">• ${i.trim()}</div>`).join('')}
+                        <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-[11px] font-bold uppercase leading-relaxed text-zinc-200">
+                            ${p.itens.split('|').map(i => `<div class="mb-2 border-b border-zinc-800/50 pb-1">• ${i.trim()}</div>`).join('')}
                         </div>
 
                         <div class="space-y-1 mb-4 border-t border-zinc-800 pt-3">
