@@ -1,78 +1,184 @@
-<script>
-    let map;
-    let drawingManager;
-    let poligonos = [];
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbwh9yv04Db69lZ50bslcRqidmjP0Eu8NTPeEUf4EI4I0VtwzUEKbaknsAGRoYy0Oxqxeg/exec";
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KF SABORES | Mapa de Taxas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #09090b; color: white; height: 100vh; overflow: hidden; }
+        #map { height: 100%; width: 100%; }
+        .sidebar { width: 350px; background: #18181b; border-right: 1px solid #27272a; overflow-y: auto; }
+        .area-card { background: #27272a; border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #39FF14; }
+        input[type="number"] { background: #09090b; border: 1px solid #3f3f46; color: #39FF14; padding: 5px; border-radius: 5px; width: 80px; font-weight: bold; }
+    </style>
+</head>
+<body class="flex">
 
-    async function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: -22.9235, lng: -43.6364 }, 
-            zoom: 15,
-            styles: [
-                { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-                { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
-            ]
-        });
+    <div class="sidebar p-6 flex flex-col">
+        <div class="mb-8">
+            <h1 class="text-xl font-black italic text-[#39FF14] uppercase leading-none">CONFIGURAR TAXAS</h1>
+            <p class="text-[10px] text-zinc-500 font-bold uppercase mt-2">Desenhe polígonos no mapa</p>
+        </div>
 
-        drawingManager = new google.maps.drawing.DrawingManager({
-            drawingControl: true,
-            drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
-            polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
-        });
-        drawingManager.setMap(map);
+        <div id="lista-areas" class="flex-grow">
+            <p id="placeholder-msg" class="text-zinc-600 text-sm italic">Nenhuma área desenhada...</p>
+        </div>
 
-        google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
-            adicionarPoligonoArray(polygon, 0);
-            atualizarListaSidebar();
-        });
+        <button onclick="salvarConfiguracoes()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl uppercase text-xs hover:brightness-110 transition-all mt-4 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
+            💾 Salvar Tudo
+        </button>
+    </div>
 
-        // Pequeno atraso para garantir que o mapa carregou as bibliotecas
-        setTimeout(carregarDadosSalvos, 1000);
-    }
+    <div class="flex-grow relative">
+        <div id="map"></div>
+    </div>
 
-    function adicionarPoligonoArray(polygon, preco, corExistente = null) {
-        const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
-        polygon.setOptions({ fillColor: cor, strokeColor: cor });
-        const id = Date.now() + Math.random();
-        poligonos.push({ id: id, obj: polygon, preco: preco });
-        
-        const placeholder = document.getElementById('placeholder-msg');
-        if(placeholder) placeholder.style.display = 'none';
-    }
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing"></script>
 
-    async function carregarDadosSalvos() {
-        try {
-            const response = await fetch(`${webAppUrl}?action=getMapa`);
-            const dados = await response.json();
-            
-            if (dados && dados.length > 0) {
-                dados.forEach(area => {
-                    // GARANTIA: Se os pontos vierem como String, converte para Objeto
-                    const pontosFormatados = typeof area.pontos === 'string' ? JSON.parse(area.pontos) : area.pontos;
+    <script>
+        let map;
+        let drawingManager;
+        let poligonos = [];
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbwh9yv04Db69lZ50bslcRqidmjP0Eu8NTPeEUf4EI4I0VtwzUEKbaknsAGRoYy0Oxqxeg/exec";
 
-                    const polygon = new google.maps.Polygon({
-                        path: pontosFormatados,
-                        editable: true,
-                        draggable: true,
-                        fillOpacity: 0.45,
-                        strokeWeight: 2,
-                        map: map
-                    });
-                    adicionarPoligonoArray(polygon, area.preco, area.cor);
-                });
+        async function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -22.9235, lng: -43.6364 }, 
+                zoom: 14,
+                disableDefaultUI: false,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+                    { featureType: "poi", stylers: [{ visibility: "off" }] }
+                ]
+            });
+
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingControl: true,
+                drawingControlOptions: { 
+                    position: google.maps.ControlPosition.TOP_CENTER, 
+                    drawingModes: ['polygon'] 
+                },
+                polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
+            });
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                adicionarPoligonoArray(polygon, 0);
                 atualizarListaSidebar();
-            } else {
-                document.getElementById('placeholder-msg').innerText = "Nenhuma área salva no banco de dados.";
-            }
-        } catch (e) {
-            console.error("Erro ao carregar:", e);
-            document.getElementById('placeholder-msg').innerText = "Erro na conexão com a planilha.";
+            });
+
+            setTimeout(carregarDadosSalvos, 1000);
         }
-    }
 
-    // ... (Mantenha as funções atualizarListaSidebar, atualizarPreco, removerArea e salvarConfiguracoes como estavam)
+        function adicionarPoligonoArray(polygon, preco, corExistente = null) {
+            const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
+            polygon.setOptions({ fillColor: cor, strokeColor: cor });
+            
+            const id = Date.now() + Math.random();
+            poligonos.push({ id: id, obj: polygon, preco: preco, cor: cor });
+            
+            const placeholder = document.getElementById('placeholder-msg');
+            if(placeholder) placeholder.style.display = 'none';
+        }
 
-    // Altere a última linha para esta forma mais segura:
-    window.onload = initMap;
-</script>
+        function atualizarListaSidebar() {
+            const container = document.getElementById('lista-areas');
+            container.innerHTML = "";
+            
+            poligonos.forEach((p, index) => {
+                const card = document.createElement('div');
+                card.className = "area-card";
+                card.style.borderLeftColor = p.cor;
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black uppercase text-zinc-400">Área #${index + 1}</span>
+                        <button onclick="removerArea(${p.id})" class="text-red-500 text-[10px] font-bold hover:underline">REMOVER</button>
+                    </div>
+                    <div class="mt-3 flex items-center justify-between">
+                        <label class="text-xs font-bold uppercase">Taxa R$</label>
+                        <input type="number" value="${p.preco}" onchange="atualizarPreco(${p.id}, this.value)">
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function atualizarPreco(id, novoPreco) {
+            const index = poligonos.findIndex(p => p.id === id);
+            if(index !== -1) poligonos[index].preco = parseFloat(novoPreco);
+        }
+
+        function removerArea(id) {
+            const index = poligonos.findIndex(p => p.id === id);
+            if(index !== -1) {
+                poligonos[index].obj.setMap(null);
+                poligonos.splice(index, 1);
+                atualizarListaSidebar();
+            }
+        }
+
+        async function carregarDadosSalvos() {
+            try {
+                const response = await fetch(`${webAppUrl}?action=getMapa`);
+                const dados = await response.json();
+                
+                if (dados && dados.length > 0) {
+                    dados.forEach(area => {
+                        const pontos = typeof area.pontos === 'string' ? JSON.parse(area.pontos) : area.pontos;
+                        const polygon = new google.maps.Polygon({
+                            path: pontos,
+                            editable: true,
+                            draggable: true,
+                            fillOpacity: 0.45,
+                            strokeWeight: 2,
+                            map: map
+                        });
+                        adicionarPoligonoArray(polygon, area.preco, area.cor);
+                    });
+                    atualizarListaSidebar();
+                }
+            } catch (e) { console.error("Erro ao carregar:", e); }
+        }
+
+        async function salvarConfiguracoes() {
+            const dadosParaSalvar = poligonos.map(p => {
+                const path = p.obj.getPath().getArray().map(coord => ({
+                    lat: coord.lat(),
+                    lng: coord.lng()
+                }));
+                return {
+                    cor: p.cor,
+                    preco: p.preco,
+                    pontos: JSON.stringify(path)
+                };
+            });
+
+            // Feedback Visual
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ SALVANDO...";
+            btn.disabled = true;
+
+            try {
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ action: 'saveMapa', data: dadosParaSalvar })
+                });
+                alert("Mapa salvo com sucesso!");
+            } catch (e) {
+                alert("Erro ao salvar.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
