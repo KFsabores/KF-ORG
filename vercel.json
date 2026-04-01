@@ -1,8 +1,1 @@
-{
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "rewrites": [
-    { "source": "/admin", "destination": "/painel.html" },
-    { "source": "/mapa", "destination": "/mapa-taxas.html" }
-  ]
-}
+
