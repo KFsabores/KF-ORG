@@ -150,13 +150,12 @@
                 const isPreparando = p.status.includes("PREPARANDO");
                 const isPendente = p.status.includes("PENDENTE");
 
-                // Configuração das Bordas solicitadas
-                let cardBorder = "border-zinc-800";
-                if (isPendente) cardBorder = "border-yellow-500";
-                else if (isPreparando) cardBorder = "border-blue-500";
-                else if (isConcluido) cardBorder = "border-green-600";
+                // Configuração das Bordas Fixas conforme solicitado
+                let cardColorClass = "border-zinc-700";
+                if (isPendente) cardColorClass = "border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
+                else if (isPreparando) cardColorClass = "border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
+                else if (isConcluido) cardColorClass = "border-green-600";
                 
-                // Cálculo de Valores
                 let vTaxa = limparValor(p.taxaEntrega);
                 let vTotal = p.totalNum;
                 let vSubtotal = vTotal - vTaxa;
@@ -171,7 +170,7 @@
                 const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
 
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border-2 ${cardBorder} p-6 rounded-3xl flex flex-col h-full border-t-8 ${isRetirada ? 'border-t-orange-600' : 'border-t-zinc-800'} shadow-xl ${isConcluido ? 'opacity-70' : ''}">
+                    <div class="bg-zinc-900 border-2 ${cardColorClass} p-6 rounded-3xl flex flex-col h-full border-t-[10px] shadow-xl ${isConcluido ? 'opacity-85' : ''} transition-all">
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <span class="text-zinc-500 font-bold text-[10px] block uppercase">${p.dataFull}</span>
