@@ -2,40 +2,51 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KF SABORES | Mapa de Taxas</title>
+    <title>Editor de Áreas - KF Sabores</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry"></script>
     <style>
-        body { font-family: 'Montserrat', sans-serif; background-color: #09090b; color: white; height: 100vh; overflow: hidden; }
-        #map { height: 100%; width: 100%; }
-        .sidebar { width: 350px; background: #18181b; border-right: 1px solid #27272a; overflow-y: auto; }
-        .area-card { background: #27272a; border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #39FF14; }
-        input[type="number"] { background: #09090b; border: 1px solid #3f3f46; color: #39FF14; padding: 5px; border-radius: 5px; width: 80px; font-weight: bold; }
+        #map { height: 600px; width: 100%; border-radius: 20px; }
+        .gm-style-iw { color: black !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #18181b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
 </head>
-<body class="flex">
+<body class="bg-zinc-950 p-4 md:p-8 text-white">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-black uppercase italic text-[#39FF14]">Editor de Geofencing</h1>
+                <p class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Paciência, RJ - Gestão de Taxas</p>
+            </div>
+            <div id="status-save" class="hidden text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full border border-green-500/50 animate-pulse">
+                Sincronizado com a Planilha
+            </div>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-3 relative">
+                <div id="map" class="border border-zinc-800 shadow-2xl"></div>
+            </div>
 
-    <div class="sidebar p-6 flex flex-col">
-        <div class="mb-8">
-            <h1 class="text-xl font-black italic text-[#39FF14] uppercase leading-none">CONFIGURAR TAXAS</h1>
-            <p class="text-[10px] text-zinc-500 font-bold uppercase mt-2">Desenhe polígonos no mapa</p>
+            <div class="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex flex-col h-[600px]">
+                <h2 class="font-bold mb-4 uppercase text-xs text-zinc-400">📍 Áreas Configuradas</h2>
+                
+                <div id="lista-areas" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <div id="placeholder-msg" class="text-center py-10 text-zinc-600 text-sm italic">
+                        Carregando áreas salvas...
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-zinc-800">
+                    <button onclick="salvarConfiguracoes()" id="btn-salvar" class="w-full bg-[#39FF14] hover:bg-[#32e612] text-black font-black py-4 rounded-xl uppercase text-xs transition-all shadow-lg active:scale-95">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div id="lista-areas" class="flex-grow">
-            <p id="placeholder-msg" class="text-zinc-600 text-sm italic">Nenhuma área desenhada...</p>
-        </div>
-
-        <button onclick="salvarConfiguracoes()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl uppercase text-xs hover:brightness-110 transition-all mt-4 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
-            💾 Salvar Tudo
-        </button>
     </div>
-
-    <div class="flex-grow relative">
-        <div id="map"></div>
-    </div>
-
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=drawing"></script>
 
     <script>
         let map;
@@ -45,23 +56,18 @@
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: -22.9235, lng: -43.6364 }, 
-                zoom: 14,
-                disableDefaultUI: false,
+                center: { lat: -22.9235, lng: -43.6364 }, // Paciência, RJ
+                zoom: 15,
                 styles: [
                     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                     { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-                    { featureType: "poi", stylers: [{ visibility: "off" }] }
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
                 ]
             });
 
             drawingManager = new google.maps.drawing.DrawingManager({
                 drawingControl: true,
-                drawingControlOptions: { 
-                    position: google.maps.ControlPosition.TOP_CENTER, 
-                    drawingModes: ['polygon'] 
-                },
+                drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
                 polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
             });
             drawingManager.setMap(map);
@@ -71,54 +77,16 @@
                 atualizarListaSidebar();
             });
 
-            setTimeout(carregarDadosSalvos, 1000);
+            // CARREGAR DADOS EXISTENTES AO ABRIR
+            carregarDadosSalvos();
         }
 
         function adicionarPoligonoArray(polygon, preco, corExistente = null) {
             const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
             polygon.setOptions({ fillColor: cor, strokeColor: cor });
-            
             const id = Date.now() + Math.random();
-            poligonos.push({ id: id, obj: polygon, preco: preco, cor: cor });
-            
-            const placeholder = document.getElementById('placeholder-msg');
-            if(placeholder) placeholder.style.display = 'none';
-        }
-
-        function atualizarListaSidebar() {
-            const container = document.getElementById('lista-areas');
-            container.innerHTML = "";
-            
-            poligonos.forEach((p, index) => {
-                const card = document.createElement('div');
-                card.className = "area-card";
-                card.style.borderLeftColor = p.cor;
-                card.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-black uppercase text-zinc-400">Área #${index + 1}</span>
-                        <button onclick="removerArea(${p.id})" class="text-red-500 text-[10px] font-bold hover:underline">REMOVER</button>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <label class="text-xs font-bold uppercase">Taxa R$</label>
-                        <input type="number" value="${p.preco}" onchange="atualizarPreco(${p.id}, this.value)">
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function atualizarPreco(id, novoPreco) {
-            const index = poligonos.findIndex(p => p.id === id);
-            if(index !== -1) poligonos[index].preco = parseFloat(novoPreco);
-        }
-
-        function removerArea(id) {
-            const index = poligonos.findIndex(p => p.id === id);
-            if(index !== -1) {
-                poligonos[index].obj.setMap(null);
-                poligonos.splice(index, 1);
-                atualizarListaSidebar();
-            }
+            poligonos.push({ id: id, obj: polygon, preco: preco });
+            document.getElementById('placeholder-msg').style.display = 'none';
         }
 
         async function carregarDadosSalvos() {
@@ -128,9 +96,8 @@
                 
                 if (dados && dados.length > 0) {
                     dados.forEach(area => {
-                        const pontos = typeof area.pontos === 'string' ? JSON.parse(area.pontos) : area.pontos;
                         const polygon = new google.maps.Polygon({
-                            path: pontos,
+                            path: area.pontos,
                             editable: true,
                             draggable: true,
                             fillOpacity: 0.45,
@@ -140,45 +107,74 @@
                         adicionarPoligonoArray(polygon, area.preco, area.cor);
                     });
                     atualizarListaSidebar();
+                } else {
+                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva. Comece a desenhar!";
                 }
-            } catch (e) { console.error("Erro ao carregar:", e); }
+            } catch (e) {
+                console.error("Erro ao carregar:", e);
+                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
+            }
+        }
+
+        function atualizarListaSidebar() {
+            const container = document.getElementById('lista-areas');
+            container.innerHTML = poligonos.map(p => `
+                <div class="p-4 bg-zinc-800/50 rounded-xl border-l-4" style="border-color: ${p.obj.fillColor}">
+                    <div class="flex justify-between items-center mb-2 text-[10px] font-bold uppercase text-zinc-400">
+                        <span>Taxa de Entrega:</span>
+                        <button onclick="removerArea(${p.id})" class="text-red-500">Remover</button>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-[#39FF14] font-bold text-sm">R$</span>
+                        <input type="number" step="0.50" value="${p.preco}" onchange="atualizarPreco(${p.id}, this.value)" 
+                            class="bg-zinc-950 border border-zinc-700 rounded-lg w-full py-2 pl-10 text-white font-black outline-none">
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function atualizarPreco(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.preco = parseFloat(valor);
+        }
+
+        function removerArea(id) {
+            const index = poligonos.findIndex(x => x.id === id);
+            if (index > -1) {
+                poligonos[index].obj.setMap(null);
+                poligonos.splice(index, 1);
+                if(poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
+                atualizarListaSidebar();
+            }
         }
 
         async function salvarConfiguracoes() {
-            const dadosParaSalvar = poligonos.map(p => {
-                const path = p.obj.getPath().getArray().map(coord => ({
-                    lat: coord.lat(),
-                    lng: coord.lng()
-                }));
-                return {
-                    cor: p.cor,
-                    preco: p.preco,
-                    pontos: JSON.stringify(path)
-                };
-            });
-
-            // Feedback Visual
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = "⏳ SALVANDO...";
+            const btn = document.getElementById('btn-salvar');
+            btn.innerText = "SALVANDO...";
             btn.disabled = true;
+
+            const dadosParaSalvar = poligonos.map(p => {
+                const path = p.obj.getPath().getArray().map(latLng => ({ lat: latLng.lat(), lng: latLng.lng() }));
+                return { preco: p.preco, cor: p.obj.fillColor, pontos: path };
+            });
 
             try {
                 await fetch(webAppUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify({ action: 'saveMapa', data: dadosParaSalvar })
+                    body: JSON.stringify({ action: "salvarMapa", dados: JSON.stringify(dadosParaSalvar) })
                 });
-                alert("Mapa salvo com sucesso!");
+                alert("Mapa salvo com sucesso em CONFIG_TAXAS!");
+                document.getElementById('status-save').classList.remove('hidden');
             } catch (e) {
-                alert("Erro ao salvar.");
+                alert("Erro ao salvar: " + e.message);
             } finally {
-                btn.innerText = originalText;
+                btn.innerText = "SALVAR ALTERAÇÕES";
                 btn.disabled = false;
             }
         }
 
-        window.onload = initMap;
+        google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
