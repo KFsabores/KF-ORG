@@ -144,9 +144,14 @@
                 const isPreparando = p.status.includes("PREPARANDO");
 
                 // Bordas coloridas inteiras baseadas no status
-                let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"; // Pendente
-                if (isPreparando) borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
-                if (isConcluido) borderColor = "border-green-600 opacity-60";
+                // Bordas coloridas inteiras baseadas no status
+let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"; // Padrão: Pendente (Amarelo)
+
+if (isPreparando) {
+    borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]"; // Preparando (Azul)
+} else if (isConcluido) {
+    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.3)]"; // Concluído (Verde)
+}
 
                 let vTaxa = limparValor(p.taxaEntrega);
                 let vTotalGeral = p.totalNum;
