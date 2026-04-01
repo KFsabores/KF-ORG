@@ -67,12 +67,11 @@
             <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Fechar Painel</button>
         </div>
     </div>
-
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyUAwFYfg4ZiqQnFumpBYk8XDf8r7mYRJuhl1Ivhu5IPlQhkhxa-UgWZcx1nbueJUYyaw/exec';
-        const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
+        // URL DO SEU WEB APP ATUALIZADA
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxCSmRWRBUYFliUDA85Iu3k3PrcvQJWkQn1jAptIxqEWfcHlUomCV8YkjQSeTkaEA9Dtw/exec';
 
         let todosOsPedidos = []; 
         let totalPedidosAnterior = 0;
@@ -83,10 +82,12 @@
 
         function parseDataBR(stringData) {
             if(!stringData) return new Date(0);
-            const partes = stringData.split(' ');
-            const dataP = partes[0].split('/');
-            const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
-            return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
+            try {
+                const partes = stringData.split(' ');
+                const dataP = partes[0].split('/');
+                const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
+                return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
+            } catch(e) { return new Date(); }
         }
 
         function limparValor(valorStr) {
@@ -97,16 +98,13 @@
         }
 
         async function carregarPedidos() {
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
+            // Chamada via API do Script (necessário para planilha restrita)
+            const url = `${WEB_APP_URL}?action=getPedidos&t=${new Date().getTime()}`;
             try {
                 const response = await fetch(url);
-                const csvData = await response.text();
-                const rows = csvData.split('\n').map(row => 
-                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
-                );
+                const dados = await response.json();
 
-                const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
-                todosOsPedidos = pedidosRaw.map((row, idx) => ({
+                todosOsPedidos = dados.map((row, idx) => ({
                     linhaOriginal: idx + 2,
                     dataFull: row[0], 
                     objData: parseDataBR(row[0]),
@@ -123,14 +121,18 @@
                 }));
 
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
-                    const temNovoPendente = todosOsPedidos.some(p => p.status === 'PENDENTE');
+                    const temNovoPendente = todosOsPedidos.some(p => p.status.includes('PENDENTE'));
                     if(temNovoPendente) ringtone.play().catch(e => {});
                 }
                 
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
                 renderizarPedidos();
-            } catch (e) { console.error("Erro carga pedidos:", e); }
+                document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
+            } catch (e) { 
+                console.error("Erro carga pedidos:", e);
+                document.getElementById('status-conexao').innerText = "❌ ERRO DE SINCRONIZAÇÃO";
+            }
         }
 
         function renderizarPedidos() {
@@ -146,11 +148,10 @@
 
             pedidosParaExibir.forEach(p => {
                 const isRetirada = p.modalidade.includes('RETIRADA');
-                const isConcluido = p.status.includes("CONCLUIDO");
+                const isConcluido = p.status.includes("CONCLU");
                 const isPreparando = p.status.includes("PREPARANDO");
                 const isPendente = p.status.includes("PENDENTE");
 
-                // Configuração das Bordas Fixas conforme solicitado
                 let cardColorClass = "border-zinc-700";
                 if (isPendente) cardColorClass = "border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
                 else if (isPreparando) cardColorClass = "border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
@@ -160,12 +161,8 @@
                 let vTotal = p.totalNum;
                 let vSubtotal = vTotal - vTaxa;
 
-                let taxaTexto = isRetirada 
-                    ? "🛍️ RETIRADA EM LOJA" 
-                    : `🛵 TAXA DE ENTREGA: R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-
+                let taxaTexto = isRetirada ? "🛍️ RETIRADA EM LOJA" : `🛵 TAXA: R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
-                const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
                 const telLimpo = p.telefone.toString().replace(/\D/g, '');
                 const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
 
@@ -183,7 +180,6 @@
                         
                         <div class="flex gap-2 mb-4">
                             <a href="${linkZap}" target="_blank" class="bg-green-600/20 text-green-500 px-3 py-2 rounded-xl text-[10px] font-black border border-green-600/30 hover:bg-green-600 hover:text-white transition-all uppercase">WhatsApp</a>
-                            <a href="${linkMaps}" target="_blank" class="bg-blue-600/20 text-blue-400 px-3 py-2 rounded-xl text-[10px] font-black border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all uppercase">Mapa</a>
                         </div>
 
                         <p class="text-[11px] font-bold text-zinc-400 mb-4 uppercase italic">📍 ${p.endereco}</p>
@@ -221,24 +217,19 @@
                 const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
                 
                 if (status.includes('CONCLU')) {
+                    el.innerText = "OK";
                     el.className = "timer-badge bg-zinc-700 opacity-50";
-                    if (el.innerText !== "..." && el.innerText !== "calculando..." && el.innerText !== "OK") return;
+                    return;
                 }
 
                 const diff = Math.floor((agora - dataPedido) / 1000);
-                if (diff < 0) { el.innerText = "00:00"; return; }
-
-                const h = Math.floor(diff / 3600);
                 const m = Math.floor((diff % 3600) / 60);
-                const tempoTexto = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
-                
-                el.innerText = tempoTexto;
+                const h = Math.floor(diff / 3600);
+                el.innerText = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
 
-                if (!status.includes('CONCLU')) {
-                    if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
-                    else if (m >= 20) el.className = "timer-badge bg-yellow-600";
-                    else el.className = "timer-badge bg-zinc-700";
-                }
+                if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
+                else if (m >= 20) el.className = "timer-badge bg-yellow-600";
+                else el.className = "timer-badge bg-zinc-700";
             });
         }
 
@@ -249,7 +240,7 @@
         }
 
         async function cancelarPedido(linha, btn) {
-            if (confirm("🚨 APAGAR PEDIDO?\nEsta ação excluirá o registro da planilha permanentemente.")) {
+            if (confirm("🚨 APAGAR PEDIDO?")) {
                 btn.innerHTML = "⏳";
                 await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1000);
@@ -261,27 +252,7 @@
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
             
-            area.innerHTML = `
-                <div class="cupom-termico">
-                    <center>
-                        <strong style="font-size: 18px;">KF SABORES</strong><br>
-                        ${p.modalidade.toUpperCase()}<br>
-                        ${p.dataFull}
-                    </center>
-                    <div class="linha"></div>
-                    CLIENTE: ${p.nome.toUpperCase()}<br>
-                    TEL: ${p.telefone}<br>
-                    END: ${p.endereco.toUpperCase()}<br>
-                    <div class="linha"></div>
-                    ITENS:<br>
-                    ${lista}
-                    <div class="linha"></div>
-                    PAGTO: ${p.pagto.toUpperCase()}<br>
-                    TAXA DE ENTREGA: R$ ${limparValor(p.taxaEntrega).toFixed(2)}<br>
-                    TOTAL: ${p.total}<br>
-                    <div class="linha"></div>
-                    <center><br>OBRIGADO PELA PREFERÊNCIA!<br>BOM APETITE!</center>
-                </div>`;
+            area.innerHTML = `<div class="cupom-termico"><center><strong style="font-size: 18px;">KF SABORES</strong><br>${p.modalidade.toUpperCase()}<br>${p.dataFull}</center><div class="linha"></div>CLIENTE: ${p.nome.toUpperCase()}<br>TEL: ${p.telefone}<br>END: ${p.endereco.toUpperCase()}<br><div class="linha"></div>ITENS:<br>${lista}<div class="linha"></div>PAGTO: ${p.pagto.toUpperCase()}<br>TAXA: R$ ${limparValor(p.taxaEntrega).toFixed(2)}<br>TOTAL: ${p.total}<br><div class="linha"></div><center><br>OBRIGADO!<br>BOM APETITE!</center></div>`;
             
             setTimeout(() => { window.print(); }, 500);
         }
@@ -302,23 +273,10 @@
 
                 let html = "";
                 Object.keys(grupos).sort().forEach(cat => {
-                    html += `
-                    <div class="cat-card">
-                        <h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic flex items-center gap-2">
-                            <span class="w-2 h-2 bg-[#39FF14] rounded-full animate-pulse"></span> ${cat}
-                        </h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
-                    
+                    html += `<div class="cat-card"><h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic flex items-center gap-2"><span class="w-2 h-2 bg-[#39FF14] rounded-full animate-pulse"></span> ${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
                     grupos[cat].forEach(i => {
                         const isPausado = i.status === 'PAUSADO';
-                        html += `
-                            <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'} transition-all">
-                                <p class="text-[10px] font-black uppercase mb-3 text-zinc-300 leading-tight h-8 overflow-hidden">${i.nome}</p>
-                                <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                    class="w-full py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600/80 text-white hover:bg-red-600'}">
-                                    ${isPausado ? 'Ativar' : 'Pausar'}
-                                </button>
-                            </div>`;
+                        html += `<div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'} transition-all"><p class="text-[10px] font-black uppercase mb-3 text-zinc-300 leading-tight h-8 overflow-hidden">${i.nome}</p><button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600/80 text-white hover:bg-red-600'}">${isPausado ? 'Ativar' : 'Pausar'}</button></div>`;
                     });
                     html += `</div></div>`;
                 });
@@ -328,11 +286,7 @@
 
         async function mudarStatusEstoque(item, status, btn) {
             btn.innerHTML = "⏳";
-            await fetch(WEB_APP_URL, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({ action: 'updateStock', item, status }) 
-            });
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
             setTimeout(carregarEstoque, 800);
         }
 
@@ -345,13 +299,12 @@
         function gerarRelatorio(tipo) {
             const agora = new Date();
             let listaFiltrada = [];
-            
             todosOsPedidos.forEach(p => {
                 if (!p.status.includes('CONCLU')) return;
                 let inicioTurno = new Date(agora);
                 if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
                 inicioTurno.setHours(17, 0, 0);
-                if (tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(agora.setDate(agora.getDate()-7)))) listaFiltrada.push(p);
+                if (tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(agora.getTime() - 7 * 24 * 60 * 60 * 1000))) listaFiltrada.push(p);
             });
 
             let totalDel = 0, qtdDel = 0, totalRet = 0, qtdRet = 0;
@@ -361,21 +314,7 @@
             });
 
             document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Resumo do Turno" : "Resumo da Semana";
-            document.getElementById('rel-content').innerHTML = `
-                <div class="space-y-4">
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-[#39FF14]">
-                        <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p>
-                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600">
-                        <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p>
-                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
-                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">TOTAL GERAL</p>
-                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                </div>`;
+            document.getElementById('rel-content').innerHTML = `<div class="space-y-4"><div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-[#39FF14]"><p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p><p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div><div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600"><p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p><p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div><div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center"><p class="text-[10px] uppercase font-black text-zinc-500 mb-1">TOTAL GERAL</p><p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div></div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
 
