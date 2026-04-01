@@ -143,11 +143,10 @@
                 const isConcluido = p.status.includes("CONCLUIDO");
                 const isPreparando = p.status.includes("PREPARANDO");
 
-                // LÓGICA DE CORES DA BORDA CORRIGIDA
-                let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]"; // Padrão: Pendente
-                
+                // CORREÇÃO DA BORDA: VERDE SE CONCLUÍDO, SENÃO AZUL SE PREPARANDO, SENÃO AMARELO
+                let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]";
                 if (isConcluido) {
-                    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.3)]";
+                    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.4)]";
                 } else if (isPreparando) {
                     borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
                 }
@@ -216,17 +215,19 @@
                 const status = el.getAttribute('data-status');
                 const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
                 
+                const diff = Math.floor((agora - dataPedido) / 1000);
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const tempoFormatado = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
+
                 if (status.includes('CONCLU')) {
-                    el.className = "timer-badge bg-zinc-700 opacity-50";
-                    if (el.innerText !== "..." && el.innerText !== "OK") el.innerText = "OK";
+                    el.className = "timer-badge bg-zinc-700 opacity-80";
+                    el.innerText = tempoFormatado; // AGORA EXIBE O TEMPO FINAL
                     return;
                 }
 
-                const diff = Math.floor((agora - dataPedido) / 1000);
                 if (diff < 0) { el.innerText = "00:00"; return; }
-                const h = Math.floor(diff / 3600);
-                const m = Math.floor((diff % 3600) / 60);
-                el.innerText = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
+                el.innerText = tempoFormatado;
 
                 if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
                 else if (m >= 20) el.className = "timer-badge bg-yellow-600";
