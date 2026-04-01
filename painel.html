@@ -34,16 +34,24 @@
                 <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o som 📞</p>
             </div>
             
-            <div class="flex flex-wrap gap-2 justify-center items-center">
+           <div class="flex flex-wrap gap-2 justify-center items-center">
                 <button onclick="gerarRelatorio('dia')" class="bg-blue-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg">📊 Hoje</button>
+                <button onclick="gerarRelatorio('semana')" class="bg-purple-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-purple-500 transition-all shadow-lg">📅 Semana</button>
                 <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg">📦 Estoque</button>
-                <a href="mapa-taxas.html" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all border border-zinc-700">🗺️ Taxas</a>
+                
+                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg border border-emerald-500 flex items-center gap-2">
+                    🌐 ABRIR SITE
+                </a>
+
+                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-800 text-white px-4 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all shadow-lg border border-zinc-700 flex items-center gap-2">
+                    🗺️ TAXAS
+                </a>
             </div>
         </div>
 
         <div id="painel-estoque" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border-2 border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.1)]">
             <div class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-black text-orange-500 uppercase italic">Disponibilidade de Itens</h2>
+                <h2 class="text-2xl font-black text-orange-500 uppercase italic">Controle de Disponibilidade</h2>
                 <button onclick="toggleEstoque()" class="text-zinc-500 font-bold uppercase text-xs">Fechar ✕</button>
             </div>
             <div id="lista-estoque-categorias" class="space-y-6"></div>
@@ -56,14 +64,15 @@
         <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl">
             <h2 id="rel-titulo" class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 border-b border-zinc-800 pb-2">Relatório</h2>
             <div id="rel-content" class="space-y-4 text-left"></div>
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Fechar</button>
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-zinc-800 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Fechar Painel</button>
         </div>
     </div>
 
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwX-nxGEJpw86qXQpywPL8kzbXJ6PG_DolE3_XWai6Spd-fVHWA4HWMzCmoue6Gl8hAkA/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyUAwFYfg4ZiqQnFumpBYk8XDf8r7mYRJuhl1Ivhu5IPlQhkhxa-UgWZcx1nbueJUYyaw/exec';
+        const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
         let todosOsPedidos = []; 
         let totalPedidosAnterior = 0;
@@ -73,27 +82,31 @@
         function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
 
         function parseDataBR(stringData) {
-            if(!stringData) return new Date();
-            try {
-                const partes = stringData.split(' ');
-                const dataP = partes[0].split('/');
-                const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
-                return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
-            } catch(e) { return new Date(); }
+            if(!stringData) return new Date(0);
+            const partes = stringData.split(' ');
+            const dataP = partes[0].split('/');
+            const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
+            return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
         }
 
         function limparValor(valorStr) {
-            if (!valorStr) return 0;
+            if (!valorStr || valorStr === "") return 0;
             let val = valorStr.toString().replace("R$", "").replace(/\s/g, "").replace(",", ".");
-            return isNaN(parseFloat(val)) ? 0 : parseFloat(val);
+            let num = parseFloat(val);
+            return isNaN(num) ? 0 : num;
         }
 
         async function carregarPedidos() {
+            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             try {
-                const response = await fetch(`${WEB_APP_URL}?action=getPedidos&t=${new Date().getTime()}`);
-                const dados = await response.json();
+                const response = await fetch(url);
+                const csvData = await response.text();
+                const rows = csvData.split('\n').map(row => 
+                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
+                );
 
-                todosOsPedidos = dados.map((row, idx) => ({
+                const pedidosRaw = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
+                todosOsPedidos = pedidosRaw.map((row, idx) => ({
                     linhaOriginal: idx + 2,
                     dataFull: row[0], 
                     objData: parseDataBR(row[0]),
@@ -104,163 +117,223 @@
                     total: row[5],
                     totalNum: limparValor(row[5]),
                     status: (row[6] || 'PENDENTE').toUpperCase(),
-                    modalidade: (row[7] || "DELIVERY").toUpperCase(),
+                    modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
                     telefone: row[8] || "",
                     taxaEntrega: row[9] || "0"
                 }));
 
-                // Alerta sonoro para novos pedidos pendentes
                 if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
-                    const temNovoPendente = todosOsPedidos.some(p => p.status.includes('PENDENTE'));
-                    if(temNovoPendente) ringtone.play().catch(e => console.log("Interação necessária para som"));
+                    const temNovoPendente = todosOsPedidos.some(p => p.status === 'PENDENTE');
+                    if(temNovoPendente) ringtone.play().catch(e => {});
                 }
                 
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
                 renderizarPedidos();
-                document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
-            } catch (e) { 
-                console.error("Erro:", e);
-                document.getElementById('status-conexao').innerText = "❌ ERRO NA CONEXÃO";
-            }
+            } catch (e) { console.error("Erro carga pedidos:", e); }
         }
 
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
             
-            // Ordenar: Pendentes e Preparando primeiro, depois por data
-            let ordenados = [...todosOsPedidos].sort((a, b) => {
-                const prioridade = (s) => (s.includes("PENDENTE") || s.includes("PREPARANDO")) ? 0 : 1;
-                if (prioridade(a.status) !== prioridade(b.status)) return prioridade(a.status) - prioridade(b.status);
+            let pedidosParaExibir = [...todosOsPedidos].sort((a, b) => {
+                const statusA = (a.status.includes("PENDENTE") || a.status.includes("PREPARANDO")) ? 0 : 1;
+                const statusB = (b.status.includes("PENDENTE") || b.status.includes("PREPARANDO")) ? 0 : 1;
+                if (statusA !== statusB) return statusA - statusB;
                 return b.objData - a.objData;
             });
 
-            ordenados.forEach(p => {
-                const isConcluido = p.status.includes("CONCLU");
+            pedidosParaExibir.forEach(p => {
+                const isRetirada = p.modalidade.includes('RETIRADA');
+                const isConcluido = p.status.includes("CONCLUIDO");
                 const isPreparando = p.status.includes("PREPARANDO");
                 const isPendente = p.status.includes("PENDENTE");
 
-                let corBorda = "border-zinc-700";
-                if (isPendente) corBorda = "border-yellow-500 shadow-yellow-500/10";
-                if (isPreparando) corBorda = "border-blue-500 shadow-blue-500/10";
+                // Configuração das Bordas Fixas conforme solicitado
+                let cardColorClass = "border-zinc-700";
+                if (isPendente) cardColorClass = "border-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.1)]";
+                else if (isPreparando) cardColorClass = "border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
+                else if (isConcluido) cardColorClass = "border-green-600";
+                
+                let vTaxa = limparValor(p.taxaEntrega);
+                let vTotal = p.totalNum;
+                let vSubtotal = vTotal - vTaxa;
+
+                let taxaTexto = isRetirada 
+                    ? "🛍️ RETIRADA EM LOJA" 
+                    : `🛵 TAXA DE ENTREGA: R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+                const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
+                const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
+                const telLimpo = p.telefone.toString().replace(/\D/g, '');
+                const linkZap = telLimpo ? `https://wa.me/55${telLimpo}` : '#';
 
                 container.innerHTML += `
-                    <div class="bg-zinc-900 border-2 ${corBorda} p-6 rounded-3xl flex flex-col h-full border-t-[10px] ${isConcluido ? 'opacity-60' : ''}">
+                    <div class="bg-zinc-900 border-2 ${cardColorClass} p-6 rounded-3xl flex flex-col h-full border-t-[10px] shadow-xl ${isConcluido ? 'opacity-85' : ''} transition-all">
                         <div class="flex justify-between items-start mb-4">
                             <div>
                                 <span class="text-zinc-500 font-bold text-[10px] block uppercase">${p.dataFull}</span>
                                 <span class="status-badge mt-2 inline-block ${isPreparando ? 'bg-blue-600' : (isConcluido ? 'bg-green-700' : 'bg-yellow-600')} text-white">${p.status}</span>
                             </div>
-                            <span class="timer-badge" data-hora="${p.objData.toISOString()}" data-status="${p.status}">...</span>
+                            <span class="timer-badge" data-hora-pedido="${p.objData.toISOString()}" data-status="${p.status}">...</span>
                         </div>
 
-                        <h3 class="text-2xl font-black italic mb-1 uppercase">${p.nome}</h3>
-                        <p class="text-[11px] font-bold text-zinc-400 mb-4 italic">📍 ${p.endereco}</p>
+                        <h3 class="text-2xl font-black italic mb-2 uppercase leading-tight">${p.nome}</h3>
+                        
+                        <div class="flex gap-2 mb-4">
+                            <a href="${linkZap}" target="_blank" class="bg-green-600/20 text-green-500 px-3 py-2 rounded-xl text-[10px] font-black border border-green-600/30 hover:bg-green-600 hover:text-white transition-all uppercase">WhatsApp</a>
+                            <a href="${linkMaps}" target="_blank" class="bg-blue-600/20 text-blue-400 px-3 py-2 rounded-xl text-[10px] font-black border border-blue-600/30 hover:bg-blue-600 hover:text-white transition-all uppercase">Mapa</a>
+                        </div>
 
-                        <div class="bg-black/40 p-4 rounded-2xl mb-4 flex-grow text-sm font-bold uppercase">
-                            ${p.itens.split('|').map(i => `<div class="mb-1 border-b border-zinc-800/50 pb-1">• ${i.trim()}</div>`).join('')}
+                        <p class="text-[11px] font-bold text-zinc-400 mb-4 uppercase italic">📍 ${p.endereco}</p>
+
+                        <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow text-sm font-bold uppercase leading-relaxed">
+                            ${p.itens.split('|').map(i => `<div class="mb-2 text-zinc-200 border-b border-zinc-800/50 pb-1">• ${i.trim()}</div>`).join('')}
+                        </div>
+
+                        <div class="mb-6 space-y-1">
+                             <div class="text-[10px] font-bold uppercase text-zinc-500 tracking-widest">SUBTOTAL: R$ ${vSubtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                             <div class="text-[10px] font-black uppercase text-orange-500 tracking-widest">${taxaTexto}</div>
                         </div>
 
                         <div class="grid grid-cols-2 gap-2 mb-4">
-                            <button onclick="pararSom(); mudarStatus(${p.linhaOriginal}, 'PREPARANDO')" class="bg-blue-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">Cozinha</button>
-                            <button onclick="mudarStatus(${p.linhaOriginal}, 'CONCLUIDO')" class="bg-green-600 text-white text-[10px] font-black py-3 rounded-xl uppercase">Concluir</button>
+                            <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500">Cozinha</button>
+                            <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="bg-green-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-500">Concluir</button>
                         </div>
 
                         <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
-                            <span class="text-xl font-black text-[#39FF14]">${p.total}</span>
+                            <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
                             <div class="flex gap-2">
-                                <button onclick="cancelarPedido(${p.linhaOriginal})" class="bg-red-900/20 text-red-500 border border-red-500/30 px-3 py-2 rounded-xl text-lg">🗑️</button>
-                                <button onclick="imprimirCupom('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black font-black px-4 py-2 rounded-xl text-[10px] uppercase">Imprimir</button>
+                                <button onclick="cancelarPedido(${p.linhaOriginal}, this)" class="bg-red-900/20 text-red-500 border border-red-500/30 font-black px-4 py-3 rounded-xl text-[12px]">🗑️</button>
+                                <button onclick="imprimir('${dadosParaImprimir}')" class="bg-white text-black font-black px-5 py-3 rounded-xl text-[10px] uppercase shadow-lg">Imprimir</button>
                             </div>
                         </div>
                     </div>`;
             });
-            atualizarTimers();
+            atualizarCronometros();
         }
 
-        async function mudarStatus(linha, status) {
+        function atualizarCronometros() {
+            const agora = new Date();
+            document.querySelectorAll('[data-hora-pedido]').forEach(el => {
+                const status = el.getAttribute('data-status');
+                const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
+                
+                if (status.includes('CONCLU')) {
+                    el.className = "timer-badge bg-zinc-700 opacity-50";
+                    if (el.innerText !== "..." && el.innerText !== "calculando..." && el.innerText !== "OK") return;
+                }
+
+                const diff = Math.floor((agora - dataPedido) / 1000);
+                if (diff < 0) { el.innerText = "00:00"; return; }
+
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const tempoTexto = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
+                
+                el.innerText = tempoTexto;
+
+                if (!status.includes('CONCLU')) {
+                    if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
+                    else if (m >= 20) el.className = "timer-badge bg-yellow-600";
+                    else el.className = "timer-badge bg-zinc-700";
+                }
+            });
+        }
+
+        async function alterarStatus(linha, status, btn) {
+            btn.innerHTML = "⏳";
             await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
             setTimeout(carregarPedidos, 1000);
         }
 
-        async function cancelarPedido(linha) {
-            if (confirm("Apagar permanentemente este pedido?")) {
+        async function cancelarPedido(linha, btn) {
+            if (confirm("🚨 APAGAR PEDIDO?\nEsta ação excluirá o registro da planilha permanentemente.")) {
+                btn.innerHTML = "⏳";
                 await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1000);
             }
         }
 
-        function atualizarTimers() {
-            const agora = new Date();
-            document.querySelectorAll('[data-hora]').forEach(el => {
-                const status = el.getAttribute('data-status');
-                if (status.includes('CONCLU')) { el.innerText = "OK"; return; }
-                
-                const diff = Math.floor((agora - new Date(el.getAttribute('data-hora'))) / 60000);
-                el.innerText = diff + "m";
-                if (diff >= 40) el.className = "timer-badge bg-red-600 animate-pulse";
-                else if (diff >= 20) el.className = "timer-badge bg-yellow-600";
-            });
-        }
-
-        function imprimirCupom(dadosEnc) {
-            const p = JSON.parse(decodeURIComponent(dadosEnc));
+        function imprimir(dados) {
+            const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
             
             area.innerHTML = `
                 <div class="cupom-termico">
-                    <center><strong>KF SABORES</strong><br>${p.modalidade}<br>${p.dataFull}</center>
+                    <center>
+                        <strong style="font-size: 18px;">KF SABORES</strong><br>
+                        ${p.modalidade.toUpperCase()}<br>
+                        ${p.dataFull}
+                    </center>
                     <div class="linha"></div>
                     CLIENTE: ${p.nome.toUpperCase()}<br>
                     TEL: ${p.telefone}<br>
                     END: ${p.endereco.toUpperCase()}<br>
                     <div class="linha"></div>
-                    ITENS:<br>${lista}
+                    ITENS:<br>
+                    ${lista}
                     <div class="linha"></div>
                     PAGTO: ${p.pagto.toUpperCase()}<br>
-                    TAXA: R$ ${limparValor(p.taxaEntrega).toFixed(2)}<br>
-                    <strong>TOTAL: ${p.total}</strong>
+                    TAXA DE ENTREGA: R$ ${limparValor(p.taxaEntrega).toFixed(2)}<br>
+                    TOTAL: ${p.total}<br>
+                    <div class="linha"></div>
+                    <center><br>OBRIGADO PELA PREFERÊNCIA!<br>BOM APETITE!</center>
                 </div>`;
-            window.print();
+            
+            setTimeout(() => { window.print(); }, 500);
         }
 
         async function carregarEstoque() {
-            const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
-            const itens = await res.json();
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "";
-            
-            const grupos = itens.reduce((acc, item) => {
-                (acc[item.categoria] = acc[item.categoria] || []).push(item);
-                return acc;
-            }, {});
-
-            for (let cat in grupos) {
-                let html = `<div class="cat-card"><h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic">${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
-                grupos[cat].forEach(i => {
-                    const isPausado = i.status === 'PAUSADO';
-                    html += `
-                        <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'}">
-                            <p class="text-[10px] font-black uppercase mb-3 truncate">${i.nome}</p>
-                            <button onclick="mudarEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}')" class="w-full py-2 rounded-xl text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'}">
-                                ${isPausado ? 'Ativar' : 'Pausar'}
-                            </button>
-                        </div>`;
+            container.innerHTML = "<p class='text-center animate-pulse text-zinc-500 font-bold uppercase'>Sincronizando estoque...</p>";
+            try {
+                const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
+                const estoqueArr = await res.json();
+                const grupos = {};
+                
+                estoqueArr.forEach(i => {
+                    const cat = (i.categoria || "OUTROS").toUpperCase();
+                    if (!grupos[cat]) grupos[cat] = [];
+                    grupos[cat].push(i);
                 });
-                html += `</div></div>`;
-                container.innerHTML += html;
-            }
+
+                let html = "";
+                Object.keys(grupos).sort().forEach(cat => {
+                    html += `
+                    <div class="cat-card">
+                        <h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic flex items-center gap-2">
+                            <span class="w-2 h-2 bg-[#39FF14] rounded-full animate-pulse"></span> ${cat}
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+                    
+                    grupos[cat].forEach(i => {
+                        const isPausado = i.status === 'PAUSADO';
+                        html += `
+                            <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'} transition-all">
+                                <p class="text-[10px] font-black uppercase mb-3 text-zinc-300 leading-tight h-8 overflow-hidden">${i.nome}</p>
+                                <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                                    class="w-full py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isPausado ? 'bg-green-600 text-white' : 'bg-red-600/80 text-white hover:bg-red-600'}">
+                                    ${isPausado ? 'Ativar' : 'Pausar'}
+                                </button>
+                            </div>`;
+                    });
+                    html += `</div></div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) { container.innerHTML = "<p class='text-red-500'>Erro ao carregar estoque.</p>"; }
         }
 
-        async function mudarEstoque(item, status) {
+        async function mudarStatusEstoque(item, status, btn) {
+            btn.innerHTML = "⏳";
             await fetch(WEB_APP_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
                 body: JSON.stringify({ action: 'updateStock', item, status }) 
             });
-            setTimeout(carregarEstoque, 1000);
+            setTimeout(carregarEstoque, 800);
         }
 
         function toggleEstoque() {
@@ -269,25 +342,51 @@
             if(!p.classList.contains('hidden')) carregarEstoque();
         }
 
-        function gerarRelatorio() {
-            let total = 0, qtd = 0;
+        function gerarRelatorio(tipo) {
+            const agora = new Date();
+            let listaFiltrada = [];
+            
             todosOsPedidos.forEach(p => {
-                if (p.status.includes('CONCLU')) {
-                    total += p.totalNum;
-                    qtd++;
-                }
+                if (!p.status.includes('CONCLU')) return;
+                let inicioTurno = new Date(agora);
+                if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
+                inicioTurno.setHours(17, 0, 0);
+                if (tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(agora.setDate(agora.getDate()-7)))) listaFiltrada.push(p);
             });
+
+            let totalDel = 0, qtdDel = 0, totalRet = 0, qtdRet = 0;
+            listaFiltrada.forEach(p => {
+                if (p.modalidade.includes("RETIRADA")) { totalRet += p.totalNum; qtdRet++; }
+                else { totalDel += p.totalNum; qtdDel++; }
+            });
+
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Resumo do Turno" : "Resumo da Semana";
             document.getElementById('rel-content').innerHTML = `
-                <div class="bg-zinc-800 p-6 rounded-3xl text-center">
-                    <p class="text-zinc-500 text-[10px] font-black uppercase">Pedidos Concluídos: ${qtd}</p>
-                    <p class="text-4xl font-black text-[#39FF14] italic mt-2">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                <div class="space-y-4">
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-[#39FF14]">
+                        <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p>
+                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600">
+                        <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p>
+                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
+                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">TOTAL GERAL</p>
+                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
                 </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
 
-        document.body.addEventListener('click', () => pararSom(), { once: true });
+        document.body.addEventListener('click', () => {
+            pararSom();
+            document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
+            document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase tracking-widest mt-2";
+        }, { once: true });
+
         setInterval(carregarPedidos, 15000);
-        setInterval(atualizarTimers, 10000);
+        setInterval(atualizarCronometros, 10000);
         carregarPedidos();
     </script>
 </body>
