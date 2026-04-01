@@ -19,8 +19,8 @@
         .linha { border-bottom: 2px dashed #000; margin: 5px 0; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
-        .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
         .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; transition: all 0.3s ease; }
+        .cat-card { background: #18181b; border: 1px solid #27272a; border-radius: 1.5rem; padding: 1.5rem; margin-bottom: 1.5rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -84,7 +84,7 @@
         }
 
         function limparValor(valorStr) {
-            if (!valorStr || valorStr === "") return 0;
+            if (!valorStr) return 0;
             let val = valorStr.toString().replace("R$", "").replace(/\s/g, "").replace(",", ".");
             let num = parseFloat(val);
             return isNaN(num) ? 0 : num;
@@ -143,17 +143,12 @@
                 const isConcluido = p.status.includes("CONCLUIDO");
                 const isPreparando = p.status.includes("PREPARANDO");
 
-                // CORREÇÃO DA BORDA: VERDE SE CONCLUÍDO, SENÃO AZUL SE PREPARANDO, SENÃO AMARELO
                 let borderColor = "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]";
-                if (isConcluido) {
-                    borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.4)]";
-                } else if (isPreparando) {
-                    borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
-                }
+                if (isConcluido) borderColor = "border-green-600 shadow-[0_0_15px_rgba(22,163,74,0.4)]";
+                else if (isPreparando) borderColor = "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]";
 
                 let vTaxa = limparValor(p.taxaEntrega);
-                let vTotalGeral = p.totalNum;
-                let vSubtotal = vTotalGeral - vTaxa;
+                let vSubtotal = p.totalNum - vTaxa;
 
                 const dadosParaImprimir = encodeURIComponent(JSON.stringify(p));
                 const telLimpo = p.telefone.toString().replace(/\D/g, '');
@@ -183,11 +178,11 @@
 
                         <div class="space-y-1 mb-4 border-t border-zinc-800 pt-3">
                             <div class="flex justify-between text-[10px] font-bold text-zinc-400">
-                                <span>SUBTOTAL (PEDIDO):</span>
+                                <span>SUBTOTAL:</span>
                                 <span>R$ ${vSubtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                             </div>
                             <div class="flex justify-between text-[10px] font-black text-orange-500">
-                                <span>${isRetirada ? '🛍️ RETIRADA' : '🛵 TAXA DE ENTREGA'}:</span>
+                                <span>${isRetirada ? '🛍️ RETIRADA' : '🛵 TAXA'}:</span>
                                 <span>R$ ${vTaxa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                             </div>
                         </div>
@@ -222,7 +217,7 @@
 
                 if (status.includes('CONCLU')) {
                     el.className = "timer-badge bg-zinc-700 opacity-80";
-                    el.innerText = tempoFormatado; // AGORA EXIBE O TEMPO FINAL
+                    el.innerText = tempoFormatado;
                     return;
                 }
 
@@ -236,13 +231,29 @@
         }
 
         async function alterarStatus(linha, status, btn) {
+            const textoOriginal = btn.innerHTML;
             btn.innerHTML = "⏳";
-            await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
-            setTimeout(carregarPedidos, 1000);
+
+            // MUDANÇA VISUAL IMEDIATA DA BORDA AO CONCLUIR
+            if (status === 'CONCLUIDO') {
+                const card = btn.closest('.bg-zinc-900');
+                if (card) {
+                    card.classList.remove('border-yellow-500', 'border-blue-500', 'shadow-[0_0_15px_rgba(234,179,8,0.3)]', 'shadow-[0_0_15px_rgba(59,130,246,0.3)]');
+                    card.classList.add('border-green-600', 'shadow-[0_0_15px_rgba(22,163,74,0.4)]');
+                }
+            }
+
+            try {
+                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
+                setTimeout(carregarPedidos, 1000);
+            } catch (e) { 
+                btn.innerHTML = textoOriginal; 
+                console.error("Erro status:", e);
+            }
         }
 
         async function cancelarPedido(linha, btn) {
-            if (confirm("🚨 APAGAR PEDIDO?\nEsta ação excluirá permanentemente.")) {
+            if (confirm("🚨 APAGAR PEDIDO?")) {
                 btn.innerHTML = "⏳";
                 await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1000);
@@ -253,42 +264,30 @@
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             const lista = p.itens.split('|').map(i => `<span class="item-separador">• ${i.trim().toUpperCase()}</span>`).join('');
-            
             let vTaxa = limparValor(p.taxaEntrega);
-            let vTotal = p.totalNum;
-            let vSubtotal = vTotal - vTaxa;
+            let vSubtotal = p.totalNum - vTaxa;
 
             area.innerHTML = `
                 <div class="cupom-termico">
-                    <center>
-                        <strong style="font-size: 18px;">KF SABORES</strong><br>
-                        ${p.modalidade.toUpperCase()}<br>
-                        ${p.dataFull}
-                    </center>
+                    <center><strong style="font-size: 18px;">KF SABORES</strong><br>${p.modalidade.toUpperCase()}<br>${p.dataFull}</center>
                     <div class="linha"></div>
-                    CLIENTE: ${p.nome.toUpperCase()}<br>
-                    TEL: ${p.telefone}<br>
-                    END: ${p.endereco.toUpperCase()}<br>
+                    CLIENTE: ${p.nome.toUpperCase()}<br>TEL: ${p.telefone}<br>END: ${p.endereco.toUpperCase()}<br>
                     <div class="linha"></div>
-                    ITENS:<br>
-                    ${lista}
+                    ITENS:<br>${lista}
                     <div class="linha"></div>
-                    SUBTOTAL: R$ ${vSubtotal.toFixed(2)}<br>
-                    TAXA: R$ ${vTaxa.toFixed(2)}<br>
-                    <strong style="font-size: 15px;">TOTAL: R$ ${vTotal.toFixed(2)}</strong><br>
+                    SUBTOTAL: R$ ${vSubtotal.toFixed(2)}<br>TAXA: R$ ${vTaxa.toFixed(2)}<br>
+                    <strong style="font-size: 15px;">TOTAL: R$ ${p.totalNum.toFixed(2)}</strong><br>
                     <div class="linha"></div>
                     PAGTO: ${p.pagto.toUpperCase()}<br>
-                    ${p.pagto.toUpperCase().includes('DINHEIRO') ? '<center><br>*** CONFERIR TROCO ***</center>' : ''}
                     <div class="linha"></div>
-                    <center><br>OBRIGADO PELA PREFERÊNCIA!<br>BOM APETITE!</center>
+                    <center><br>BOM APETITE!</center>
                 </div>`;
-            
             setTimeout(() => { window.print(); }, 500);
         }
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-center animate-pulse text-zinc-500 font-bold uppercase'>Sincronizando estoque...</p>";
+            container.innerHTML = "<p class='text-center animate-pulse text-zinc-500 font-bold uppercase'>Sincronizando...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoqueArr = await res.json();
@@ -298,25 +297,15 @@
                     if (!grupos[cat]) grupos[cat] = [];
                     grupos[cat].push(i);
                 });
-
                 let html = "";
                 Object.keys(grupos).sort().forEach(cat => {
-                    html += `
-                    <div class="cat-card">
-                        <h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic flex items-center gap-2">
-                            <span class="w-2 h-2 bg-[#39FF14] rounded-full animate-pulse"></span> ${cat}
-                        </h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+                    html += `<div class="cat-card"><h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic">${cat}</h3><div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
                     grupos[cat].forEach(i => {
                         const isPausado = i.status === 'PAUSADO';
-                        html += `
-                            <div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'}">
-                                <p class="text-[10px] font-black uppercase mb-3 text-zinc-300 h-8 overflow-hidden">${i.nome}</p>
-                                <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                    class="w-full py-2 rounded-xl text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600/80 hover:bg-red-600'} text-white">
-                                    ${isPausado ? 'Ativar' : 'Pausar'}
-                                </button>
-                            </div>`;
+                        html += `<div class="bg-black/40 p-4 rounded-2xl border ${isPausado ? 'border-red-600/40 opacity-60' : 'border-zinc-800'}">
+                            <p class="text-[10px] font-black uppercase mb-3 text-zinc-300 h-8">${i.nome}</p>
+                            <button onclick="mudarStatusEstoque('${i.nome}', '${isPausado ? 'DISPONÍVEL' : 'PAUSADO'}', this)" class="w-full py-2 rounded-xl text-[9px] font-black uppercase ${isPausado ? 'bg-green-600' : 'bg-red-600'} text-white">${isPausado ? 'Ativar' : 'Pausar'}</button>
+                        </div>`;
                     });
                     html += `</div></div>`;
                 });
@@ -346,29 +335,17 @@
                 inicioTurno.setHours(17, 0, 0);
                 if (tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(agora.setDate(agora.getDate()-7)))) listaFiltrada.push(p);
             });
-
             let totalDel = 0, qtdDel = 0, totalRet = 0, qtdRet = 0;
             listaFiltrada.forEach(p => {
                 if (p.modalidade.includes("RETIRADA")) { totalRet += p.totalNum; qtdRet++; }
                 else { totalDel += p.totalNum; qtdDel++; }
             });
-
             document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Resumo do Turno" : "Resumo da Semana";
-            document.getElementById('rel-content').innerHTML = `
-                <div class="space-y-4">
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-[#39FF14]">
-                        <p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p>
-                        <p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600">
-                        <p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p>
-                        <p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                    <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center">
-                        <p class="text-[10px] uppercase font-black text-zinc-500 mb-1">TOTAL GERAL</p>
-                        <p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                </div>`;
+            document.getElementById('rel-content').innerHTML = `<div class="space-y-4">
+                <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-[#39FF14]"><p class="text-[10px] uppercase font-black text-zinc-500">🛵 Delivery (${qtdDel})</p><p class="text-xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                <div class="bg-zinc-800 p-4 rounded-2xl border-l-4 border-orange-600"><p class="text-[10px] uppercase font-black text-zinc-500">🛍️ Retirada (${qtdRet})</p><p class="text-xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                <div class="bg-zinc-800 p-6 rounded-3xl border border-[#39FF14]/30 text-center"><p class="text-4xl font-black text-[#39FF14] italic">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+            </div>`;
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
 
