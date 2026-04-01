@@ -3,48 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KF SABORES | Painel de Gestão Premium</title>
+    <title>KF SABORES | Gestão Pro Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-main: #09090b;
-            --card-bg: #18181b;
-            --accent: #39FF14;
-        }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: var(--bg-main); 
-            color: #f4f4f5;
-            letter-spacing: -0.01em;
-        }
-        /* Efeito de vidro sutil */
-        .glass {
-            background: rgba(24, 24, 27, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .grid-custom {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-        }
-        /* Estilo de cupom para os itens */
-        .item-list {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 1rem;
-            padding: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        /* Scrollbar elegante */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #09090b; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        :root { --bg: #09090b; --card: #18181b; --green: #39FF14; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: #f4f4f5; letter-spacing: -0.02em; }
         
+        .glass { background: rgba(24, 24, 27, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        
+        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+        
+        /* Scrollbar Moderna */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; display: block !important; }
-            #print-area { position: absolute; left: 0; top: 0; width: 48mm; color: #000; }
+            #print-area { position: absolute; left: 0; top: 0; width: 48mm; color: #000; font-family: monospace; }
         }
     </style>
 </head>
@@ -54,45 +31,44 @@
 
     <div class="max-w-[1600px] mx-auto">
         
-        <header class="glass mb-10 p-6 rounded-[2rem] flex flex-col md:flex-row justify-between items-center gap-6">
+        <header class="glass mb-8 p-6 rounded-[2.5rem] flex flex-col lg:flex-row justify-between items-center gap-6 shadow-2xl">
             <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                    <span class="text-black font-black text-xl italic">KF</span>
+                <div class="w-14 h-14 bg-[#39FF14] rounded-2xl flex items-center justify-center shadow-[0_0_25px_rgba(57,255,20,0.3)]">
+                    <span class="text-black font-black text-2xl italic">KF</span>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-extrabold tracking-tighter uppercase">KF SABORES</h1>
-                    <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                        <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Sistema Operacional</p>
-                    </div>
+                    <h1 class="text-2xl font-black tracking-tighter uppercase italic">KF SABORES</h1>
+                    <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] animate-pulse">⚠️ Clique para ativar som</p>
                 </div>
             </div>
             
-            <nav class="flex flex-wrap gap-3">
-                <button onclick="gerarRelatorio('dia')" class="bg-zinc-800 hover:bg-zinc-700 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">RELATÓRIO</button>
-                <button onclick="toggleEstoque()" class="bg-zinc-800 hover:bg-zinc-700 px-5 py-2.5 rounded-xl text-xs font-bold transition-all">ESTOQUE</button>
-                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-2.5 rounded-xl text-xs font-black uppercase shadow-lg shadow-emerald-900/20 transition-all">ABRIR SITE</a>
-            </nav>
+            <div class="flex flex-wrap gap-2 justify-center">
+                <button onclick="gerarRelatorio('dia')" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all">📊 Hoje</button>
+                <button onclick="gerarRelatorio('semana')" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase transition-all">📅 Semana</button>
+                <button onclick="toggleEstoque()" class="bg-orange-600/20 text-orange-500 border border-orange-500/20 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-orange-600 hover:text-white transition-all">📦 Estoque</button>
+                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg hover:bg-emerald-500 transition-all">🌐 Site</a>
+                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-800 border border-zinc-700 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase hover:bg-zinc-700 transition-all">🗺️ Taxas</a>
+            </div>
         </header>
 
         <main id="lista-pedidos" class="grid-custom"></main>
     </div>
 
-    <div id="painel-estoque" class="fixed inset-0 z-[200] hidden bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-[2.5rem] p-8 shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-3xl font-black italic uppercase">Gestão de Estoque</h2>
-                <button onclick="toggleEstoque()" class="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">✕</button>
+    <div id="painel-estoque" class="fixed inset-0 z-[200] hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-4xl max-h-[85vh] overflow-y-auto rounded-[3rem] p-10 shadow-2xl">
+            <div class="flex justify-between items-center mb-10">
+                <h2 class="text-3xl font-black italic text-orange-500 uppercase">Controle de Produtos</h2>
+                <button onclick="toggleEstoque()" class="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center hover:bg-red-500 transition-all">✕</button>
             </div>
-            <div id="lista-estoque-categorias" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+            <div id="lista-estoque-categorias" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
         </div>
     </div>
 
-    <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[300] bg-black/80 backdrop-blur-sm">
-        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-[2rem] p-8 shadow-2xl">
-            <h2 id="rel-titulo" class="text-xl font-black uppercase mb-6">Relatório</h2>
+    <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[300] bg-black/90 backdrop-blur-sm">
+        <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl text-center">
+            <h2 id="rel-titulo" class="text-xl font-black uppercase mb-8 text-[#39FF14] italic">Resumo de Vendas</h2>
             <div id="rel-content" class="space-y-4"></div>
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-8 bg-white text-black py-4 rounded-2xl font-bold uppercase text-xs">Fechar</button>
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-10 bg-white text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-zinc-200 transition-all">Fechar Painel</button>
         </div>
     </div>
 
@@ -139,7 +115,7 @@
                         total: row[5],
                         totalNum: parseFloat(row[5].toString().replace("R$", "").replace(",", ".")),
                         status: statusBase,
-                        modalidade: (row[7] || "DELIVERY").toUpperCase(),
+                        modalidade: (row[7] || (row[2].toUpperCase().includes("RETIRADA") ? "RETIRADA" : "DELIVERY")).toUpperCase(),
                         telefone: row[8] || "",
                         taxaEntrega: row[9] || "0"
                     };
@@ -153,68 +129,66 @@
             container.innerHTML = "";
             
             todosOsPedidos.sort((a, b) => {
-                const statusA = (a.status.includes("CONCLU")) ? 1 : 0;
-                const statusB = (b.status.includes("CONCLU")) ? 1 : 0;
-                return statusA - statusB || b.objData - a.objData;
+                const sA = a.status.includes("CONCLU") ? 1 : 0;
+                const sB = b.status.includes("CONCLU") ? 1 : 0;
+                return sA - sB || b.objData - a.objData;
             }).forEach(p => {
                 const isConcluido = p.status.includes("CONCLU");
                 const isPreparando = p.status.includes("PREPAR");
-                
-                // Cores de status dinâmicas
-                let statusColor = "bg-amber-500/10 text-amber-500 border-amber-500/20";
-                let borderColor = "border-zinc-800";
-                let glow = "shadow-none";
+                const telLimpo = p.telefone.toString().replace(/\D/g, '');
+
+                let borderStyle = "border-amber-500/40 shadow-[0_0_20px_rgba(245,158,11,0.1)]";
+                let badgeStyle = "bg-amber-500 text-black";
 
                 if (isConcluido) {
-                    statusColor = "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
-                    borderColor = "border-emerald-500/30";
+                    borderStyle = "border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.2)]";
+                    badgeStyle = "bg-emerald-500 text-black";
                 } else if (isPreparando) {
-                    statusColor = "bg-blue-500/10 text-blue-500 border-blue-500/20";
-                    borderColor = "border-blue-500/30";
+                    borderStyle = "border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]";
+                    badgeStyle = "bg-blue-500 text-white";
                 }
 
                 container.innerHTML += `
-                    <div class="glass relative rounded-[2rem] p-6 flex flex-col h-full transition-all border-2 ${borderColor} ${isConcluido ? 'opacity-80 scale-95' : 'hover:scale-[1.02] shadow-2xl shadow-black'}">
+                    <div class="glass relative rounded-[2.5rem] p-6 flex flex-col h-full border-2 transition-all ${borderStyle} ${isConcluido ? 'opacity-70 scale-[0.98]' : 'hover:scale-[1.02]'}">
                         
-                        <div class="absolute left-0 top-10 bottom-10 w-1 rounded-r-full ${isConcluido ? 'bg-emerald-500' : isPreparando ? 'bg-blue-500' : 'bg-amber-500'}"></div>
-
-                        <div class="flex justify-between items-start mb-5">
-                            <div>
-                                <span class="${statusColor} border px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">${p.status}</span>
-                                <p class="text-[10px] text-zinc-500 font-medium mt-2">${p.dataFull}</p>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex flex-col gap-1">
+                                <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${badgeStyle}">${p.status}</span>
+                                <span class="text-[10px] text-zinc-500 font-bold ml-1">${p.dataFull}</span>
                             </div>
-                            <div class="timer-badge px-3 py-1 bg-zinc-800/50 rounded-lg font-mono text-[11px] font-bold" data-hora-pedido="${p.objData.toISOString()}" data-status="${p.status}">--:--</div>
+                            <div class="px-3 py-1 bg-zinc-800 rounded-xl font-mono text-[11px] font-bold" data-hora-pedido="${p.objData.toISOString()}" data-status="${p.status}">--:--</div>
                         </div>
 
-                        <h3 class="text-xl font-extrabold text-white mb-1 truncate">${p.nome}</h3>
-                        <p class="text-[10px] text-zinc-400 font-medium mb-4 flex items-center gap-1 uppercase truncate">
-                            <svg class="w-3 h-3 text-zinc-600" fill="currentColor" viewBox="0 0 20 20"><path d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"/></svg>
-                            ${p.endereco}
-                        </p>
+                        <h3 class="text-2xl font-black text-white italic uppercase leading-none mb-2 truncate">${p.nome}</h3>
+                        
+                        <div class="flex gap-2 mb-4">
+                            <a href="https://wa.me/55${telLimpo}" target="_blank" class="bg-emerald-500/10 text-emerald-500 px-3 py-1.5 rounded-lg text-[9px] font-black border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all uppercase">WhatsApp</a>
+                            <span class="bg-zinc-800 text-zinc-400 px-3 py-1.5 rounded-lg text-[9px] font-black border border-zinc-700 uppercase">${p.modalidade}</span>
+                        </div>
 
-                        <div class="item-list flex-grow mb-5">
-                            <ul class="space-y-3">
-                                ${p.itens.split('|').map(i => `
-                                    <li class="text-[11px] font-semibold text-zinc-200 flex gap-2">
-                                        <span class="text-zinc-600 font-black">×</span> ${i.trim().toUpperCase()}
-                                    </li>
-                                `).join('')}
+                        <p class="text-[10px] text-zinc-400 font-medium mb-4 italic truncate">📍 ${p.endereco}</p>
+
+                        <div class="bg-black/30 rounded-2xl p-4 mb-4 border border-white/5 flex-grow">
+                            <ul class="space-y-2">
+                                ${p.itens.split('|').map(i => `<li class="text-[11px] font-bold text-zinc-200 border-b border-white/5 pb-1 uppercase">• ${i.trim()}</li>`).join('')}
                             </ul>
                         </div>
 
-                        <div class="flex items-end justify-between mb-6">
-                            <div>
-                                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-1">Pagamento: ${p.pagto}</p>
-                                <p class="text-2xl font-black text-white italic">R$ ${p.totalNum.toFixed(2)}</p>
+                        <div class="flex justify-between items-center mb-4 px-1">
+                            <div class="text-[10px] font-bold text-zinc-500 uppercase">
+                                Taxa: <span class="text-orange-500">R$ ${p.taxaEntrega}</span>
                             </div>
-                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="p-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                            </button>
+                            <div class="text-xl font-black text-[#39FF14] italic tracking-tighter">TOTAL: R$ ${p.totalNum.toFixed(2)}</div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="py-3 bg-blue-600/10 hover:bg-blue-600 text-blue-500 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all border border-blue-500/20">PREPARAR</button>
-                            <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="py-3 bg-emerald-600/10 hover:bg-emerald-600 text-emerald-500 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-500/20">CONCLUIR</button>
+                        <div class="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
+                            <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg shadow-blue-900/20">Cozinha</button>
+                            <button onclick="alterarStatus(${p.linhaOriginal}, 'CONCLUIDO', this)" class="py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg shadow-emerald-900/20">Concluir</button>
+                        </div>
+
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="cancelarPedido(${p.linhaOriginal}, this)" class="flex-1 py-2 bg-red-900/20 text-red-500 rounded-xl text-[10px] font-bold border border-red-500/20 hover:bg-red-600 hover:text-white transition-all uppercase">Excluir</button>
+                            <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="flex-1 py-2 bg-white text-black rounded-xl text-[10px] font-black uppercase hover:bg-zinc-200 transition-all">Imprimir</button>
                         </div>
                     </div>`;
             });
@@ -232,21 +206,34 @@
                 
                 el.innerText = tempo;
                 if (!status.includes('CONCLU')) {
-                    if (m >= 40) el.className = "px-3 py-1 rounded-lg font-mono text-[11px] font-bold bg-red-600 text-white animate-pulse";
-                    else if (m >= 20) el.className = "px-3 py-1 rounded-lg font-mono text-[11px] font-bold bg-amber-500 text-black";
+                    if (m >= 40) el.className = "px-3 py-1 rounded-xl font-mono text-[11px] font-bold bg-red-600 text-white animate-pulse";
+                    else if (m >= 20) el.className = "px-3 py-1 rounded-xl font-mono text-[11px] font-bold bg-amber-500 text-black";
+                } else {
+                    el.className = "px-3 py-1 bg-zinc-800 rounded-xl font-mono text-[11px] font-bold opacity-50";
                 }
             });
         }
 
         async function alterarStatus(linha, status, btn) {
             btn.innerText = "⏳";
-            travaStatus[linha] = status;
-            renderizarPedidos(); // Atualiza visual na hora
+            travaStatus[linha] = status; 
+            renderizarPedidos(); 
             
             try {
                 await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1500);
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e); 
+                delete travaStatus[linha];
+            }
+        }
+
+        async function cancelarPedido(linha, btn) {
+            if (confirm("🚨 APAGAR DEFINITIVAMENTE?")) {
+                btn.innerText = "⏳";
+                await fetch(`${WEB_APP_URL}?action=deleteRow&row=${linha}`, { mode: 'no-cors' });
+                setTimeout(carregarPedidos, 1000);
+            }
         }
 
         function toggleEstoque() {
@@ -257,27 +244,27 @@
 
         async function carregarEstoque() {
             const container = document.getElementById('lista-estoque-categorias');
-            container.innerHTML = "<p class='text-zinc-500 animate-pulse'>Sincronizando produtos...</p>";
+            container.innerHTML = "<p class='text-zinc-500 animate-pulse font-black uppercase text-center'>Sincronizando...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
                 const estoqueArr = await res.json();
                 const grupos = {};
                 estoqueArr.forEach(i => {
-                    const cat = i.categoria || "DIVERSOS";
+                    const cat = (i.categoria || "DIVERSOS").toUpperCase();
                     if (!grupos[cat]) grupos[cat] = [];
                     grupos[cat].push(i);
                 });
 
                 container.innerHTML = Object.keys(grupos).map(cat => `
-                    <div class="bg-black/20 p-6 rounded-3xl border border-white/5">
-                        <h3 class="text-emerald-500 font-black text-xs uppercase mb-4 tracking-widest">${cat}</h3>
-                        <div class="space-y-2">
+                    <div class="bg-black/40 p-6 rounded-[2rem] border border-white/5 shadow-xl">
+                        <h3 class="text-[#39FF14] font-black text-xs uppercase mb-6 italic tracking-widest border-b border-white/5 pb-2">${cat}</h3>
+                        <div class="grid grid-cols-1 gap-3">
                             ${grupos[cat].map(i => `
-                                <div class="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                                    <span class="text-[11px] font-bold uppercase text-zinc-300">${i.nome}</span>
+                                <div class="flex justify-between items-center p-4 bg-zinc-800/50 rounded-2xl border border-white/5 hover:border-zinc-600 transition-all">
+                                    <span class="text-[10px] font-black uppercase text-zinc-200">${i.nome}</span>
                                     <button onclick="mudarStatusEstoque('${i.nome}', '${i.status === 'PAUSADO' ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
-                                        class="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase ${i.status === 'PAUSADO' ? 'bg-red-600' : 'bg-emerald-600'}">
-                                        ${i.status === 'PAUSADO' ? 'OFF' : 'ON'}
+                                        class="px-5 py-2 rounded-xl text-[9px] font-black uppercase shadow-lg transition-all ${i.status === 'PAUSADO' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'}">
+                                        ${i.status === 'PAUSADO' ? 'Reativar' : 'Pausar'}
                                     </button>
                                 </div>
                             `).join('')}
@@ -287,36 +274,74 @@
             } catch (e) { }
         }
 
-        // Funções de som e inicialização
+        async function mudarStatusEstoque(item, status, btn) {
+            btn.innerHTML = "⏳";
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
+            setTimeout(carregarEstoque, 800);
+        }
+
+        function gerarRelatorio(tipo) {
+            const agora = new Date();
+            let totalDel = 0, totalRet = 0, qtd = 0;
+            todosOsPedidos.forEach(p => {
+                if (!p.status.includes('CONCLU')) return;
+                let inicioTurno = new Date(agora);
+                if (agora.getHours() < 17) inicioTurno.setDate(agora.getDate() - 1);
+                inicioTurno.setHours(17, 0, 0);
+                
+                const filtroData = tipo === 'dia' ? (p.objData >= inicioTurno) : (p.objData >= new Date(new Date().setDate(new Date().getDate()-7)));
+                
+                if (filtroData) {
+                    if (p.modalidade.includes("RETIRADA")) totalRet += p.totalNum;
+                    else totalDel += p.totalNum;
+                    qtd++;
+                }
+            });
+            document.getElementById('rel-titulo').innerText = tipo === 'dia' ? "Fechamento de Turno" : "Resumo da Semana";
+            document.getElementById('rel-content').innerHTML = `
+                <div class="bg-zinc-800/50 p-5 rounded-2xl border-l-4 border-emerald-500"><p class="text-[10px] font-black text-zinc-500 uppercase">🛵 Delivery</p><p class="text-2xl font-black">R$ ${totalDel.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                <div class="bg-zinc-800/50 p-5 rounded-2xl border-l-4 border-orange-500"><p class="text-[10px] font-black text-zinc-500 uppercase">🛍️ Retirada</p><p class="text-2xl font-black">R$ ${totalRet.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p></div>
+                <div class="bg-[#39FF14] p-6 rounded-[2rem] text-black shadow-[0_0_30px_rgba(57,255,20,0.2)] mt-6">
+                    <p class="text-[10px] font-black uppercase opacity-60">Total Líquido (${qtd} pedidos)</p>
+                    <p class="text-3xl font-black italic tracking-tighter">R$ ${(totalDel + totalRet).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                </div>
+            `;
+            document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        function imprimir(dados) {
+            const p = JSON.parse(decodeURIComponent(dados));
+            const area = document.getElementById('print-area');
+            area.innerHTML = `
+                <div style="font-family: monospace; width: 48mm; padding: 2mm; font-size: 13px; line-height: 1.1;">
+                    <center><strong style="font-size: 16px;">KF SABORES</strong><br>${p.modalidade.toUpperCase()}<br>${p.dataFull}</center>
+                    ----------------------------<br>
+                    CLIENTE: ${p.nome.toUpperCase()}<br>
+                    TEL: ${p.telefone}<br>
+                    END: ${p.endereco.toUpperCase()}<br>
+                    ----------------------------<br>
+                    ITENS:<br>
+                    ${p.itens.split('|').map(i => `• ${i.trim().toUpperCase()}`).join('<br>')}<br>
+                    ----------------------------<br>
+                    PAGTO: ${p.pagto.toUpperCase()}<br>
+                    TAXA: R$ ${p.taxaEntrega}<br>
+                    <strong>TOTAL: R$ ${p.totalNum.toFixed(2)}</strong><br><br>
+                    <center>BOM APETITE!</center>
+                </div>`;
+            window.print();
+        }
+
+        function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
+
         document.body.addEventListener('click', () => {
-            ringtone.pause();
-            document.getElementById('status-conexao').innerText = "CONECTADO AO SERVIDOR";
-            document.getElementById('status-conexao').className = "text-emerald-500 text-[10px] font-bold uppercase tracking-widest";
+            pararSom();
+            document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
+            document.getElementById('status-conexao').className = "text-[#39FF14] text-[10px] font-bold uppercase tracking-widest mt-2";
         }, { once: true });
 
         setInterval(carregarPedidos, 15000);
         setInterval(atualizarCronometros, 10000);
         carregarPedidos();
-
-        // Estilo de impressão adaptado
-        function imprimir(dados) {
-            const p = JSON.parse(decodeURIComponent(dados));
-            const area = document.getElementById('print-area');
-            area.innerHTML = `
-                <div style="font-family: monospace; width: 48mm; padding: 2mm; font-size: 12px;">
-                    <center><strong>KF SABORES</strong><br>${p.modalidade}</center><br>
-                    DATA: ${p.dataFull}<br>
-                    CLIENTE: ${p.nome}<br>
-                    ----------------------------<br>
-                    ITENS:<br>
-                    ${p.itens.split('|').map(i => `• ${i.trim().toUpperCase()}`).join('<br>')}<br>
-                    ----------------------------<br>
-                    TOTAL: R$ ${p.totalNum.toFixed(2)}<br>
-                    PAGTO: ${p.pagto}<br><br>
-                    <center>BOM APETITE!</center>
-                </div>`;
-            window.print();
-        }
     </script>
 </body>
 </html>
