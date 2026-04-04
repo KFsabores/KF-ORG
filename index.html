@@ -391,33 +391,62 @@
         }
 
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-            const n = document.getElementById('cust-name').value;
-            const tel = document.getElementById('cust-phone').value;
-            const a = document.getElementById('cust-addr').value;
-            const totalStr = document.getElementById('cart-total').innerText;
-            const pagto = document.getElementById('pay-method').value;
-            const obs = document.getElementById('cust-obs').value;
-            const troco = document.getElementById('troco-val').value;
-            
-            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
-            
-            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${troco ? ' (Troco para ' + troco + ')' : ''}%0A%0A*🍕 ITENS:*%0A`;
-            cart.forEach(i => msg += `• ${i.name}%0A`);
-            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
-            
-            fetch(URL_PLANILHA, { 
-                method: 'POST', mode: 'no-cors', 
-                body: JSON.stringify({
-                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto,
-                    modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2),
-                    obs: obs, troco: troco
-                }) 
-            });
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-            cart = []; updateCartUI(); toggleCart();
-        }
+    if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
+    
+    const n = document.getElementById('cust-name').value;
+    const tel = document.getElementById('cust-phone').value;
+    const a = document.getElementById('cust-addr').value;
+    const totalStr = document.getElementById('cart-total').innerText;
+    const pagto = document.getElementById('pay-method').value;
+    const obs = document.getElementById('cust-obs').value;
+    const troco = document.getElementById('troco-val').value; // Pega o valor do troco
+    
+    if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { 
+        alert("Preencha Nome, Telefone e Endereço!"); 
+        return; 
+    }
+    
+    // Montagem da mensagem para o WhatsApp
+    let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
+    msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}`;
+    
+    // Se for dinheiro e tiver valor de troco, adiciona na mensagem
+    if (pagto === 'Dinheiro' && troco) {
+        msg += ` (Troco para ${troco})`;
+    }
+    
+    msg += `%0A%0A*🍕 ITENS:*%0A`;
+    cart.forEach(i => msg += `• ${i.name}%0A`);
+    
+    if(obs) msg += `%0A*📝 OBS:* ${obs}%0A`;
+    
+    msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
+    
+    // ENVIO PARA O PAINEL (Planilha)
+    fetch(URL_PLANILHA, { 
+        method: 'POST', 
+        mode: 'no-cors', 
+        body: JSON.stringify({
+            nome: n, 
+            telefone: tel, 
+            endereco: a, 
+            total: totalStr, 
+            pagamento: pagto,
+            modalidade: modalidadeAtual, 
+            itens: cart.map(i=>i.name).join(" | "), 
+            taxa: taxaEntrega.toFixed(2),
+            obs: obs, 
+            troco: troco // <--- AQUI: Agora o troco vai para o seu painel!
+        }) 
+    });
+
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+    
+    // Limpa o carrinho após o sucesso
+    cart = []; 
+    updateCartUI(); 
+    toggleCart();
+}
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
