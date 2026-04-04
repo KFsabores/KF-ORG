@@ -243,7 +243,7 @@
             } catch (e) { btn.innerHTML = txt; }
         }
 
-        function function imprimir(dados) {
+        function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             area.innerHTML = `
@@ -349,8 +349,10 @@
 
         document.body.addEventListener('click', () => {
             pararSom();
-            document.getElementById('status-conexao').innerText = "✅ MONITORAMENTO ATIVO";
-            document.getElementById('status-conexao').classList.replace('text-zinc-500', 'text-[#39FF14]');
+            const status = document.getElementById('status-conexao');
+            status.innerText = "✅ MONITORAMENTO ATIVO";
+            status.classList.remove('text-zinc-500');
+            status.classList.add('text-[#39FF14]');
         }, { once: true });
 
         setInterval(carregarPedidos, 15000);
