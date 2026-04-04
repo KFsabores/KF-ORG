@@ -316,22 +316,48 @@
             const horaIni = document.getElementById('rel-hora-inicio').value;
             const dataFim = document.getElementById('rel-data-fim').value;
             const horaFim = document.getElementById('rel-hora-fim').value;
+            
             if(!dataIni || !dataFim) return alert("Selecione as datas!");
+            
             const inicio = new Date(`${dataIni}T${horaIni}`);
             const fim = new Date(`${dataFim}T${horaFim}`);
-            let total = 0, qtd = 0;
+            
+            // Variáveis para separação
+            let totalDelivery = 0, qtdDelivery = 0;
+            let totalBalcao = 0, qtdBalcao = 0;
+
             todosOsPedidos.forEach(p => {
                 if((p.status.includes('CONCLU')) && p.objData >= inicio && p.objData <= fim) {
-                    total += p.totalNum;
-                    qtd++;
+                    // Verifica se é retirada/balcão ou delivery
+                    if (p.modalidade.includes('RETIRADA') || p.modalidade.includes('BALCÃO') || p.modalidade.includes('BALCAO')) {
+                        totalBalcao += p.totalNum;
+                        qtdBalcao++;
+                    } else {
+                        totalDelivery += p.totalNum;
+                        qtdDelivery++;
+                    }
                 }
             });
+
+            const totalGeral = totalDelivery + totalBalcao;
+            const qtdGeral = qtdDelivery + qtdBalcao;
+
             const resDiv = document.getElementById('resultado-relatorio');
             resDiv.innerHTML = `
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="bg-zinc-800 p-3 rounded-2xl border-l-4 border-blue-500">
+                        <p class="text-[9px] uppercase font-black text-zinc-500">🚚 Delivery (${qtdDelivery})</p>
+                        <p class="text-sm font-black text-white">R$ ${totalDelivery.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                    <div class="bg-zinc-800 p-3 rounded-2xl border-l-4 border-orange-500">
+                        <p class="text-[9px] uppercase font-black text-zinc-500">🛍️ Balcão (${qtdBalcao})</p>
+                        <p class="text-sm font-black text-white">R$ ${totalBalcao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                </div>
                 <div class="bg-[#39FF14] p-6 rounded-3xl text-black text-center shadow-lg">
-                    <p class="font-black text-[10px] uppercase opacity-60">Faturamento Líquido</p>
-                    <p class="text-4xl font-black italic">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    <p class="font-bold text-[11px] mt-2 uppercase">${qtd} Pedidos</p>
+                    <p class="font-black text-[10px] uppercase opacity-60">Faturamento Total (Líquido)</p>
+                    <p class="text-4xl font-black italic">R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    <p class="font-bold text-[11px] mt-2 uppercase">${qtdGeral} Pedidos Concluídos</p>
                 </div>`;
             resDiv.classList.remove('hidden');
         }
