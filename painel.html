@@ -71,7 +71,7 @@
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxBA8QL90xAnHvMlw5ak1qG9Zwbiu3XCI2JTLL2QPTrdC8avR8RUtQQyQjuh2COZ6MTGQ/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyW6qYo-UiDo6GrmRxAcFIgPcp6ZKHGl4Hzqse1F4qGJeCCROJDLTFfINeqr5yw7o8R5w/exec';
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
         let todosOsPedidos = []; 
@@ -219,21 +219,21 @@
                 const status = el.getAttribute('data-status').toUpperCase();
                 const dataPedido = new Date(el.getAttribute('data-hora-pedido'));
                 
+                const diff = Math.floor((agora - dataPedido) / 1000);
+                const h = Math.floor(diff / 3600);
+                const m = Math.floor((diff % 3600) / 60);
+                const tempoTexto = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
+
                 if (status.includes('CONCLU')) {
                     el.className = "timer-badge bg-zinc-700 opacity-50";
+                    // Mantém o tempo final em vez de "OK"
                     if (el.innerText === "..." || el.innerText === "calculando...") {
-                        el.innerText = "OK"; 
+                        el.innerText = tempoTexto; 
                     }
                     return; 
                 }
 
-                const diff = Math.floor((agora - dataPedido) / 1000);
                 if (diff < 0) { el.innerText = "00:00"; return; }
-
-                const h = Math.floor(diff / 3600);
-                const m = Math.floor((diff % 3600) / 60);
-                const tempoTexto = (h > 0 ? h + "h " : "") + String(m).padStart(2, '0') + "m";
-                
                 el.innerText = tempoTexto;
 
                 if (m >= 40 || h > 0) el.className = "timer-badge bg-red-600 animate-pulse";
@@ -292,21 +292,29 @@
             container.innerHTML = "<p class='text-center animate-pulse text-zinc-500 font-bold uppercase'>Sincronizando estoque...</p>";
             try {
                 const res = await fetch(`${WEB_APP_URL}?action=getEstoque&t=${new Date().getTime()}`);
-                const estoqueRaw = await res.json();
+                const estoqueArr = await res.json();
                 
-                // Converte objeto do Script em array se necessário (compatibilidade v6)
-                let estoqueArr = Array.isArray(estoqueRaw) ? estoqueRaw : 
-                                 Object.keys(estoqueRaw).map(key => ({ nome: key, status: estoqueRaw[key], categoria: "GERAL" }));
-
                 const grupos = {};
+                // Categorias prioritárias para ordenação
+                const ordemCategorias = ["PIZZA", "TAPIOCA", "BEBIDA"];
+
                 estoqueArr.forEach(i => {
                     const cat = (i.categoria || "OUTROS").toUpperCase();
                     if (!grupos[cat]) grupos[cat] = [];
                     grupos[cat].push(i);
                 });
 
+                // Ordenar chaves: primeiro as prioritárias, depois o resto alfabeticamente
+                const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+                    let indexA = ordemCategorias.indexOf(a);
+                    let indexB = ordemCategorias.indexOf(b);
+                    if (indexA === -1) indexA = 99;
+                    if (indexB === -1) indexB = 99;
+                    return indexA - indexB || a.localeCompare(b);
+                });
+
                 let html = "";
-                Object.keys(grupos).sort().forEach(cat => {
+                chavesOrdenadas.forEach(cat => {
                     html += `
                     <div class="cat-card">
                         <h3 class="text-[#39FF14] font-black uppercase text-xs mb-4 italic flex items-center gap-2">
