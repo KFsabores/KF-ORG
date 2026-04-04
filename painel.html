@@ -243,7 +243,7 @@
             } catch (e) { btn.innerHTML = txt; }
         }
 
-        function imprimir(dados) {
+        function function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
             area.innerHTML = `
@@ -251,12 +251,15 @@
                     <center><strong style="font-size:16px">KF SABORES</strong><br>${p.dataFull}</center><br>
                     <strong>CLIENTE:</strong> ${p.nome}<br>
                     <strong>ENDEREÇO:</strong> ${p.endereco}<br>
-                    <strong>FORMA PAGTO:</strong> ${p.pagto}<br>
+                    
                     <hr style="border:1px dashed #000; margin: 5px 0">
                     <strong>PEDIDO:</strong><br>${p.itens.split('|').join('<br>')}<br>
                     <hr style="border:1px dashed #000; margin: 5px 0">
+                    
                     <strong>TAXA ENTREGA:</strong> R$ ${p.taxa}<br>
                     <strong>TOTAL:</strong> ${p.total}<br>
+                    
+                    <strong>FORMA PAGTO:</strong> ${p.pagto}<br>
                     <strong>TROCO:</strong> ${p.troco}
                 </div>`;
             window.print();
