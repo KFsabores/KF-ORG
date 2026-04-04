@@ -189,32 +189,22 @@
             }).catch(e => console.error("Erro na carga:", e));
         }
 
-        // AUTOCOMPLETE TURBINADO COM GEOCODER
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
-            
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
-
-            input.addEventListener('blur', () => {
-                setTimeout(() => { geocodificarEndereco(input.value); }, 400);
-            });
-
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); }
-            });
+            input.addEventListener('blur', () => { setTimeout(() => { geocodificarEndereco(input.value); }, 400); });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); } });
         }
 
         async function geocodificarEndereco(endereco) {
             if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: endereco }, (results, status) => {
-                if (status === "OK" && results[0].geometry) {
-                    verificarLocalizacao(results[0].geometry.location);
-                }
+                if (status === "OK" && results[0].geometry) { verificarLocalizacao(results[0].geometry.location); }
             });
         }
 
@@ -224,29 +214,18 @@
             infoDistancia.style.color = "#FFD700";
             taxaEntrega = 0;
             updateCartUI();
-
             try {
                 let dadosTratados = zonasEntrega;
-                if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') {
-                    dadosTratados = JSON.parse(zonasEntrega[0]);
-                } else if (typeof zonasEntrega === 'string') {
-                    dadosTratados = JSON.parse(zonasEntrega);
-                }
-
+                if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') { dadosTratados = JSON.parse(zonasEntrega[0]); } 
+                else if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
                 for (const zona of dadosTratados) {
                     if (zona.pontos && Array.isArray(zona.pontos)) {
-                        const caminhos = zona.pontos.map(p => ({
-                            lat: parseFloat(String(p.lat).trim().replace(',', '.')),
-                            lng: parseFloat(String(p.lng).trim().replace(',', '.'))
-                        }));
+                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).trim().replace(',', '.')), lng: parseFloat(String(p.lng).trim().replace(',', '.')) }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
-                        if (google.maps.geometry.poly.containsLocation(loc, poly)) {
-                            zonaAchada = zona; break;
-                        }
+                        if (google.maps.geometry.poly.containsLocation(loc, poly)) { zonaAchada = zona; break; }
                     }
                 }
-
                 if (zonaAchada) {
                     taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
                     infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
@@ -256,9 +235,7 @@
                     infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
                     infoDistancia.style.color = "#ff4444";
                 }
-            } catch(e) { 
-                infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR NO WHATSAPP";
-            }
+            } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR NO WHATSAPP"; }
             updateCartUI();
         }
 
@@ -329,13 +306,12 @@
                 const isPausado = estoqueAtual[item.name] === 'PAUSADO';
                 let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
                 return `
-                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5' : ''}">
+                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5; pointer-events: none;' : ''}">
                         <div class="flex-1">
                             <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                            <p class="text-[10px] gold-text font-bold mt-2">${precoTexto}</p>
-                            ${isPausado ? '<span class="text-[9px] text-red-500 font-black uppercase">Indisponível</span>' : ''}
+                            <p class="text-[10px] gold-text font-bold mt-2">${isPausado ? '🚫 INDISPONÍVEL' : precoTexto}</p>
                         </div>
-                        <button ${isPausado ? '' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
+                        <button ${isPausado ? 'disabled' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
                             ${isPausado ? 'ESGOTADO' : 'Escolher'}
                         </button>
                     </div>`;
@@ -420,18 +396,23 @@
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
+            const pagto = document.getElementById('pay-method').value;
+            const obs = document.getElementById('cust-obs').value;
+            const troco = document.getElementById('troco-val').value;
+            
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha Nome, Telefone e Endereço!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${document.getElementById('pay-method').value}%0A%0A*🍕 ITENS:*%0A`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${troco ? ' (Troco para ' + troco + ')' : ''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
             fetch(URL_PLANILHA, { 
                 method: 'POST', mode: 'no-cors', 
                 body: JSON.stringify({
-                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: document.getElementById('pay-method').value,
-                    modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2)
+                    nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto,
+                    modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2),
+                    obs: obs, troco: troco
                 }) 
             });
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
