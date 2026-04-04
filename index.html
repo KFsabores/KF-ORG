@@ -427,16 +427,16 @@
         method: 'POST', 
         mode: 'no-cors', 
         body: JSON.stringify({
-            nome: n, 
-            telefone: tel, 
-            endereco: a, 
-            total: totalStr, 
-            pagamento: pagto,
-            modalidade: modalidadeAtual, 
-            itens: cart.map(i=>i.name).join(" | "), 
-            taxa: taxaEntrega.toFixed(2),
-            obs: obs, 
-            troco: troco // <--- AQUI: Agora o troco vai para o seu painel!
+    nome: n, 
+    telefone: tel, 
+    endereco: a, 
+    total: totalStr, 
+    pagamento: pagto,
+    modalidade: modalidadeAtual, 
+    // Juntamos os itens + a observação no mesmo texto
+    itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: " + obs + "]" : ""), 
+    taxa: taxaEntrega.toFixed(2),
+    troco: troco 
         }) 
     });
 
