@@ -9,7 +9,6 @@
     <style>
         body { font-family: 'Montserrat', sans-serif; background-color: #09090b; color: white; overflow-x: hidden; }
         
-        /* SISTEMA DE IMPRESSÃO ORIGINAL PRESERVADO */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; display: block !important; }
@@ -19,22 +18,14 @@
 
         .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 12px; line-height: 1.2; color: #000; font-weight: bold; padding: 2px; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-        
-        /* ESTILIZAÇÃO DOS CARDS */
         .card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; transition: all 0.3s ease; position: relative; overflow: hidden; }
         .card:hover { border-color: #39FF14; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(57, 255, 20, 0.2); }
         .timer-badge { position: absolute; top: 12px; right: 12px; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; }
         
-        /* NOVOS BOTÕES ESTILIZADOS */
+        /* Cores dos novos botões */
         .btn-whats { background-color: #25D366; color: white; }
         .btn-mapa { background-color: #4285F4; color: white; }
         .btn-entrega { background-color: #F29339; color: white; }
-
-        /* SCROLLBAR CUSTOMIZADA */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #09090b; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -55,20 +46,16 @@
 
         <div id="resumo-dia" class="mb-8 hidden"></div>
 
-        <div id="cards-container" class="grid-custom">
-            </div>
+        <div id="cards-container" class="grid-custom"></div>
     </div>
 
     <audio id="som-notificacao" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
 
     <script>
-        // MANTENHA SUA URL DO SCRIPT AQUI
         const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbwqZ-K2_2uVz-XoN6Hj98yVf-m4vI-MvX-o9G-N9-mR-Q-L-Q-L-Q-L-Q-L/exec"; 
-        
         let ultimoId = 0;
         let somHabilitado = false;
 
-        // BUSCA DE DADOS NA PLANILHA
         async function buscarDados() {
             try {
                 const res = await fetch(URL_SCRIPT);
@@ -77,11 +64,9 @@
                 verificarNovoPedido(dados);
             } catch (e) {
                 console.error("Erro ao buscar dados", e);
-                document.getElementById('status-conexao').innerText = "❌ ERRO DE CONEXÃO";
             }
         }
 
-        // LÓGICA DE SOM PARA NOVOS PEDIDOS
         function verificarNovoPedido(dados) {
             if (dados.length > 1) {
                 const idAtual = dados[1][0]; 
@@ -103,55 +88,50 @@
             som.currentTime = 0;
         }
 
-        // GERAÇÃO DOS CARDS NO PAINEL
         function atualizarPainel(dados) {
             const container = document.getElementById('cards-container');
             container.innerHTML = "";
             
-            // Filtra pedidos que não estão CONCLUÍDOS
             const pedidosAtivos = dados.slice(1).filter(row => row[6] && !row[6].includes("CONCLUÍDO"));
 
             pedidosAtivos.forEach((row) => {
                 const originalRowIndex = dados.indexOf(row) + 1;
                 const statusClean = row[6].includes("PREPARANDO") ? "PREPARANDO" : "PENDENTE";
                 
+                // Mapeamento exato das suas colunas
                 const dataHora = row[0];
                 const nome = (row[1] || "CLIENTE").toUpperCase();
                 const endereco = (row[2] || "NÃO INFORMADO").toUpperCase();
                 const itens = row[3] || "";
-                const telefone = row[8] || ""; 
-                const total = row[5] || "0.00";
+                const telefone = row[8] || ""; // Coluna I (📞 TEL)
 
                 container.innerHTML += `
                     <div class="card p-4 flex flex-col justify-between min-h-[350px]">
                         <div>
                             <div class="flex justify-between items-start mb-2">
-                                <span class="timer-badge bg-zinc-800 text-white" data-hora="${dataHora}">0m</span>
-                                <span class="text-[10px] font-bold text-zinc-500">ORDEM #${originalRowIndex}</span>
+                                <span class="timer-badge bg-zinc-800" data-hora="${dataHora}">0m</span>
+                                <span class="text-[10px] font-bold text-zinc-500">#${originalRowIndex}</span>
                             </div>
                             <h3 class="text-xl font-black italic text-[#39FF14] leading-tight mb-1">${nome}</h3>
-                            <p class="text-[10px] font-bold text-zinc-400 mb-3 leading-tight">${endereco}</p>
-                            
-                            <div class="bg-black/40 p-3 rounded-lg border border-white/5 mb-4">
-                                <p class="text-[11px] leading-relaxed text-zinc-200 font-medium">${itens}</p>
+                            <p class="text-[10px] font-bold text-zinc-400 mb-3 uppercase">${endereco}</p>
+                            <div class="bg-black/30 p-2 rounded border border-white/5 mb-3">
+                                <p class="text-[11px] leading-tight text-zinc-300 font-medium">${itens}</p>
                             </div>
                         </div>
 
-                        <div class="space-y-3">
+                        <div class="space-y-2">
                             <div class="grid grid-cols-3 gap-1">
-                                <button onclick="abrirWhats('${telefone}')" class="btn-whats hover:brightness-110 p-2 rounded text-[9px] font-black uppercase transition-all">WhatsApp</button>
-                                <button onclick="abrirMapa('${endereco}')" class="btn-mapa hover:brightness-110 p-2 rounded text-[9px] font-black uppercase transition-all">Mapa</button>
-                                <button onclick="enviarEntrega('${telefone}', '${nome}')" class="btn-entrega hover:brightness-110 p-2 rounded text-[9px] font-black uppercase transition-all">Saiu Entrega</button>
+                                <button onclick="abrirWhats('${telefone}')" class="btn-whats p-2 rounded text-[9px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
+                                <button onclick="abrirMapa('${endereco}')" class="btn-mapa p-2 rounded text-[9px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
+                                <button onclick="enviarEntrega('${telefone}', '${nome}')" class="btn-entrega p-2 rounded text-[9px] font-black uppercase hover:opacity-80 transition-all">Saiu p/ Entrega</button>
                             </div>
 
-                            <div class="grid grid-cols-4 gap-2">
+                            <div class="grid grid-cols-2 gap-2">
                                 <button onclick="mudarStatus(${originalRowIndex}, '${statusClean === 'PENDENTE' ? 'PREPARANDO' : 'CONCLUIDO'}')" 
-                                        class="col-span-3 py-3 rounded-xl font-black italic uppercase text-xs transition-all ${statusClean === 'PENDENTE' ? 'bg-[#39FF14] text-black hover:bg-white' : 'bg-blue-600 text-white hover:bg-blue-400'}">
-                                    ${statusClean === 'PENDENTE' ? 'ACEITAR E PREPARAR' : 'MARCAR COMO ENTREGUE'}
+                                        class="w-full py-3 rounded-lg font-black italic uppercase text-xs ${statusClean === 'PENDENTE' ? 'bg-[#39FF14] text-black' : 'bg-blue-600 text-white'}">
+                                    ${statusClean === 'PENDENTE' ? 'PREPARAR' : 'CONCLUIR'}
                                 </button>
-                                <button onclick="imprimirCupom(${JSON.stringify(row).replace(/"/g, '"')})" class="bg-zinc-800 hover:bg-zinc-700 rounded-xl flex items-center justify-center transition-all">
-                                    <span class="text-lg">🖨️</span>
-                                </button>
+                                <button onclick="imprimirCupom(${JSON.stringify(row).replace(/"/g, '"')})" class="bg-zinc-800 p-2 rounded-lg text-xs font-black italic uppercase">🖨️ PRINT</button>
                             </div>
                         </div>
                     </div>`;
@@ -159,10 +139,10 @@
             atualizarCronometros();
         }
 
-        // --- FUNÇÕES DE INTERAÇÃO ---
+        // --- NOVAS FUNÇÕES ---
 
         function abrirWhats(tel) {
-            if(!tel || tel.includes("NÃO")) return alert("Sem telefone.");
+            if(!tel || tel.includes("NÃO")) return alert("Telefone não informado.");
             let num = tel.replace(/\D/g, '');
             if(num.length === 11) num = "55" + num;
             window.open(`https://wa.me/${num}`, '_blank');
@@ -174,12 +154,14 @@
         }
 
         function enviarEntrega(tel, nome) {
-            if(!tel || tel.includes("NÃO")) return alert("Sem telefone.");
+            if(!tel || tel.includes("NÃO")) return alert("Telefone não informado.");
             let num = tel.replace(/\D/g, '');
             if(num.length === 11) num = "55" + num;
-            const msg = encodeURIComponent(`🚀 Olá, ${nome}! Seu pedido da *KF Sabores* saiu para entrega e chegará em breve!`);
+            const msg = encodeURIComponent(`🚀 Olá, ${nome}! Seu pedido da *KF Sabores* acabou de sair para entrega!`);
             window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
+
+        // --- FUNÇÕES DE APOIO ---
 
         async function mudarStatus(row, status) {
             const url = `${URL_SCRIPT}?row=${row}&status=${status}`;
@@ -187,35 +169,18 @@
             buscarDados();
         }
 
-        // --- FUNÇÕES DE IMPRESSÃO E RELATÓRIO (MANTIDAS) ---
-
         function imprimirCupom(row) {
             const area = document.getElementById('print-area');
             area.innerHTML = `
                 <div class="cupom-termico">
-                    <center>
-                        <h2 style="margin:0">KF SABORES</h2>
-                        --------------------------------
-                    </center>
-                    <b>DATA:</b> ${row[0]}<br>
-                    <b>CLIENTE:</b> ${row[1]}<br>
-                    <b>TEL:</b> ${row[8]}<br>
-                    <b>MODALIDADE:</b> ${row[7]}<br>
+                    <center><h2>KF SABORES</h2>--------------------------------</center>
+                    <b>DATA:</b> ${row[0]}<br><b>CLIENTE:</b> ${row[1]}<br><b>TEL:</b> ${row[8]}<br>
+                    --------------------------------<br><b>ENDEREÇO:</b><br>${row[2]}<br>
+                    --------------------------------<br><b>PEDIDO:</b><br>${row[3]}<br>
                     --------------------------------<br>
-                    <b>ENDEREÇO:</b><br>
-                    ${row[2]}<br>
-                    --------------------------------<br>
-                    <b>PEDIDO:</b><br>
-                    ${row[3]}<br>
-                    --------------------------------<br>
-                    <b>PGTO:</b> ${row[4]} | <b>TAXA:</b> R$ ${row[9]}<br>
-                    <b>TROCO:</b> ${row[10] || '---'}<br>
-                    <center>
-                        <h3 style="margin:5px 0">TOTAL: R$ ${row[5]}</h3>
-                        --------------------------------
-                    </center>
-                </div>
-            `;
+                    <b>PAGTO:</b> ${row[4]}<br><b>TAXA:</b> R$ ${row[9]}<br>
+                    <center><h3>TOTAL: R$ ${row[5]}</h3>--------------------------------</center>
+                </div>`;
             window.print();
         }
 
@@ -223,52 +188,42 @@
             const res = await fetch(URL_SCRIPT);
             const dados = await res.json();
             const hoje = new Date().toLocaleDateString('pt-BR');
-            
-            const concluidosHoje = dados.slice(1).filter(row => 
-                row[6] && row[6].includes("CONCLUÍDO") && row[0].includes(hoje)
-            );
-
+            const concluidosHoje = dados.slice(1).filter(row => row[6] && row[6].includes("CONCLUÍDO") && row[0].includes(hoje));
             let totalGeral = 0;
             concluidosHoje.forEach(row => {
                 let v = parseFloat(row[5].toString().replace(',', '.'));
                 if(!isNaN(v)) totalGeral += v;
             });
-
             const resDiv = document.getElementById('resumo-dia');
             resDiv.innerHTML = `
-                <div class="bg-[#39FF14] text-black p-6 rounded-2xl">
-                    <p class="font-black text-[10px] uppercase opacity-70">Faturamento Hoje (${hoje})</p>
+                <div class="bg-[#39FF14] text-black p-6 rounded-2xl shadow-lg">
+                    <p class="font-black text-[10px] uppercase opacity-60">Faturamento Hoje</p>
                     <p class="text-4xl font-black italic">R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    <p class="font-bold text-[11px] mt-1 uppercase">${concluidosHoje.length} Pedidos Concluídos</p>
-                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="mt-3 text-[9px] font-black border border-black px-2 py-1 rounded">FECHAR</button>
+                    <p class="font-bold text-[11px] mt-2 uppercase">${concluidosHoje.length} Pedidos Concluídos</p>
+                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="mt-4 text-[9px] font-black border border-black px-2 py-1 rounded">FECHAR</button>
                 </div>`;
             resDiv.classList.remove('hidden');
         }
 
-        // CRONÔMETRO COM CORREÇÃO DE FORMATO DE DATA
         function atualizarCronometros() {
             const agora = new Date();
             document.querySelectorAll('[data-hora]').forEach(el => {
-                const txt = el.getAttribute('data-hora'); // Ex: "06/04/2024 13:00:00"
+                const txt = el.getAttribute('data-hora');
                 const partes = txt.split(' ');
                 const d = partes[0].split('/');
                 const h = partes[1].split(':');
                 const dataPedido = new Date(d[2], d[1]-1, d[0], h[0], h[1], h[2]);
-                
                 const diff = Math.floor((agora - dataPedido) / 60000);
                 el.innerText = (diff < 0 ? 0 : diff) + "m";
-                
                 if(diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
                 else if(diff > 25) el.className = "timer-badge bg-orange-600";
-                else el.className = "timer-badge bg-zinc-800";
             });
         }
 
-        // ATIVAÇÃO DO PAINEL
         document.body.addEventListener('click', () => {
             pararSom();
             const status = document.getElementById('status-conexao');
-            status.innerText = "✅ MONITORAMENTO ATIVO (AUTO-REFRESH 30S)";
+            status.innerText = "✅ MONITORAMENTO ATIVO";
             status.classList.replace('text-zinc-500', 'text-[#39FF14]');
             somHabilitado = true;
         });
