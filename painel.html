@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAINEL KF - Gestão Pro V8.5</title>
+    <title>PAINEL KF - Gestão Pro V10.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -29,6 +29,11 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #09090b; }
         ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+
+        /* Estilos dos Novos Botões */
+        .btn-whats { background-color: #25D366; color: white; }
+        .btn-mapa { background-color: #4285F4; color: white; }
+        .btn-entrega { background-color: #F29339; color: white; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -149,6 +154,7 @@
                     totalNum: parseFloat(row[5].replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || "DELIVERY").toUpperCase(),
+                    telefone: row[8] || "", // COLUNA I - TEL
                     taxa: row[9] || "0,00",
                     troco: row[10] || "NÃO"
                 })).filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
@@ -189,9 +195,17 @@
                         </div>
                         <h3 class="text-2xl font-black italic mb-1 uppercase tracking-tighter">${p.nome}</h3>
                         <p class="text-[10px] font-bold text-zinc-500 mb-4 uppercase italic">📍 ${p.endereco}</p>
+                        
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
                             ${p.itens.split('|').map(i => `<div class="mb-2 text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${i.trim()}</div>`).join('')}
                         </div>
+
+                        <div class="grid grid-cols-3 gap-1 mb-4">
+                            <button onclick="abrirWhats('${p.telefone}')" class="btn-whats p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
+                            <button onclick="abrirMapa('${p.endereco}')" class="btn-mapa p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
+                            <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">Saiu p/ Entrega</button>
+                        </div>
+
                         <div class="grid grid-cols-2 gap-3 mb-5">
                             <div class="bg-zinc-800 p-2 rounded-xl text-center">
                                 <p class="text-[8px] font-black text-zinc-500 uppercase">Taxa Entrega</p>
@@ -216,6 +230,27 @@
                     </div>`;
             });
             atualizarCronometros();
+        }
+
+        /* FUNÇÕES DOS NOVOS BOTÕES */
+        function abrirWhats(tel) {
+            if(!tel || tel === "") return alert("Telefone não disponível.");
+            let num = tel.replace(/\D/g, '');
+            if(num.length === 11) num = "55" + num;
+            window.open(`https://wa.me/${num}`, '_blank');
+        }
+
+        function abrirMapa(end) {
+            if(!end || end.includes("RETIRADA")) return alert("Pedido para retirada.");
+            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
+        }
+
+        function enviarEntrega(tel, nome) {
+            if(!tel || tel === "") return alert("Telefone não disponível.");
+            let num = tel.replace(/\D/g, '');
+            if(num.length === 11) num = "55" + num;
+            const msg = encodeURIComponent(`🚀 Olá, ${nome}! Seu pedido da *KF Sabores* acabou de sair para entrega e logo estará aí!`);
+            window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
 
         async function cancelarPedido(linha) {
@@ -251,14 +286,11 @@
                     <center><strong style="font-size:16px">KF SABORES</strong><br>${p.dataFull}</center><br>
                     <strong>CLIENTE:</strong> ${p.nome}<br>
                     <strong>ENDEREÇO:</strong> ${p.endereco}<br>
-                    
                     <hr style="border:1px dashed #000; margin: 5px 0">
                     <strong>PEDIDO:</strong><br>${p.itens.split('|').join('<br>')}<br>
                     <hr style="border:1px dashed #000; margin: 5px 0">
-                    
                     <strong>TAXA ENTREGA:</strong> R$ ${p.taxa}<br>
                     <strong>TOTAL:</strong> ${p.total}<br>
-                    
                     <strong>FORMA PAGTO:</strong> ${p.pagto}<br>
                     <strong>TROCO:</strong> ${p.troco}
                 </div>`;
@@ -322,13 +354,11 @@
             const inicio = new Date(`${dataIni}T${horaIni}`);
             const fim = new Date(`${dataFim}T${horaFim}`);
             
-            // Variáveis para separação
             let totalDelivery = 0, qtdDelivery = 0;
             let totalBalcao = 0, qtdBalcao = 0;
 
             todosOsPedidos.forEach(p => {
                 if((p.status.includes('CONCLU')) && p.objData >= inicio && p.objData <= fim) {
-                    // Verifica se é retirada/balcão ou delivery
                     if (p.modalidade.includes('RETIRADA') || p.modalidade.includes('BALCÃO') || p.modalidade.includes('BALCAO')) {
                         totalBalcao += p.totalNum;
                         qtdBalcao++;
