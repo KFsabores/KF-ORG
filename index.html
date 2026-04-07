@@ -55,36 +55,29 @@
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
             <h2 class="text-xl font-black neon-text mb-4 italic uppercase text-center mt-2">Meu Pedido</h2>
             <div id="cart-items" class="space-y-2 mb-4"></div>
-            
             <div id="form-fechamento">
                 <input type="text" id="cust-name" placeholder="Seu Nome">
                 <input type="tel" id="cust-phone" placeholder="WhatsApp (Ex: 21997437285)">
-                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button id="mode-delivery" onclick="setModalidade('DELIVERY')" class="modal-btn active">🛵 Entrega</button>
                     <button id="mode-retirada" onclick="setModalidade('RETIRADA')" class="modal-btn">🛍️ Retirada</button>
                 </div>
-
                 <div id="area-endereco">
                     <input type="text" id="cust-addr" placeholder="Digite endereço e selecione..." onfocus="initAutocomplete()">
                     <p id="distancia-info" class="text-[10px] gold-text mb-2 italic font-bold text-center"></p>
                 </div>
-
                 <textarea id="cust-obs" placeholder="Ponto de referência ou observação"></textarea>
-                
                 <select id="pay-method" onchange="checkPayment()">
                     <option value="Pix">Pix</option>
                     <option value="Cartão">Cartão</option>
                     <option value="Dinheiro">Dinheiro</option>
                 </select>
                 <input type="text" id="troco-val" class="hidden" placeholder="Troco para quanto?">
-
                 <div class="space-y-1 text-sm border-t border-zinc-800 pt-4 mt-4">
                     <div class="flex justify-between text-zinc-400"><span>Subtotal:</span><span>R$ <span id="cart-subtotal">0.00</span></span></div>
                     <div class="flex justify-between text-zinc-400" id="row-taxa"><span>Taxa de Entrega:</span><span>R$ <span id="taxa-valor">0.00</span></span></div>
                     <div class="flex justify-between text-2xl font-black neon-text pt-2"><span>Total:</span><span>R$ <span id="cart-total">0.00</span></span></div>
                 </div>
-                
                 <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black uppercase mt-4">Finalizar Pedido</button>
             </div>
         </div>
@@ -117,7 +110,7 @@
         const WHATSAPP_NUMBER = "5521997437285";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzFKb7_DtRqgvjV3meQqSVmPZBZ9xO1w74lDIKQN74-G1WazyXRtGR0ywqZJiQgi2_Hgg/exec";
         
-        let estoqueAtual = {}; 
+        let estoquePausado = []; // Agora armazenamos os nomes dos itens pausados aqui
         let zonasEntrega = [];
         let modoAdmin = false;
         const urlParams = new URLSearchParams(window.location.search);
@@ -178,17 +171,25 @@
 
         async function init() {
             verificarStatusLoja();
-            switchCategory('promos');
-            Promise.all([
-                fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
-                fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
-            ]).then(([estoque, mapa]) => {
-                estoqueAtual = estoque; zonasEntrega = mapa;
-                const catAtiva = document.querySelector('.category-btn.active').innerText.toLowerCase().split(' ')[1] || 'promos';
-                switchCategory(catAtiva.includes('promo') ? 'promos' : catAtiva);
-            }).catch(e => console.error("Erro na carga:", e));
+            // Primeiro buscamos o estoque para depois renderizar as categorias
+            try {
+                const [estoque, mapa] = await Promise.all([
+                    fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
+                    fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
+                ]);
+                
+                // Mapeamos apenas os nomes dos itens que estão com status "PAUSADO"
+                estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
+                zonasEntrega = mapa;
+                
+                switchCategory('promos');
+            } catch (e) {
+                console.error("Erro na carga:", e);
+                switchCategory('promos');
+            }
         }
 
+        // Funções de Autocomplete e Localização (Mantidas)
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -298,13 +299,17 @@
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
+            
             if(cat === 'tapioca') {
                 container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
+
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
-                const isPausado = estoqueAtual[item.name] === 'PAUSADO';
+                // CORREÇÃO AQUI: Verifica se o nome do item está na lista de pausados
+                const isPausado = estoquePausado.includes(item.name.trim());
                 let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
+                
                 return `
                     <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5; pointer-events: none;' : ''}">
                         <div class="flex-1">
@@ -369,8 +374,8 @@
             menuData.tapioca_cats.forEach(group => {
                 html += `<div class="ing-label">${group.cat}</div>`;
                 group.items.forEach(r => { 
-                    const isPausado = estoqueAtual[r.n] === 'PAUSADO';
-                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; 
+                    const isPausado = estoquePausado.includes(r.n.trim());
+                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)} ${isPausado ? '(ESGOTADO)' : ''}</span></button>`; 
                 });
             });
             document.getElementById('tapioca-options').innerHTML = html;
@@ -391,62 +396,56 @@
         }
 
         async function finalizeOrder() {
-    if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-    
-    const n = document.getElementById('cust-name').value;
-    const tel = document.getElementById('cust-phone').value;
-    const a = document.getElementById('cust-addr').value;
-    const totalStr = document.getElementById('cart-total').innerText;
-    const pagto = document.getElementById('pay-method').value;
-    const obs = document.getElementById('cust-obs').value;
-    const troco = document.getElementById('troco-val').value; // Pega o valor do troco
-    
-    if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { 
-        alert("Preencha Nome, Telefone e Endereço!"); 
-        return; 
-    }
-    
-    // Montagem da mensagem para o WhatsApp
-    let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-    msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}`;
-    
-    // Se for dinheiro e tiver valor de troco, adiciona na mensagem
-    if (pagto === 'Dinheiro' && troco) {
-        msg += ` (Troco para ${troco})`;
-    }
-    
-    msg += `%0A%0A*🍕 ITENS:*%0A`;
-    cart.forEach(i => msg += `• ${i.name}%0A`);
-    
-    if(obs) msg += `%0A*📝 OBS:* ${obs}%0A`;
-    
-    msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
-    
-    // ENVIO PARA O PAINEL (Planilha)
-    fetch(URL_PLANILHA, { 
-        method: 'POST', 
-        mode: 'no-cors', 
-        body: JSON.stringify({
-    nome: n, 
-    telefone: tel, 
-    endereco: a, 
-    total: totalStr, 
-    pagamento: pagto,
-    modalidade: modalidadeAtual, 
-    // Juntamos os itens + a observação no mesmo texto
-    itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: " + obs + "]" : ""), 
-    taxa: taxaEntrega.toFixed(2),
-    troco: troco 
-        }) 
-    });
+            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
+            
+            const n = document.getElementById('cust-name').value;
+            const tel = document.getElementById('cust-phone').value;
+            const a = document.getElementById('cust-addr').value;
+            const totalStr = document.getElementById('cart-total').innerText;
+            const pagto = document.getElementById('pay-method').value;
+            const obs = document.getElementById('cust-obs').value;
+            const troco = document.getElementById('troco-val').value;
+            
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { 
+                alert("Preencha Nome, Telefone e Endereço!"); 
+                return; 
+            }
+            
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
+            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}`;
+            
+            if (pagto === 'Dinheiro' && troco) {
+                msg += ` (Troco para ${troco})`;
+            }
+            
+            msg += `%0A%0A*🍕 ITENS:*%0A`;
+            cart.forEach(i => msg += `• ${i.name}%0A`);
+            
+            if(obs) msg += `%0A*📝 OBS:* ${obs}%0A`;
+            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
+            
+            fetch(URL_PLANILHA, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({
+                    nome: n, 
+                    telefone: tel, 
+                    endereco: a, 
+                    total: totalStr, 
+                    pagamento: pagto,
+                    modalidade: modalidadeAtual, 
+                    itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: " + obs + "]" : ""), 
+                    taxa: taxaEntrega.toFixed(2),
+                    troco: troco 
+                }) 
+            });
 
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-    
-    // Limpa o carrinho após o sucesso
-    cart = []; 
-    updateCartUI(); 
-    toggleCart();
-}
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+            
+            cart = []; 
+            updateCartUI(); 
+            toggleCart();
+        }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
         function closeModal() { document.getElementById('item-modal').classList.add('hidden'); document.getElementById('tapioca-modal').classList.add('hidden'); }
