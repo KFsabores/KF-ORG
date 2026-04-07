@@ -19,7 +19,7 @@
         .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 12px; line-height: 1.2; color: #000; font-weight: bold; padding: 2px; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
-        .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; }
+        .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; transition: all 0.3s; }
         .excluindo { transform: scale(0.8); opacity: 0; transition: all 0.5s ease; pointer-events: none; }
         
         .header-pizza { color: #ef4444; border-bottom: 2px solid #ef4444; }
@@ -30,7 +30,6 @@
         ::-webkit-scrollbar-track { background: #09090b; }
         ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
 
-        /* Estilos dos Novos Botões */
         .btn-whats { background-color: #25D366; color: white; }
         .btn-mapa { background-color: #4285F4; color: white; }
         .btn-entrega { background-color: #F29339; color: white; }
@@ -50,9 +49,7 @@
             <div class="flex flex-wrap gap-2 justify-center items-center">
                 <button onclick="abrirModalRelatorio()" class="bg-blue-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg flex items-center gap-2">📊 RELATÓRIOS</button>
                 <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg flex items-center gap-2">📦 ESTOQUE</button>
-                
                 <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-700 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600 transition-all shadow-lg flex items-center gap-2">📍 MAPA TAXAS</a>
-                
                 <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg">🌐 SITE</a>
             </div>
         </div>
@@ -154,7 +151,7 @@
                     totalNum: parseFloat(row[5].replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || "DELIVERY").toUpperCase(),
-                    telefone: row[8] || "", // COLUNA I - TEL
+                    telefone: row[8] || "",
                     taxa: row[9] || "0,00",
                     troco: row[10] || "NÃO"
                 })).filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
@@ -180,6 +177,8 @@
             lista.forEach(p => {
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
+                const isConcluido = p.status.includes("CONCLUIDO");
+                
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
                 let corStatus = isPendente ? "bg-yellow-600" : (isCozinha ? "bg-blue-600" : "bg-zinc-700");
@@ -191,7 +190,7 @@
                                 <span class="text-[10px] font-black text-zinc-500 block uppercase">${p.dataFull}</span>
                                 <span class="status-badge mt-2 inline-block ${corStatus} text-white">${p.status}</span>
                             </div>
-                            <span class="timer-badge" data-hora="${p.objData.toISOString()}">0m</span>
+                            <span class="timer-badge" data-hora="${p.objData.toISOString()}" data-status="${p.status}">0m</span>
                         </div>
                         <h3 class="text-2xl font-black italic mb-1 uppercase tracking-tighter">${p.nome}</h3>
                         <p class="text-[10px] font-bold text-zinc-500 mb-4 uppercase italic">📍 ${p.endereco}</p>
@@ -232,7 +231,6 @@
             atualizarCronometros();
         }
 
-        /* FUNÇÕES DOS NOVOS BOTÕES */
         function abrirWhats(tel) {
             if(!tel || tel === "") return alert("Telefone não disponível.");
             let num = tel.replace(/\D/g, '');
@@ -395,11 +393,22 @@
         function atualizarCronometros() {
             const agora = new Date();
             document.querySelectorAll('[data-hora]').forEach(el => {
+                const status = el.getAttribute('data-status');
+
+                // LÓGICA DE PARAR O RELÓGIO SE ESTIVER CONCLUÍDO
+                if (status && status.includes("CONCLUIDO")) {
+                    el.className = "timer-badge bg-zinc-800 opacity-40";
+                    return; 
+                }
+
                 const dataPedido = new Date(el.getAttribute('data-hora'));
                 const diff = Math.floor((agora - dataPedido) / 60000);
+                
                 el.innerText = (diff < 0 ? 0 : diff) + "m";
+                
                 if(diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
                 else if(diff > 25) el.className = "timer-badge bg-orange-600";
+                else el.className = "timer-badge bg-zinc-700";
             });
         }
 
