@@ -50,6 +50,24 @@
 
     <main id="items-container" class="p-4 space-y-4 max-w-lg mx-auto"></main>
 
+    <div id="tapioca-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[100]">
+        <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-black neon-text italic uppercase leading-none">Montar Tapioca</h3>
+            <p class="text-[10px] font-black text-zinc-400 uppercase mt-2 italic">Escolha 2 ingredientes e 1 acompanhamento</p>
+            <p class="text-xs font-black gold-text uppercase mt-4 mb-2 border-b border-zinc-800 pb-1">Ingredientes!</p>
+            
+            <div id="tapioca-options" class="grid grid-cols-2 gap-2"></div>
+            
+            <div class="mt-8 mb-2 border-t border-zinc-800 pt-4">
+                <p class="text-sm font-black neon-text uppercase italic">Acompanhamentos</p>
+            </div>
+            <div id="tapioca-extras" class="grid grid-cols-2 gap-2"></div>
+
+            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8 shadow-[0_0_15px_rgba(57,255,20,0.4)]">ADICIONAR TAPIOCA</button>
+            <button onclick="closeModal()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Voltar</button>
+        </div>
+    </div>
+
     <div id="cart-modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[90]">
         <div id="cart-content" class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto relative">
             <button onclick="toggleCart()" class="absolute top-4 right-4 text-zinc-500 hover:text-white text-3xl font-light p-2">&times;</button>
@@ -92,16 +110,6 @@
         </div>
     </div>
 
-    <div id="tapioca-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[100]">
-        <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-black neon-text mb-2 italic uppercase">Montar Tapioca</h3>
-            <div id="tapioca-options" class="grid grid-cols-2 gap-2"></div>
-            <div id="tapioca-extras" class="grid grid-cols-2 gap-2 mt-6"></div>
-            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8">ADICIONAR TAPIOCA</button>
-            <button onclick="closeModal()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Voltar</button>
-        </div>
-    </div>
-
     <button onclick="toggleCart()" class="fixed bottom-6 right-6 bg-[#39FF14] text-black px-6 py-4 rounded-full shadow-[0_0_20px_#39FF14] z-50 flex items-center gap-3">
         <span class="text-xl">🛒</span><span id="cart-count" class="font-black text-lg">0</span>
     </button>
@@ -110,7 +118,7 @@
         const WHATSAPP_NUMBER = "5521997437285";
         const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzFKb7_DtRqgvjV3meQqSVmPZBZ9xO1w74lDIKQN74-G1WazyXRtGR0ywqZJiQgi2_Hgg/exec";
         
-        let estoquePausado = []; // Agora armazenamos os nomes dos itens pausados aqui
+        let estoquePausado = []; 
         let zonasEntrega = [];
         let modoAdmin = false;
         const urlParams = new URLSearchParams(window.location.search);
@@ -171,25 +179,20 @@
 
         async function init() {
             verificarStatusLoja();
-            // Primeiro buscamos o estoque para depois renderizar as categorias
             try {
                 const [estoque, mapa] = await Promise.all([
                     fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
                     fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
                 ]);
-                
-                // Mapeamos apenas os nomes dos itens que estão com status "PAUSADO"
                 estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
                 zonasEntrega = mapa;
-                
                 switchCategory('promos');
             } catch (e) {
-                console.error("Erro na carga:", e);
                 switchCategory('promos');
             }
         }
 
-        // Funções de Autocomplete e Localização (Mantidas)
+        // Funções de Mapa e Carrinho
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -197,38 +200,24 @@
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
-            input.addEventListener('blur', () => { setTimeout(() => { geocodificarEndereco(input.value); }, 400); });
-            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); } });
-        }
-
-        async function geocodificarEndereco(endereco) {
-            if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: endereco }, (results, status) => {
-                if (status === "OK" && results[0].geometry) { verificarLocalizacao(results[0].geometry.location); }
-            });
         }
 
         async function verificarLocalizacao(loc) {
             const infoDistancia = document.getElementById('distancia-info');
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
-            infoDistancia.style.color = "#FFD700";
-            taxaEntrega = 0;
-            updateCartUI();
             try {
                 let dadosTratados = zonasEntrega;
-                if (Array.isArray(zonasEntrega) && typeof zonasEntrega[0] === 'string') { dadosTratados = JSON.parse(zonasEntrega[0]); } 
-                else if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
+                if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
                 for (const zona of dadosTratados) {
-                    if (zona.pontos && Array.isArray(zona.pontos)) {
-                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).trim().replace(',', '.')), lng: parseFloat(String(p.lng).trim().replace(',', '.')) }));
+                    if (zona.pontos) {
+                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
                         if (google.maps.geometry.poly.containsLocation(loc, poly)) { zonaAchada = zona; break; }
                     }
                 }
                 if (zonaAchada) {
-                    taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',', '.')); 
+                    taxaEntrega = parseFloat(zonaAchada.preco);
                     infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
                     infoDistancia.style.color = "#39FF14";
                 } else {
@@ -236,17 +225,16 @@
                     infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
                     infoDistancia.style.color = "#ff4444";
                 }
-            } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR NO WHATSAPP"; }
+            } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR"; }
             updateCartUI();
         }
 
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
             const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
-            const total = subtotal + taxa;
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
-            document.getElementById('cart-total').innerText = total.toFixed(2);
+            document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
             document.getElementById('cart-count').innerText = cart.length;
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
                 <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
@@ -269,14 +257,13 @@
             const banner = document.getElementById('banner-status');
             if (!estaAberto()) {
                 banner.classList.remove('hidden');
-                const diasSemana = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
                 let html = "";
                 [4, 5, 6, 0].forEach(dia => {
                     const h = HORARIOS[dia];
                     if(h){
                         const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : (h.fechar === 2500 ? "01:00" : "02:00")) : (h.fechar/100).toFixed(2).replace('.',':');
-                        html += `<span>${diasSemana[dia]}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : "01:00") : (h.fechar/100).toFixed(2).replace('.',':');
+                        html += `<span>Dia ${dia}</span> <span class="text-white">${abr} às ${fec}</span>`;
                     }
                 });
                 document.getElementById('horarios-lista').innerHTML = html;
@@ -289,40 +276,66 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') {
-                document.getElementById('cust-addr').value = "RETIRADA NA LOJA";
-                taxaEntrega = 0;
-            }
+            if(tipo === 'RETIRADA') taxaEntrega = 0;
             updateCartUI();
         }
 
         function switchCategory(cat) {
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
-            
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase shadow-[0_0_15px_rgba(57,255,20,0.3)]">Montar Minha Tapioca</button></div>`;
                 return;
             }
-
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
-                // CORREÇÃO AQUI: Verifica se o nome do item está na lista de pausados
                 const isPausado = estoquePausado.includes(item.name.trim());
                 let precoTexto = item.price ? 'R$ '+item.price.toFixed(2) : 'A partir de R$ '+item.p25.toFixed(2);
-                
-                return `
-                    <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5; pointer-events: none;' : ''}">
-                        <div class="flex-1">
-                            <h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4>
-                            <p class="text-[10px] gold-text font-bold mt-2">${isPausado ? '🚫 INDISPONÍVEL' : precoTexto}</p>
-                        </div>
-                        <button ${isPausado ? 'disabled' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">
-                            ${isPausado ? 'ESGOTADO' : 'Escolher'}
-                        </button>
-                    </div>`;
+                return `<div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800 flex justify-between items-center gap-3" style="${isPausado ? 'opacity: 0.5; pointer-events: none;' : ''}">
+                    <div class="flex-1"><h4 class="font-black text-white uppercase italic text-lg leading-tight">${item.name}</h4><p class="text-[10px] gold-text font-bold mt-2">${isPausado ? '🚫 INDISPONÍVEL' : precoTexto}</p></div>
+                    <button ${isPausado ? 'disabled' : `onclick='openItemModal("${cat}", ${index})'`} class="bg-zinc-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">${isPausado ? 'ESGOTADO' : 'Escolher'}</button>
+                </div>`;
             }).join('');
         }
 
+        // LÓGICA MODAL TAPIOCA
+        function openTapiocaModal() {
+            tapRecheios = []; 
+            let optionsHtml = "";
+            let extrasHtml = "";
+
+            menuData.tapioca_cats.forEach(group => {
+                optionsHtml += `<div class="ing-label">${group.cat}</div>`;
+                group.items.forEach(r => { 
+                    const isPausado = estoquePausado.includes(r.n.trim());
+                    optionsHtml += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)}</span></button>`; 
+                });
+            });
+            document.getElementById('tapioca-options').innerHTML = optionsHtml;
+
+            // Renderizar extras (acompanhamentos)
+            extrasHtml = menuData.tapioca_extras.map(e => {
+                const isPausado = estoquePausado.includes(e.trim());
+                return `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn ${e === 'Nenhum' ? 'selected' : ''}">${e}</button>`;
+            }).join('');
+            document.getElementById('tapioca-extras').innerHTML = extrasHtml;
+            
+            document.getElementById('tapioca-modal').classList.remove('hidden');
+        }
+
+        function toggleTapRecheio(n, p, b) { 
+            const idx = tapRecheios.findIndex(x=>x.name===n); 
+            if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}
+            else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
+        }
+
+        function addTapiocaFinal() { 
+            if(tapRecheios.length===0) { alert("Escolha pelo menos 1 ingrediente!"); return; }
+            const price = Math.max(...tapRecheios.map(r=>r.price)); 
+            cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [ACOMP: ${tapExtra.toUpperCase()}]`, price}); 
+            updateCartUI(); closeModal(); 
+        }
+
+        // Outras Funções do Modal de Pizza
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
@@ -332,7 +345,7 @@
             let html = createPizzaSelect(1, (cat !== 'promos'), currentItem.name, list);
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
             if(cat === 'promos' && currentItem.refri) {
-                let bebidasF = currentItem.refri === "2L" ? menuData.bebidas.filter(b => b.name.includes("1.5L") || b.name.includes("2L")) : menuData.bebidas.filter(b => b.name.includes(currentItem.refri));
+                let bebidasF = menuData.bebidas.filter(b => b.name.includes(currentItem.refri) || b.name.includes("1.5L") || b.name.includes("2L"));
                 html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select" class="mt-1">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
             }
             if(currentItem.p35) {
@@ -369,82 +382,24 @@
             updateCartUI(); closeModal();
         }
 
-        function openTapiocaModal() {
-            tapRecheios = []; let html = "";
-            menuData.tapioca_cats.forEach(group => {
-                html += `<div class="ing-label">${group.cat}</div>`;
-                group.items.forEach(r => { 
-                    const isPausado = estoquePausado.includes(r.n.trim());
-                    html += `<button onclick="toggleTapRecheio('${r.n}', ${r.p}, this)" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn flex flex-col"><span class="text-white font-bold uppercase">${r.n}</span><span class="gold-text">R$ ${r.p.toFixed(2)} ${isPausado ? '(ESGOTADO)' : ''}</span></button>`; 
-                });
-            });
-            document.getElementById('tapioca-options').innerHTML = html;
-            document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn">${e}</button>`).join('');
-            document.getElementById('tapioca-modal').classList.remove('hidden');
-        }
-
-        function toggleTapRecheio(n, p, b) { 
-            const idx = tapRecheios.findIndex(x=>x.name===n); 
-            if(idx>-1){tapRecheios.splice(idx,1);b.classList.remove('selected')}else if(tapRecheios.length<2){tapRecheios.push({name:n,price:p});b.classList.add('selected')} 
-        }
-
-        function addTapiocaFinal() { 
-            if(tapRecheios.length===0)return; 
-            const price = Math.max(...tapRecheios.map(r=>r.price)); 
-            cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [EXTRA: ${tapExtra.toUpperCase()}]`, price}); 
-            updateCartUI(); closeModal(); 
-        }
-
         async function finalizeOrder() {
-            if (!estaAberto()) { alert("LOJA FECHADA NO MOMENTO!"); return; }
-            
+            if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
             const pagto = document.getElementById('pay-method').value;
-            const obs = document.getElementById('cust-obs').value;
             const troco = document.getElementById('troco-val').value;
             
-            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { 
-                alert("Preencha Nome, Telefone e Endereço!"); 
-                return; 
-            }
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
             
-            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A`;
-            msg += `*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}`;
-            
-            if (pagto === 'Dinheiro' && troco) {
-                msg += ` (Troco para ${troco})`;
-            }
-            
-            msg += `%0A%0A*🍕 ITENS:*%0A`;
+            let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${pagto==='Dinheiro'?' (Troco p/ '+troco+')':''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
-            
-            if(obs) msg += `%0A*📝 OBS:* ${obs}%0A`;
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
-            fetch(URL_PLANILHA, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({
-                    nome: n, 
-                    telefone: tel, 
-                    endereco: a, 
-                    total: totalStr, 
-                    pagamento: pagto,
-                    modalidade: modalidadeAtual, 
-                    itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: " + obs + "]" : ""), 
-                    taxa: taxaEntrega.toFixed(2),
-                    troco: troco 
-                }) 
-            });
-
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2), troco: troco }) });
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
-            
-            cart = []; 
-            updateCartUI(); 
-            toggleCart();
+            cart = []; updateCartUI(); toggleCart();
         }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
