@@ -22,7 +22,6 @@
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
-        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
     </style>
 </head>
 <body class="pb-24">
@@ -52,9 +51,9 @@
 
     <div id="tapioca-modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-4 z-[100]">
         <div class="bg-zinc-900 w-full max-w-md rounded-3xl p-6 border border-zinc-700 max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-black neon-text italic uppercase leading-none">Montar Tapioca</h3>
-            <p class="text-[10px] font-black text-zinc-400 uppercase mt-2 italic">Escolha 2 ingredientes e 1 acompanhamento</p>
-            <p class="text-xs font-black gold-text uppercase mt-4 mb-2 border-b border-zinc-800 pb-1">Ingredientes!</p>
+            <h3 class="text-2xl font-black neon-text italic uppercase">Montar Tapioca</h3>
+            <p class="text-[10px] font-black text-zinc-400 uppercase mt-1 italic">Escolha 2 ingredientes e 1 acompanhamento</p>
+            <h4 class="text-xs font-black gold-text uppercase mt-4 mb-2 border-b border-zinc-800 pb-1">Ingredientes!</h4>
             
             <div id="tapioca-options" class="grid grid-cols-2 gap-2"></div>
             
@@ -63,7 +62,7 @@
             </div>
             <div id="tapioca-extras" class="grid grid-cols-2 gap-2"></div>
 
-            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8 shadow-[0_0_15px_rgba(57,255,20,0.4)]">ADICIONAR TAPIOCA</button>
+            <button onclick="addTapiocaFinal()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase mt-8">ADICIONAR TAPIOCA</button>
             <button onclick="closeModal()" class="w-full py-4 text-zinc-500 text-[10px] uppercase font-bold text-center block">Voltar</button>
         </div>
     </div>
@@ -187,18 +186,26 @@
                 estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
                 zonasEntrega = mapa;
                 switchCategory('promos');
-            } catch (e) {
-                switchCategory('promos');
-            }
+            } catch (e) { switchCategory('promos'); }
         }
 
-        // Funções de Mapa e Carrinho
+        // --- GOOGLE PLACES & GEOCODING ---
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
             autocomplete.addListener('place_changed', async () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
+            });
+            input.addEventListener('blur', () => { setTimeout(() => { geocodificarEndereco(input.value); }, 400); });
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); } });
+        }
+
+        async function geocodificarEndereco(endereco) {
+            if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: endereco }, (results, status) => {
+                if (status === "OK" && results[0].geometry) { verificarLocalizacao(results[0].geometry.location); }
             });
         }
 
@@ -263,7 +270,7 @@
                     if(h){
                         const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
                         const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : "01:00") : (h.fechar/100).toFixed(2).replace('.',':');
-                        html += `<span>Dia ${dia}</span> <span class="text-white">${abr} às ${fec}</span>`;
+                        html += `<span>Dia ${dia}</span> <span class="text-white">${abr} às ${fec}</span> `;
                     }
                 });
                 document.getElementById('horarios-lista').innerHTML = html;
@@ -276,7 +283,7 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') taxaEntrega = 0;
+            if(tipo === 'RETIRADA') { taxaEntrega = 0; document.getElementById('cust-addr').value = "RETIRADA NA LOJA"; }
             updateCartUI();
         }
 
@@ -284,7 +291,7 @@
             document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
-                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase shadow-[0_0_15px_rgba(57,255,20,0.3)]">Montar Minha Tapioca</button></div>`;
+                container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
                 return;
             }
             container.innerHTML = (menuData[cat] || []).map((item, index) => {
@@ -297,12 +304,10 @@
             }).join('');
         }
 
-        // LÓGICA MODAL TAPIOCA
+        // --- TAPIOCA MODAL LOGIC ---
         function openTapiocaModal() {
             tapRecheios = []; 
             let optionsHtml = "";
-            let extrasHtml = "";
-
             menuData.tapioca_cats.forEach(group => {
                 optionsHtml += `<div class="ing-label">${group.cat}</div>`;
                 group.items.forEach(r => { 
@@ -311,14 +316,7 @@
                 });
             });
             document.getElementById('tapioca-options').innerHTML = optionsHtml;
-
-            // Renderizar extras (acompanhamentos)
-            extrasHtml = menuData.tapioca_extras.map(e => {
-                const isPausado = estoquePausado.includes(e.trim());
-                return `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" style="${isPausado ? 'opacity:0.4; pointer-events:none' : ''}" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn ${e === 'Nenhum' ? 'selected' : ''}">${e}</button>`;
-            }).join('');
-            document.getElementById('tapioca-extras').innerHTML = extrasHtml;
-            
+            document.getElementById('tapioca-extras').innerHTML = menuData.tapioca_extras.map(e => `<button onclick="tapExtra='${e}';this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('selected'));this.classList.add('selected')" class="ing-btn text-center text-zinc-400 font-bold uppercase extra-btn ${e==='Nenhum'?'selected':''}">${e}</button>`).join('');
             document.getElementById('tapioca-modal').classList.remove('hidden');
         }
 
@@ -329,13 +327,13 @@
         }
 
         function addTapiocaFinal() { 
-            if(tapRecheios.length===0) { alert("Escolha pelo menos 1 ingrediente!"); return; }
+            if(tapRecheios.length===0)return; 
             const price = Math.max(...tapRecheios.map(r=>r.price)); 
             cart.push({name:`TAPIOCA: ${tapRecheios.map(r=>r.name).join(' + ')} [ACOMP: ${tapExtra.toUpperCase()}]`, price}); 
             updateCartUI(); closeModal(); 
         }
 
-        // Outras Funções do Modal de Pizza
+        // --- PIZZA MODAL LOGIC ---
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
@@ -346,7 +344,7 @@
             if(currentItem.pizzas === 2) html += createPizzaSelect(2, false, list[1], list);
             if(cat === 'promos' && currentItem.refri) {
                 let bebidasF = menuData.bebidas.filter(b => b.name.includes(currentItem.refri) || b.name.includes("1.5L") || b.name.includes("2L"));
-                html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select" class="mt-1">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
+                html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
             }
             if(currentItem.p35) {
                 html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
@@ -382,6 +380,7 @@
             updateCartUI(); closeModal();
         }
 
+        // --- FINALIZE ORDER ---
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
             const n = document.getElementById('cust-name').value;
@@ -389,15 +388,19 @@
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
             const pagto = document.getElementById('pay-method').value;
+            const obs = document.getElementById('cust-obs').value; // RESTAURADO
             const troco = document.getElementById('troco-val').value;
             
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${pagto==='Dinheiro'?' (Troco p/ '+troco+')':''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
+            if(obs) msg += `%0A*📝 OBS:* ${obs.toUpperCase()}%0A`; // RESTAURADO
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
-            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | "), taxa: taxaEntrega.toFixed(2), troco: troco }) });
+            // Post para Planilha
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: "+obs+"]" : ""), taxa: taxaEntrega.toFixed(2), troco: troco }) });
+            
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
         }
