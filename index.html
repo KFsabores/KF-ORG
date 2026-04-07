@@ -22,6 +22,7 @@
         .hidden { display: none; }
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
+        #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
     </style>
 </head>
 <body class="pb-24">
@@ -189,7 +190,7 @@
             } catch (e) { switchCategory('promos'); }
         }
 
-        // --- GOOGLE PLACES & GEOCODING ---
+        // --- GOOGLE AUTOCOMPLETE & GEOCODING ---
         function initAutocomplete() {
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
@@ -197,6 +198,7 @@
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
+            // Tenta geocodificar se o usuário apenas digitar e sair do campo ou der enter
             input.addEventListener('blur', () => { setTimeout(() => { geocodificarEndereco(input.value); }, 400); });
             input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); geocodificarEndereco(input.value); } });
         }
@@ -212,19 +214,20 @@
         async function verificarLocalizacao(loc) {
             const infoDistancia = document.getElementById('distancia-info');
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
+            infoDistancia.style.color = "#FFD700";
             try {
                 let dadosTratados = zonasEntrega;
                 if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
                 for (const zona of dadosTratados) {
                     if (zona.pontos) {
-                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(p.lat), lng: parseFloat(p.lng) }));
+                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).replace(',','.')), lng: parseFloat(String(p.lng).replace(',','.')) }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
                         if (google.maps.geometry.poly.containsLocation(loc, poly)) { zonaAchada = zona; break; }
                     }
                 }
                 if (zonaAchada) {
-                    taxaEntrega = parseFloat(zonaAchada.preco);
+                    taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',','.'));
                     infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
                     infoDistancia.style.color = "#39FF14";
                 } else {
@@ -304,7 +307,7 @@
             }).join('');
         }
 
-        // --- TAPIOCA MODAL LOGIC ---
+        // --- TAPIOCA MODAL ---
         function openTapiocaModal() {
             tapRecheios = []; 
             let optionsHtml = "";
@@ -333,7 +336,7 @@
             updateCartUI(); closeModal(); 
         }
 
-        // --- PIZZA MODAL LOGIC ---
+        // --- PIZZA MODAL ---
         function openItemModal(cat, index) {
             currentItem = menuData[cat][index];
             if(cat === 'bebidas') { cart.push({ name: currentItem.name, price: currentItem.price }); updateCartUI(); return; }
@@ -380,7 +383,7 @@
             updateCartUI(); closeModal();
         }
 
-        // --- FINALIZE ORDER ---
+        // --- FINALIZAÇÃO ---
         async function finalizeOrder() {
             if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
             const n = document.getElementById('cust-name').value;
@@ -388,17 +391,16 @@
             const a = document.getElementById('cust-addr').value;
             const totalStr = document.getElementById('cart-total').innerText;
             const pagto = document.getElementById('pay-method').value;
-            const obs = document.getElementById('cust-obs').value; // RESTAURADO
+            const obs = document.getElementById('cust-obs').value;
             const troco = document.getElementById('troco-val').value;
             
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${pagto==='Dinheiro'?' (Troco p/ '+troco+')':''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
-            if(obs) msg += `%0A*📝 OBS:* ${obs.toUpperCase()}%0A`; // RESTAURADO
+            if(obs) msg += `%0A*📝 OBS:* ${obs.toUpperCase()}%0A`;
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
-            // Post para Planilha
             fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: "+obs+"]" : ""), taxa: taxaEntrega.toFixed(2), troco: troco }) });
             
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
