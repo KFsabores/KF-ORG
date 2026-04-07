@@ -264,21 +264,24 @@
         }
 
         function verificarStatusLoja() {
-            const banner = document.getElementById('banner-status');
-            if (!estaAberto()) {
-                banner.classList.remove('hidden');
-                let html = "";
-                [4, 5, 6, 0].forEach(dia => {
-                    const h = HORARIOS[dia];
-                    if(h){
-                        const abr = (h.abrir / 100).toFixed(2).replace('.', ':');
-                        const fec = h.fechar >= 2400 ? (h.fechar === 2400 ? "00:00" : "01:00") : (h.fechar/100).toFixed(2).replace('.',':');
-                        html += `<span>Dia ${dia}</span> <span class="text-white">${abr} às ${fec}</span> `;
-                    }
-                });
-                document.getElementById('horarios-lista').innerHTML = html;
-            } else { banner.classList.add('hidden'); }
-        }
+    const banner = document.getElementById('banner-status');
+    
+    if (!estaAberto()) {
+        banner.classList.remove('hidden');
+        
+        // Texto fixo informativo, sem loops ou cálculos complexos
+        const html = `
+            <span>QUINTA</span> <span class="text-white">20:00 às 00:00</span>
+            <span>SEXTA</span> <span class="text-white">20:00 às 01:00</span>
+            <span>SÁBADO</span> <span class="text-white">20:00 às 01:00</span>
+            <span>DOMINGO</span> <span class="text-white">19:00 às 01:00</span>
+        `;
+        
+        document.getElementById('horarios-lista').innerHTML = html;
+    } else { 
+        banner.classList.add('hidden'); 
+    }
+}
 
         function setModalidade(tipo) {
             modalidadeAtual = tipo;
