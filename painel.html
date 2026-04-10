@@ -37,7 +37,7 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <audio id="notificacao-som" src="https://www.soundjay.com/phone/phone-ring-01.mp3" preload="auto" loop></audio>
+    <audio id="notificacao-som" src="assets/sounds/telefone.mp3" preload="auto" loop></audio>
 
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
@@ -185,6 +185,16 @@
             analogRingInterval = setInterval(tocarCiclo, 3200);
         }
 
+        function tocarSomPedidoNovo() {
+            if (!audioDesbloqueado) return;
+            pararSom();
+            ringtone.currentTime = 0;
+            ringtone.play().catch(() => {
+                // Fallback para toque sintético se o arquivo falhar.
+                tocarToqueAnalogico();
+            });
+        }
+
         function pararSom() {
             ringtone.pause();
             ringtone.currentTime = 0;
@@ -285,7 +295,7 @@
                     const novosPendentes = pendentesAtuais.filter(p => !pedidosPendentesVistos.has(p.linhaOriginal));
                     if (novosPendentes.length > 0) {
                         if (audioDesbloqueado) {
-                            tocarToqueAnalogico();
+                            tocarSomPedidoNovo();
                         } else {
                             const status = document.getElementById('status-conexao');
                             status.innerText = "⚠️ Clique na tela para ativar o som 📞";
