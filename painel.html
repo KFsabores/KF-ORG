@@ -332,7 +332,7 @@
             lista.forEach(p => {
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
-                const horaConclusao = extrairHoraConclusao(p.status) || (p.status.includes("CONCLU") ? obterHorarioConclusao(p.linhaOriginal) : "");
+                const horaConclusao = extrairHoraConclusao(p.status) || (p.status.includes("CONCLU") ? obterHorarioConclusao(p.chaveAlerta) : "");
                 
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
@@ -452,10 +452,13 @@
         }
 
         async function concluirPedido(linha, btn) {
+            const pedido = todosOsPedidos.find(p => p.linhaOriginal === linha);
+            const idKey = pedido ? pedido.chaveAlerta : String(linha);
+            
             const hora = gerarStatusConcluido();
-            salvarHorarioConclusao(linha, hora);
-            const ok = await alterarStatus(linha, 'CONCLUIDO ' + hora, btn);
-            if (!ok) removerHorarioConclusao(linha);
+            salvarHorarioConclusao(idKey, hora);
+            const ok = await alterarStatus(linha, 'CONCLUIDO', btn);
+            if (!ok) removerHorarioConclusao(idKey);
         }
 
         function abrirWhats(tel) {
@@ -522,8 +525,11 @@
                 if (card) card.classList.add('excluindo');
                 pedidosExcluidosLocalmente.add(linha);
                 try {
+                    const pedido = todosOsPedidos.find(p => p.linhaOriginal === linha);
+                    const idKey = pedido ? pedido.chaveAlerta : String(linha);
+                    
                     await fetch(`${WEB_APP_URL}?action=delete&row=${linha}&t=${new Date().getTime()}`, { mode: 'no-cors' });
-                    removerHorarioConclusao(linha);
+                    removerHorarioConclusao(idKey);
                     setTimeout(() => { if(card) card.remove(); }, 500);
                 } catch(e) {
                     pedidosExcluidosLocalmente.delete(linha);
