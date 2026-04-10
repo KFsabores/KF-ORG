@@ -116,9 +116,60 @@
         let pedidosExcluidosLocalmente = new Set();
         let totalPedidosAnterior = 0;
         let primeiraCarga = true;
+        let audioDesbloqueado = false;
+        let pedidosPendentesVistos = new Set();
+        let audioCtx = null;
+        let analogRingInterval = null;
         const ringtone = document.getElementById('notificacao-som');
 
-        function pararSom() { ringtone.pause(); ringtone.currentTime = 0; }
+        function garantirAudioContext() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+        }
+
+        function tocarPulsoAnalogico(inicio, duracao = 0.35) {
+            if (!audioCtx) return;
+            const ganho = audioCtx.createGain();
+            ganho.gain.setValueAtTime(0.0001, inicio);
+            ganho.gain.exponentialRampToValueAtTime(0.18, inicio + 0.02);
+            ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
+            ganho.connect(audioCtx.destination);
+
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            osc1.type = 'sine';
+            osc2.type = 'sine';
+            osc1.frequency.setValueAtTime(440, inicio);
+            osc2.frequency.setValueAtTime(480, inicio);
+            osc1.connect(ganho);
+            osc2.connect(ganho);
+            osc1.start(inicio); osc2.start(inicio);
+            osc1.stop(inicio + duracao); osc2.stop(inicio + duracao);
+        }
+
+        function tocarToqueAnalogico() {
+            if (!audioDesbloqueado) return;
+            garantirAudioContext();
+            if (!audioCtx || analogRingInterval) return;
+
+            const tocarCiclo = () => {
+                const t = audioCtx.currentTime + 0.02;
+                tocarPulsoAnalogico(t, 0.35);
+                tocarPulsoAnalogico(t + 0.55, 0.35);
+            };
+
+            tocarCiclo();
+            analogRingInterval = setInterval(tocarCiclo, 3000);
+        }
+
+        function pararSom() {
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            if (analogRingInterval) {
+                clearInterval(analogRingInterval);
+                analogRingInterval = null;
+            }
+        }
 
         function parseDataBR(stringData) {
             if(!stringData) return new Date();
@@ -203,9 +254,23 @@
                     troco: row[10] || "NÃO"
                 })).filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
 
-                if (!primeiraCarga && todosOsPedidos.length > totalPedidosAnterior) {
-                    const novos = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
-                    if(novos.length > 0) ringtone.play().catch(e => {});
+                const pendentesAtuais = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
+
+                if (primeiraCarga) {
+                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.linhaOriginal));
+                } else {
+                    const novosPendentes = pendentesAtuais.filter(p => !pedidosPendentesVistos.has(p.linhaOriginal));
+                    if (novosPendentes.length > 0) {
+                        if (audioDesbloqueado) {
+                            tocarToqueAnalogico();
+                        } else {
+                            const status = document.getElementById('status-conexao');
+                            status.innerText = "⚠️ Clique na tela para ativar o som 📞";
+                            status.classList.remove('text-[#39FF14]');
+                            status.classList.add('text-zinc-500');
+                        }
+                    }
+                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.linhaOriginal));
                 }
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
@@ -228,27 +293,29 @@
                 
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
+                let espessuraBorda = isPendente ? "border-4" : (isCozinha ? "border-[3px]" : "border-2");
                 let corStatus = isPendente ? "bg-yellow-600" : (isCozinha ? "bg-blue-600" : "bg-zinc-700");
 
                 container.innerHTML += `
-                    <div id="card-${p.linhaOriginal}" class="bg-zinc-900 border-t-[12px] ${corBorda} p-6 rounded-3xl flex flex-col transition-all">
+                    <div id="card-${p.linhaOriginal}" class="bg-zinc-900 ${espessuraBorda} ${corBorda} p-6 rounded-3xl flex flex-col transition-all">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <span class="text-[10px] font-black text-zinc-500 block uppercase">${p.dataFull}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-black text-zinc-500 block uppercase">${p.dataFull}</span>
+                                    ${horaConclusao ? `<span class="text-[9px] font-black text-zinc-500">✅ ${horaConclusao}</span>` : ""}
+                                </div>
                                 <span class="status-badge mt-2 inline-block ${corStatus} text-white">${p.status}</span>
                             </div>
                             <div class="flex flex-col items-end gap-1">
                                 <span class="timer-badge" data-hora="${p.objData.toISOString()}" data-status="${p.status}">0m</span>
-                                ${horaConclusao ? `<span class="text-[9px] font-black text-zinc-500">✅ ${horaConclusao}</span>` : ""}
                             </div>
                         </div>
                         <h3 class="text-2xl font-black italic mb-1 uppercase tracking-tighter">${p.nome}</h3>
                         <p class="text-[10px] font-bold text-zinc-500 mb-4 uppercase italic">📍 ${p.endereco}</p>
                         
-                        <div class="grid grid-cols-3 gap-1 mb-4">
+                        <div class="grid grid-cols-2 gap-1 mb-4">
                             <button onclick="abrirWhats('${p.telefone}')" class="btn-whats p-2.5 rounded-xl text-[8px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
                             <button onclick="abrirMapa('${p.endereco}')" class="btn-mapa p-2.5 rounded-xl text-[8px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
-                            <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega p-2.5 rounded-xl text-[8px] font-black uppercase hover:opacity-80 transition-all">Saiu para entrega</button>
                         </div>
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
@@ -269,8 +336,9 @@
                                 <p class="text-xs font-black text-zinc-300">${p.troco}</p>
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="grid grid-cols-3 gap-2 mb-4">
                             <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 py-3 rounded-xl font-black text-[9px] uppercase hover:bg-blue-500">Cozinha</button>
+                            <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega py-3 rounded-xl font-black text-[9px] uppercase hover:opacity-80 transition-all">Saiu para entrega</button>
                             <button onclick="concluirPedido(${p.linhaOriginal}, this)" class="bg-emerald-600 py-3 rounded-xl font-black text-[9px] uppercase hover:bg-emerald-500">Concluir</button>
                         </div>
                         <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
@@ -485,15 +553,35 @@
             resDiv.classList.remove('hidden');
         }
 
-        document.body.addEventListener('click', () => {
-            pararSom();
-            const status = document.getElementById('status-conexao');
-            status.innerText = "✅ MONITORAMENTO ATIVO";
-            status.classList.remove('text-zinc-500');
-            status.classList.add('text-[#39FF14]');
-        }, { once: true });
+        document.body.addEventListener('click', async () => {
+            try {
+                garantirAudioContext();
+                if (audioCtx && audioCtx.state === 'running') {
+                    // Pulso rápido para garantir desbloqueio em alguns navegadores.
+                    tocarPulsoAnalogico(audioCtx.currentTime + 0.01, 0.06);
+                } else {
+                    await ringtone.play();
+                    ringtone.pause();
+                    ringtone.currentTime = 0;
+                }
+                audioDesbloqueado = true;
+            } catch (e) {
+                audioDesbloqueado = false;
+            }
 
-        setInterval(carregarPedidos, 15000);
+            const status = document.getElementById('status-conexao');
+            if (audioDesbloqueado) {
+                status.innerText = "✅ MONITORAMENTO ATIVO (SOM LIGADO)";
+                status.classList.remove('text-zinc-500');
+                status.classList.add('text-[#39FF14]');
+            } else {
+                status.innerText = "⚠️ Não foi possível ativar o som. Tente clicar novamente.";
+                status.classList.remove('text-[#39FF14]');
+                status.classList.add('text-zinc-500');
+            }
+        });
+
+        setInterval(carregarPedidos, 10000);
         setInterval(atualizarCronometros, 30000); 
         carregarPedidos();
     </script>
