@@ -12,7 +12,7 @@
         .neon-text { color: #39FF14; text-shadow: 0 0 10px rgba(57, 255, 20, 0.8), 0 0 20px rgba(57, 255, 20, 0.5); }
         .neon-border { border-color: #39FF14; box-shadow: 0 0 15px rgba(57, 255, 20, 0.6); }
         .gold-text { color: #FFD700; text-shadow: 0 0 3px rgba(255, 215, 0, 0.6); }
-        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 10px; font-weight: 900; white-space: nowrap; }
+        .category-btn { border: 1px solid #333; transition: 0.3s; color: #999; text-transform: uppercase; font-size: 9px; font-weight: 900; white-space: normal; text-align: center; line-height: 1.15; }
         .category-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         select, input, textarea { background: #111 !important; border: 1px solid #333 !important; border-radius: 10px !important; padding: 12px !important; color: white !important; width: 100%; outline: none; margin-bottom: 8px; font-size: 14px; }
         textarea { resize: none; height: 70px; }
@@ -38,14 +38,14 @@
         <div id="horarios-lista" class="text-[10px] grid grid-cols-2 gap-x-4 gap-y-1 opacity-80 font-bold uppercase"></div>
     </div>
 
-    <nav class="flex overflow-x-auto bg-black p-3 gap-2 sticky top-0 z-50 border-b border-zinc-800">
-        <button onclick="switchCategory('promos')" class="category-btn active px-4 py-2 rounded-full shrink-0">🔥 Promos</button>
-        <button onclick="switchCategory('tradicional')" class="category-btn px-4 py-2 rounded-full shrink-0">🍕 Tradicional</button>
-        <button onclick="switchCategory('especial')" class="category-btn px-4 py-2 rounded-full shrink-0">🌟 Especial</button>
-        <button onclick="switchCategory('premium')" class="category-btn px-4 py-2 rounded-full shrink-0">💎 Premium</button>
-        <button onclick="switchCategory('doces')" class="category-btn px-4 py-2 rounded-full shrink-0">🍫 Pizzas Doces</button>
-        <button onclick="switchCategory('tapioca')" class="category-btn px-4 py-2 rounded-full shrink-0">Tapiocas</button>
-        <button onclick="switchCategory('bebidas')" class="category-btn px-4 py-2 rounded-full shrink-0">🥤 Bebidas</button>
+    <nav class="grid grid-cols-4 gap-2 bg-black p-3 sticky top-0 z-50 border-b border-zinc-800 max-w-lg mx-auto w-full">
+        <button type="button" data-cat="promos" onclick="switchCategory('promos')" class="category-btn active px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">🔥<br>PROMOÇÕES</button>
+        <button type="button" data-cat="tradicional" onclick="switchCategory('tradicional')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">🍕<br>PIZZAS TRADICIONAIS</button>
+        <button type="button" data-cat="especial" onclick="switchCategory('especial')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">🌟<br>PIZZAS ESPECIAIS</button>
+        <button type="button" data-cat="premium" onclick="switchCategory('premium')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">💎<br>PIZZAS PREMIUM</button>
+        <button type="button" data-cat="doces" onclick="switchCategory('doces')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">🍫<br>PIZZAS DOCES</button>
+        <button type="button" data-cat="tapioca" onclick="switchCategory('tapioca')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">TAPIOCAS</button>
+        <button type="button" data-cat="bebidas" onclick="switchCategory('bebidas')" class="category-btn px-2 py-2.5 rounded-xl min-h-[3rem] flex items-center justify-center">🥤<br>BEBIDAS</button>
     </nav>
 
     <main id="items-container" class="p-4 space-y-4 max-w-lg mx-auto"></main>
@@ -318,7 +318,7 @@
         }
 
         function switchCategory(cat) {
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(cat.substring(0,3))));
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-cat') === cat));
             const container = document.getElementById('items-container');
             if(cat === 'tapioca') {
                 container.innerHTML = `<div class="bg-zinc-900 p-8 rounded-3xl border-2 border-[#39FF14] text-center"><h4 class="font-black neon-text text-xl mb-2 italic">TAPIOCAS</h4><button onclick="openTapiocaModal()" class="w-full bg-[#39FF14] text-black font-black py-4 rounded-2xl text-xs mt-4 uppercase">Montar Minha Tapioca</button></div>`;
