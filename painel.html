@@ -177,7 +177,6 @@
             lista.forEach(p => {
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
-                const isConcluido = p.status.includes("CONCLUIDO");
                 
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
@@ -231,6 +230,57 @@
             atualizarCronometros();
         }
 
+        // --- FUNÇÕES DE STATUS E CRONÔMETRO CORRIGIDAS ---
+
+        async function alterarStatus(linha, status, btn) {
+            const txt = btn.innerHTML;
+            btn.innerHTML = "⏳";
+
+            // Atualização imediata no HTML para o cronômetro parar na hora
+            const card = document.getElementById(`card-${linha}`);
+            if (card) {
+                const timer = card.querySelector('.timer-badge');
+                if (timer) {
+                    timer.setAttribute('data-status', status);
+                    // Força a atualização visual imediata
+                    if (status.includes("CONCLUIDO")) {
+                        timer.className = "timer-badge bg-zinc-800 opacity-40";
+                    }
+                }
+            }
+
+            try {
+                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}&t=${new Date().getTime()}`, { mode: 'no-cors' });
+                setTimeout(carregarPedidos, 1500);
+            } catch (e) { 
+                btn.innerHTML = txt; 
+            }
+        }
+
+        function atualizarCronometros() {
+            const agora = new Date();
+            document.querySelectorAll('[data-hora]').forEach(el => {
+                const status = el.getAttribute('data-status');
+
+                // Lógica de pausa: se concluído, apenas muda o estilo e mantém o tempo travado
+                if (status && status.includes("CONCLUIDO")) {
+                    el.className = "timer-badge bg-zinc-800 opacity-40";
+                    return; 
+                }
+
+                const dataPedido = new Date(el.getAttribute('data-hora'));
+                const diff = Math.floor((agora - dataPedido) / 60000);
+                
+                el.innerText = (diff < 0 ? 0 : diff) + "m";
+                
+                if(diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
+                else if(diff > 25) el.className = "timer-badge bg-orange-600";
+                else el.className = "timer-badge bg-zinc-700";
+            });
+        }
+
+        // --- RESTANTE DAS FUNÇÕES ---
+
         function abrirWhats(tel) {
             if(!tel || tel === "") return alert("Telefone não disponível.");
             let num = tel.replace(/\D/g, '');
@@ -240,7 +290,7 @@
 
         function abrirMapa(end) {
             if(!end || end.includes("RETIRADA")) return alert("Pedido para retirada.");
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
+            window.open(`https://www.google.com/maps/search/${encodeURIComponent(end)}`, '_blank');
         }
 
         function enviarEntrega(tel, nome) {
@@ -265,15 +315,6 @@
                     alert("Erro ao excluir.");
                 }
             }
-        }
-
-        async function alterarStatus(linha, status, btn) {
-            const txt = btn.innerHTML;
-            btn.innerHTML = "⏳";
-            try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}&t=${new Date().getTime()}`, { mode: 'no-cors' });
-                setTimeout(carregarPedidos, 1500);
-            } catch (e) { btn.innerHTML = txt; }
         }
 
         function imprimir(dados) {
@@ -390,28 +431,6 @@
             resDiv.classList.remove('hidden');
         }
 
-        function atualizarCronometros() {
-            const agora = new Date();
-            document.querySelectorAll('[data-hora]').forEach(el => {
-                const status = el.getAttribute('data-status');
-
-                // LÓGICA DE PARAR O RELÓGIO SE ESTIVER CONCLUÍDO
-                if (status && status.includes("CONCLUIDO")) {
-                    el.className = "timer-badge bg-zinc-800 opacity-40";
-                    return; 
-                }
-
-                const dataPedido = new Date(el.getAttribute('data-hora'));
-                const diff = Math.floor((agora - dataPedido) / 60000);
-                
-                el.innerText = (diff < 0 ? 0 : diff) + "m";
-                
-                if(diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
-                else if(diff > 25) el.className = "timer-badge bg-orange-600";
-                else el.className = "timer-badge bg-zinc-700";
-            });
-        }
-
         document.body.addEventListener('click', () => {
             pararSom();
             const status = document.getElementById('status-conexao');
@@ -421,9 +440,8 @@
         }, { once: true });
 
         setInterval(carregarPedidos, 15000);
-        setInterval(atualizarCronometros, 60000);
+        setInterval(atualizarCronometros, 30000); // Reduzi para 30s para atualizar o tempo mais rápido
         carregarPedidos();
     </script>
 </body>
 </html>
-
