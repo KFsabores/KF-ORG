@@ -177,9 +177,30 @@
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
         let localizacaoPedido = null;
+        const CACHE_ESTOQUE_KEY = "kf_cache_estoque_pausado";
+        const CACHE_MAPA_KEY = "kf_cache_mapa_zonas";
+
+        function carregarCacheInicial() {
+            try {
+                const cacheEstoque = JSON.parse(localStorage.getItem(CACHE_ESTOQUE_KEY) || "[]");
+                if (Array.isArray(cacheEstoque)) estoquePausado = cacheEstoque;
+            } catch (e) {}
+            try {
+                const cacheMapa = JSON.parse(localStorage.getItem(CACHE_MAPA_KEY) || "[]");
+                if (Array.isArray(cacheMapa)) zonasEntrega = cacheMapa;
+            } catch (e) {}
+        }
+
+        function salvarCaches() {
+            try { localStorage.setItem(CACHE_ESTOQUE_KEY, JSON.stringify(estoquePausado)); } catch (e) {}
+            try { localStorage.setItem(CACHE_MAPA_KEY, JSON.stringify(zonasEntrega)); } catch (e) {}
+        }
 
         async function init() {
             verificarStatusLoja();
+            carregarCacheInicial();
+            // Renderiza imediato com cache/local para eliminar atraso visual inicial.
+            switchCategory('promos');
             try {
                 const [estoque, mapa] = await Promise.all([
                     fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
@@ -187,8 +208,10 @@
                 ]);
                 estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
                 zonasEntrega = mapa;
+                salvarCaches();
+                // Re-renderiza com dados atualizados de rede.
                 switchCategory('promos');
-            } catch (e) { switchCategory('promos'); }
+            } catch (e) {}
         }
 
         // --- GOOGLE AUTOCOMPLETE & GEOCODING ---
