@@ -285,7 +285,11 @@
                     modalidade: (row[7] || "DELIVERY").toUpperCase(),
                     telefone: row[8] || "",
                     taxa: row[9] || "0,00",
-                    troco: row[10] || "NÃO"
+                    troco: row[10] || "NÃO",
+                    latitude: row[11] || "",
+                    longitude: row[12] || "",
+                    localizacaoLink: row[13] || "",
+                    localizacaoFonte: row[14] || ""
                 }));
 
                 todosOsPedidos = pedidosComLinha
@@ -353,8 +357,8 @@
                         
                         <div class="grid grid-cols-3 gap-1 mb-4">
                             <button onclick="abrirWhats('${p.telefone}')" class="btn-whats p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
-                            <button onclick="abrirMapa('${p.endereco}')" class="btn-mapa p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
-                            <button onclick="chamarMotoboy('${p.nome}', '${p.endereco}', '${p.pagto}', '${p.total}', '${p.telefone}')" class="btn-motoboy p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">🏍️ Motoboy</button>
+                            <button onclick="abrirMapa('${p.endereco}', '${p.localizacaoLink}', '${p.latitude}', '${p.longitude}')" class="btn-mapa p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
+                            <button onclick="chamarMotoboy('${p.nome}', '${p.endereco}', '${p.pagto}', '${p.total}', '${p.telefone}', '${p.localizacaoLink}', '${p.latitude}', '${p.longitude}')" class="btn-motoboy p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">🏍️ Motoboy</button>
                         </div>
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
@@ -459,9 +463,27 @@
             window.open(`https://wa.me/${num}`, '_blank');
         }
 
-        function abrirMapa(end) {
-            if(!end || end.includes("RETIRADA")) return alert("Pedido para retirada.");
-            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`, '_blank');
+        function montarUrlMapaPedido(end, localizacaoLink, lat, lng) {
+            const latNum = parseFloat(String(lat || "").replace(",", "."));
+            const lngNum = parseFloat(String(lng || "").replace(",", "."));
+
+            if (localizacaoLink && String(localizacaoLink).trim() !== "") {
+                return String(localizacaoLink).trim();
+            }
+            if (!isNaN(latNum) && !isNaN(lngNum)) {
+                return `https://www.google.com/maps?q=${latNum},${lngNum}`;
+            }
+            if (!end || end.includes("RETIRADA")) return "";
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`;
+        }
+
+        function abrirMapa(end, localizacaoLink, lat, lng) {
+            const url = montarUrlMapaPedido(end, localizacaoLink, lat, lng);
+            if (!url) {
+                if (!end || end.includes("RETIRADA")) return alert("Pedido para retirada.");
+                return;
+            }
+            window.open(url, '_blank');
         }
 
         function enviarEntrega(tel, nome) {
@@ -471,9 +493,12 @@
             window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
 
-        function chamarMotoboy(nome, endereco, pagto, total, telefoneCliente) {
+        function chamarMotoboy(nome, endereco, pagto, total, telefoneCliente, localizacaoLink, lat, lng) {
             const num = "5521969692473";
-            const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco || "")}`;
+            const mapa = montarUrlMapaPedido(endereco, localizacaoLink, lat, lng) ||
+                (endereco && !String(endereco).includes("RETIRADA")
+                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`
+                    : "-");
             const telNormalizado = normalizarTelefoneBR(telefoneCliente);
             const telFormatado = telNormalizado || (telefoneCliente || "-");
             const telLink = telNormalizado ? `https://wa.me/${telNormalizado}` : "-";
