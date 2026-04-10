@@ -119,32 +119,55 @@
         let audioDesbloqueado = false;
         let pedidosPendentesVistos = new Set();
         let audioCtx = null;
+        let compressor = null;
         let analogRingInterval = null;
         const ringtone = document.getElementById('notificacao-som');
 
         function garantirAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+            if (audioCtx && !compressor) {
+                compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-22, audioCtx.currentTime);
+                compressor.knee.setValueAtTime(18, audioCtx.currentTime);
+                compressor.ratio.setValueAtTime(8, audioCtx.currentTime);
+                compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+                compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+                compressor.connect(audioCtx.destination);
+            }
         }
 
-        function tocarPulsoAnalogico(inicio, duracao = 0.35) {
-            if (!audioCtx) return;
+        function tocarPulsoAnalogico(inicio, duracao = 0.75) {
+            if (!audioCtx || !compressor) return;
             const ganho = audioCtx.createGain();
             ganho.gain.setValueAtTime(0.0001, inicio);
-            ganho.gain.exponentialRampToValueAtTime(0.18, inicio + 0.02);
+            ganho.gain.exponentialRampToValueAtTime(0.42, inicio + 0.015);
             ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
-            ganho.connect(audioCtx.destination);
+            ganho.connect(compressor);
 
             const osc1 = audioCtx.createOscillator();
             const osc2 = audioCtx.createOscillator();
-            osc1.type = 'sine';
-            osc2.type = 'sine';
-            osc1.frequency.setValueAtTime(440, inicio);
-            osc2.frequency.setValueAtTime(480, inicio);
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+
+            // Timbre mais "telefone antigo", menos beep eletrônico.
+            osc1.type = 'square';
+            osc2.type = 'triangle';
+            osc1.frequency.setValueAtTime(430, inicio);
+            osc2.frequency.setValueAtTime(475, inicio);
+
+            // Leve "warble" para lembrar toque analógico.
+            lfo.type = 'sine';
+            lfo.frequency.setValueAtTime(22, inicio);
+            lfoGain.gain.setValueAtTime(10, inicio);
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc1.frequency);
+            lfoGain.connect(osc2.frequency);
+
             osc1.connect(ganho);
             osc2.connect(ganho);
-            osc1.start(inicio); osc2.start(inicio);
-            osc1.stop(inicio + duracao); osc2.stop(inicio + duracao);
+            osc1.start(inicio); osc2.start(inicio); lfo.start(inicio);
+            osc1.stop(inicio + duracao); osc2.stop(inicio + duracao); lfo.stop(inicio + duracao);
         }
 
         function tocarToqueAnalogico() {
@@ -154,12 +177,12 @@
 
             const tocarCiclo = () => {
                 const t = audioCtx.currentTime + 0.02;
-                tocarPulsoAnalogico(t, 0.35);
-                tocarPulsoAnalogico(t + 0.55, 0.35);
+                tocarPulsoAnalogico(t, 0.78);
+                tocarPulsoAnalogico(t + 0.95, 0.78);
             };
 
             tocarCiclo();
-            analogRingInterval = setInterval(tocarCiclo, 3000);
+            analogRingInterval = setInterval(tocarCiclo, 3200);
         }
 
         function pararSom() {
@@ -556,6 +579,7 @@
         document.body.addEventListener('click', async () => {
             try {
                 garantirAudioContext();
+                ringtone.volume = 1;
                 if (audioCtx && audioCtx.state === 'running') {
                     // Pulso rápido para garantir desbloqueio em alguns navegadores.
                     tocarPulsoAnalogico(audioCtx.currentTime + 0.01, 0.06);
