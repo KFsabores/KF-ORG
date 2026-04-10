@@ -270,8 +270,7 @@
                 const rows = csvData.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
-                const pedidosFiltrados = rows.slice(1).filter(r => r[1] && r[1] !== ""); 
-                todosOsPedidos = pedidosFiltrados.map((row, idx) => ({
+                const pedidosComLinha = rows.slice(1).map((row, idx) => ({
                     linhaOriginal: idx + 2,
                     dataFull: row[0], 
                     objData: parseDataBR(row[0]),
@@ -286,7 +285,11 @@
                     telefone: row[8] || "",
                     taxa: row[9] || "0,00",
                     troco: row[10] || "NÃO"
-                })).filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
+                }));
+
+                todosOsPedidos = pedidosComLinha
+                    .filter(p => p.nome && p.nome !== "")
+                    .filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
 
                 const pendentesAtuais = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
 
