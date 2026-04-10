@@ -356,11 +356,21 @@
                         </div>
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
-                            ${p.itens.split('|').filter(i => i && i.trim() !== "").map(i => {
-                                const item = i.trim();
-                                const isObs = item.toUpperCase().startsWith("OBS:");
-                                return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
-                            }).join('')}
+                            ${p.itens
+                                .split('|')
+                                .flatMap(i => {
+                                    const item = i.trim();
+                                    if (!item) return [];
+                                    const matchObs = item.match(/^(.*?)(\s*OBS:.*)$/i);
+                                    if (matchObs && matchObs[1].trim()) {
+                                        return [matchObs[1].trim(), matchObs[2].trim()];
+                                    }
+                                    return [item];
+                                })
+                                .map(item => {
+                                    const isObs = item.toUpperCase().startsWith("OBS:");
+                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
+                                }).join('')}
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 mb-5">
