@@ -174,9 +174,11 @@
                 if (prioritario(a.status) !== prioritario(b.status)) return prioritario(a.status) - prioritario(b.status);
                 return b.objData - a.objData;
             });
+
             lista.forEach(p => {
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
+                const statusFinal = p.status.toUpperCase();
                 
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
@@ -189,19 +191,19 @@
                                 <span class="text-[10px] font-black text-zinc-500 block uppercase">${p.dataFull}</span>
                                 <span class="status-badge mt-2 inline-block ${corStatus} text-white">${p.status}</span>
                             </div>
-                            <span class="timer-badge" data-hora="${p.objData.toISOString()}" data-status="${p.status}">0m</span>
+                            <span class="timer-badge" data-hora="${p.objData.toISOString()}" data-status="${statusFinal}">0m</span>
                         </div>
                         <h3 class="text-2xl font-black italic mb-1 uppercase tracking-tighter">${p.nome}</h3>
                         <p class="text-[10px] font-bold text-zinc-500 mb-4 uppercase italic">📍 ${p.endereco}</p>
                         
-                        <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
-                            ${p.itens.split('|').map(i => `<div class="mb-2 text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${i.trim()}</div>`).join('')}
-                        </div>
-
                         <div class="grid grid-cols-3 gap-1 mb-4">
                             <button onclick="abrirWhats('${p.telefone}')" class="btn-whats p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
                             <button onclick="abrirMapa('${p.endereco}')" class="btn-mapa p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
                             <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega p-3 rounded-xl text-[9px] font-black uppercase hover:opacity-80 transition-all">Saiu p/ Entrega</button>
+                        </div>
+
+                        <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
+                            ${p.itens.split('|').map(i => `<div class="mb-2 text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${i.trim()}</div>`).join('')}
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 mb-5">
@@ -233,32 +235,25 @@
         async function alterarStatus(linha, status, btn) {
             const txt = btn.innerHTML;
             btn.innerHTML = "⏳";
-
-            // Atualização visual imediata no card
-            const card = document.getElementById(`card-${linha}`);
-            if (card) {
-                const timer = card.querySelector('.timer-badge');
-                if (timer) {
-                    timer.setAttribute('data-status', status); // Atualiza o atributo para a lógica de pausa
-                }
-            }
+            
+            // Força a pausa visual do cronômetro imediatamente
+            const badge = document.querySelector(`#card-${linha} .timer-badge`);
+            if(badge) badge.setAttribute('data-status', status.toUpperCase());
 
             try {
                 await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}&t=${new Date().getTime()}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1500);
-            } catch (e) { 
-                btn.innerHTML = txt; 
-            }
+            } catch (e) { btn.innerHTML = txt; }
         }
 
         function atualizarCronometros() {
             const agora = new Date();
             document.querySelectorAll('.timer-badge').forEach(el => {
-                const status = el.getAttribute('data-status');
+                const status = el.getAttribute('data-status') ? el.getAttribute('data-status').toUpperCase() : "";
 
-                // Se o status for concluído, travamos o texto e mudamos o estilo para parado
-                if (status && status.includes("CONCLUIDO")) {
-                    el.innerText = "--"; // Ou você pode colocar "Ok" ou "Fim"
+                // CORREÇÃO DEFINITIVA: Se concluído, trava em "OK" e não faz a conta
+                if (status.includes("CONCLUIDO")) {
+                    el.innerText = "OK";
                     el.className = "timer-badge bg-zinc-800 opacity-40";
                     return; 
                 }
