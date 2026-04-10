@@ -140,7 +140,26 @@
             const agora = new Date();
             const hh = String(agora.getHours()).padStart(2, '0');
             const mm = String(agora.getMinutes()).padStart(2, '0');
-            return `CONCLUIDO ${hh}:${mm}`;
+            return `${hh}:${mm}`;
+        }
+
+        function lerHorariosConclusao() {
+            try {
+                return JSON.parse(localStorage.getItem('kf_horarios_conclusao') || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function salvarHorarioConclusao(linha, hora) {
+            const horarios = lerHorariosConclusao();
+            horarios[String(linha)] = hora;
+            localStorage.setItem('kf_horarios_conclusao', JSON.stringify(horarios));
+        }
+
+        function obterHorarioConclusao(linha) {
+            const horarios = lerHorariosConclusao();
+            return horarios[String(linha)] || "";
         }
 
         async function carregarPedidos() {
@@ -190,7 +209,7 @@
             lista.forEach(p => {
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
-                const horaConclusao = extrairHoraConclusao(p.status);
+                const horaConclusao = extrairHoraConclusao(p.status) || (p.status.includes("CONCLU") ? obterHorarioConclusao(p.linhaOriginal) : "");
                 
                 let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
                                (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
@@ -237,7 +256,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2 mb-4">
                             <button onclick="pararSom(); alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 py-3 rounded-xl font-black text-[9px] uppercase hover:bg-blue-500">Cozinha</button>
-                            <button onclick="alterarStatus(${p.linhaOriginal}, gerarStatusConcluido(), this)" class="bg-emerald-600 py-3 rounded-xl font-black text-[9px] uppercase hover:bg-emerald-500">Concluir</button>
+                            <button onclick="concluirPedido(${p.linhaOriginal}, this)" class="bg-emerald-600 py-3 rounded-xl font-black text-[9px] uppercase hover:bg-emerald-500">Concluir</button>
                         </div>
                         <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                             <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
@@ -291,6 +310,12 @@
             } catch (e) { 
                 btn.innerHTML = txt; 
             }
+        }
+
+        function concluirPedido(linha, btn) {
+            const hora = gerarStatusConcluido();
+            salvarHorarioConclusao(linha, hora);
+            alterarStatus(linha, 'CONCLUIDO', btn);
         }
 
         function abrirWhats(tel) {
