@@ -116,7 +116,7 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbzFKb7_DtRqgvjV3meQqSVmPZBZ9xO1w74lDIKQN74-G1WazyXRtGR0ywqZJiQgi2_Hgg/exec";
+        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec";
         
         let estoquePausado = []; 
         let zonasEntrega = [];
@@ -176,6 +176,7 @@
         
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
+        let localizacaoPedido = null;
 
         async function init() {
             verificarStatusLoja();
@@ -216,6 +217,11 @@
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
             infoDistancia.style.color = "#FFD700";
             try {
+                if (loc && typeof loc.lat === 'function' && typeof loc.lng === 'function') {
+                    localizacaoPedido = { lat: loc.lat(), lng: loc.lng(), fonte: "maps_autocomplete" };
+                } else if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+                    localizacaoPedido = { lat: loc.lat, lng: loc.lng, fonte: "maps_geocode" };
+                }
                 let dadosTratados = zonasEntrega;
                 if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
@@ -237,6 +243,24 @@
                 }
             } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR"; }
             updateCartUI();
+        }
+
+        function capturarLocalizacaoAtual() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    resolve(null);
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => resolve({
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        fonte: "gps_usuario"
+                    }),
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 9000, maximumAge: 120000 }
+                );
+            });
         }
 
         function updateCartUI() {
@@ -398,13 +422,20 @@
             const troco = document.getElementById('troco-val').value;
             
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
+
+            let geoFinal = localizacaoPedido;
+            if (!geoFinal) {
+                geoFinal = await capturarLocalizacaoAtual();
+            }
+            const geoLink = geoFinal ? `https://www.google.com/maps?q=${geoFinal.lat},${geoFinal.lng}` : "";
             
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${pagto==='Dinheiro'?' (Troco p/ '+troco+')':''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
             if(obs) msg += `%0A*📝 OBS:* ${obs.toUpperCase()}%0A`;
+            if(geoLink) msg += `%0A*📌 LOCALIZAÇÃO:* ${encodeURIComponent(geoLink)}%0A`;
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
-            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: "+obs+"]" : ""), taxa: taxaEntrega.toFixed(2), troco: troco }) });
+            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i=>i.name).join(" | ") + (obs ? " [OBS: "+obs+"]" : ""), taxa: taxaEntrega.toFixed(2), troco: troco, latitude: geoFinal ? geoFinal.lat : "", longitude: geoFinal ? geoFinal.lng : "", localizacao_link: geoLink, localizacao_fonte: geoFinal ? geoFinal.fonte : "nao_informada" }) });
             
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
             cart = []; updateCartUI(); toggleCart();
