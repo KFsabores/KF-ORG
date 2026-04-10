@@ -313,9 +313,14 @@
             lastCartSize = cart.length;
 
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
-                <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
-                    <span class="uppercase">${i.name}</span>
-                    <button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 font-bold">✕</button>
+                <div class="flex justify-between items-center bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2 gap-2">
+                    <div class="flex flex-col flex-1">
+                        <span class="uppercase font-bold text-white">${i.name}</span>
+                        <span class="gold-text font-black mt-1">R$ ${i.price.toFixed(2)}</span>
+                    </div>
+                    <button onclick="cart.splice(${idx},1);updateCartUI()" class="text-red-500 hover:text-red-400 transition-colors p-2 text-lg">
+                        🗑️
+                    </button>
                 </div>`).join('');
         }
 
@@ -419,7 +424,16 @@
                 html += `<div class="mt-4"><label class="text-[10px] gold-text font-black uppercase italic">Escolha o Refrigerante</label><select id="promo-refri-select">${bebidasF.map(b => `<option value="${b.name}">${b.name}</option>`).join('')}</select></div>`;
             }
             if(currentItem.p35) {
-                html += `<div class="flex gap-2 mt-4"><button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700">25CM</button><button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]">35CM</button></div>`;
+                html += `<div class="flex gap-2 mt-4">
+                    <button onclick="selectSize(25)" id="btn-25" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 flex flex-col items-center">
+                        <span>25CM</span>
+                        <span class="text-[10px] opacity-70 mt-1">R$ ${currentItem.p25.toFixed(2)}</span>
+                    </button>
+                    <button onclick="selectSize(35)" id="btn-35" class="flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14] flex flex-col items-center">
+                        <span>35CM</span>
+                        <span class="text-[10px] opacity-70 mt-1">R$ ${currentItem.p35.toFixed(2)}</span>
+                    </button>
+                </div>`;
             }
             container.innerHTML = html;
             document.getElementById('item-modal').classList.remove('hidden');
@@ -432,8 +446,8 @@
 
         function selectSize(s) { 
             selectedSize = s; 
-            document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
-            document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14]':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700'; 
+            document.getElementById('btn-25').className = s===25?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14] flex flex-col items-center':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 flex flex-col items-center'; 
+            document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14] flex flex-col items-center':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 flex flex-col items-center'; 
         }
 
         function addToCartFinal() {
