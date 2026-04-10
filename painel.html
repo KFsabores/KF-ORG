@@ -454,7 +454,7 @@
         async function concluirPedido(linha, btn) {
             const hora = gerarStatusConcluido();
             salvarHorarioConclusao(linha, hora);
-            const ok = await alterarStatus(linha, 'CONCLUIDO', btn);
+            const ok = await alterarStatus(linha, 'CONCLUIDO ' + hora, btn);
             if (!ok) removerHorarioConclusao(linha);
         }
 
