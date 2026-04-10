@@ -289,7 +289,8 @@
                     latitude: row[11] || "",
                     longitude: row[12] || "",
                     localizacaoLink: row[13] || "",
-                    localizacaoFonte: row[14] || ""
+                    localizacaoFonte: row[14] || "",
+                    chaveAlerta: `${row[0] || ""}|${row[1] || ""}|${row[3] || ""}|${row[5] || ""}`
                 }));
 
                 todosOsPedidos = pedidosComLinha
@@ -299,9 +300,9 @@
                 const pendentesAtuais = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
 
                 if (primeiraCarga) {
-                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.linhaOriginal));
+                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.chaveAlerta));
                 } else {
-                    const novosPendentes = pendentesAtuais.filter(p => !pedidosPendentesVistos.has(p.linhaOriginal));
+                    const novosPendentes = pendentesAtuais.filter(p => !pedidosPendentesVistos.has(p.chaveAlerta));
                     if (novosPendentes.length > 0) {
                         if (audioDesbloqueado) {
                             tocarSomPedidoNovo();
@@ -312,7 +313,7 @@
                             status.classList.add('text-zinc-500');
                         }
                     }
-                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.linhaOriginal));
+                    pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.chaveAlerta));
                 }
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
