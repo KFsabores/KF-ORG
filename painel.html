@@ -162,6 +162,21 @@
             return horarios[String(linha)] || "";
         }
 
+        function removerHorarioConclusao(linha) {
+            const horarios = lerHorariosConclusao();
+            delete horarios[String(linha)];
+            localStorage.setItem('kf_horarios_conclusao', JSON.stringify(horarios));
+        }
+
+        function normalizarTelefoneBR(tel) {
+            if (!tel) return "";
+            let num = String(tel).replace(/\D/g, '').replace(/^0+/, '');
+            if (num.length === 10 || num.length === 11) num = "55" + num;
+            if (num.length < 12 || num.length > 13) return "";
+            if (!num.startsWith("55")) return "";
+            return num;
+        }
+
         async function carregarPedidos() {
             const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
             try {
@@ -237,10 +252,10 @@
                         </div>
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
-                            ${p.itens.split('|').map(i => {
+                            ${p.itens.split('|').filter(i => i && i.trim() !== "").map(i => {
                                 const item = i.trim();
                                 const isObs = item.toUpperCase().startsWith("OBS:");
-                                return `<div class="${isObs ? 'mt-3' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
+                                return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
                             }).join('')}
                         </div>
 
@@ -305,23 +320,25 @@
             }
 
             try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${status}&t=${new Date().getTime()}`, { mode: 'no-cors' });
+                await fetch(`${WEB_APP_URL}?row=${linha}&status=${encodeURIComponent(status)}&t=${new Date().getTime()}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1500);
+                return true;
             } catch (e) { 
                 btn.innerHTML = txt; 
+                return false;
             }
         }
 
-        function concluirPedido(linha, btn) {
+        async function concluirPedido(linha, btn) {
             const hora = gerarStatusConcluido();
             salvarHorarioConclusao(linha, hora);
-            alterarStatus(linha, 'CONCLUIDO', btn);
+            const ok = await alterarStatus(linha, 'CONCLUIDO', btn);
+            if (!ok) removerHorarioConclusao(linha);
         }
 
         function abrirWhats(tel) {
-            if(!tel || tel === "") return alert("Telefone não disponível.");
-            let num = tel.replace(/\D/g, '');
-            if(num.length === 11) num = "55" + num;
+            const num = normalizarTelefoneBR(tel);
+            if(!num) return alert("Telefone inválido ou não disponível.");
             window.open(`https://wa.me/${num}`, '_blank');
         }
 
@@ -331,9 +348,8 @@
         }
 
         function enviarEntrega(tel, nome) {
-            if(!tel || tel === "") return alert("Telefone não disponível.");
-            let num = tel.replace(/\D/g, '');
-            if(num.length === 11) num = "55" + num;
+            const num = normalizarTelefoneBR(tel);
+            if(!num) return alert("Telefone inválido ou não disponível.");
             const msg = encodeURIComponent(`🚀 Olá, ${nome}! Seu pedido da *KF Sabores* acabou de sair para entrega!`);
             window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
@@ -345,6 +361,7 @@
                 pedidosExcluidosLocalmente.add(linha);
                 try {
                     await fetch(`${WEB_APP_URL}?action=delete&row=${linha}&t=${new Date().getTime()}`, { mode: 'no-cors' });
+                    removerHorarioConclusao(linha);
                     setTimeout(() => { if(card) card.remove(); }, 500);
                 } catch(e) {
                     pedidosExcluidosLocalmente.delete(linha);
