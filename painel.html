@@ -137,11 +137,11 @@
             }
         }
 
-        function tocarPulsoAnalogico(inicio, duracao = 0.75) {
+        function tocarPulsoAnalogico(inicio, duracao = 0.75, volumeMax = 0.42) {
             if (!audioCtx || !compressor) return;
             const ganho = audioCtx.createGain();
             ganho.gain.setValueAtTime(0.0001, inicio);
-            ganho.gain.exponentialRampToValueAtTime(0.42, inicio + 0.015);
+            ganho.gain.exponentialRampToValueAtTime(volumeMax, inicio + 0.015);
             ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
             ganho.connect(compressor);
 
@@ -188,6 +188,7 @@
         function tocarSomPedidoNovo() {
             if (!audioDesbloqueado) return;
             pararSom();
+            ringtone.volume = 1;
             ringtone.currentTime = 0;
             ringtone.play().catch(() => {
                 // Fallback para toque sintético se o arquivo falhar.
@@ -589,10 +590,10 @@
         document.body.addEventListener('click', async () => {
             try {
                 garantirAudioContext();
-                ringtone.volume = 1;
+                ringtone.volume = 0.08;
                 if (audioCtx && audioCtx.state === 'running') {
                     // Pulso rápido para garantir desbloqueio em alguns navegadores.
-                    tocarPulsoAnalogico(audioCtx.currentTime + 0.01, 0.06);
+                    tocarPulsoAnalogico(audioCtx.currentTime + 0.01, 0.05, 0.05);
                 } else {
                     await ringtone.play();
                     ringtone.pause();
