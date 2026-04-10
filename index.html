@@ -23,6 +23,12 @@
         .modal-btn { border: 2px solid #333; padding: 12px; border-radius: 15px; font-size: 12px; font-weight: 900; color: #666; text-transform: uppercase; transition: 0.3s; }
         .modal-btn.active { border-color: #39FF14; color: #39FF14; background: rgba(57, 255, 20, 0.1); }
         #banner-status { background: rgba(255, 68, 68, 0.15); border: 1px solid #ff4444; color: #ff4444; }
+        @keyframes cart-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+        .animate-pop { animation: cart-pop 0.3s ease-out; }
     </style>
 </head>
 <body class="pb-24">
@@ -177,6 +183,7 @@
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
         let localizacaoPedido = null;
+        let lastCartSize = 0;
         const CACHE_ESTOQUE_KEY = "kf_cache_estoque_pausado";
         const CACHE_MAPA_KEY = "kf_cache_mapa_zonas";
 
@@ -292,7 +299,19 @@
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
             document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
             document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
-            document.getElementById('cart-count').innerText = cart.length;
+            
+            const cartCountEl = document.getElementById('cart-count');
+            cartCountEl.innerText = cart.length;
+            
+            // Animação se o carrinho aumentou
+            if (cart.length > lastCartSize) {
+                const cartBtn = cartCountEl.parentElement;
+                cartBtn.classList.remove('animate-pop');
+                void cartBtn.offsetWidth; // Trigger reflow
+                cartBtn.classList.add('animate-pop');
+            }
+            lastCartSize = cart.length;
+
             document.getElementById('cart-items').innerHTML = cart.map((i, idx) => `
                 <div class="flex justify-between bg-black p-3 rounded-xl border border-zinc-800 text-[10px] mb-2">
                     <span class="uppercase">${i.name}</span>
