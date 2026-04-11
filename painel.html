@@ -83,7 +83,8 @@
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[110] p-4 bg-black/95">
-        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="absolute top-6 right-6 text-zinc-500 hover:text-white font-black text-xl">✕</button>
             <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Relatório de Faturamento</h2>
             <div class="space-y-6">
                 <div>
@@ -100,7 +101,10 @@
                         <input type="time" id="rel-hora-fim" value="23:59" class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
                     </div>
                 </div>
-                <button onclick="processarRelatorio()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Processar Vendas</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="setPeriodoHoje()" class="w-full bg-zinc-700 text-white py-4 rounded-2xl font-black uppercase text-xs hover:bg-zinc-600 transition-all shadow-lg">Setar HOJE (18h-02h)</button>
+                    <button onclick="processarRelatorio()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Processar Vendas</button>
+                </div>
                 <div id="resultado-relatorio" class="hidden mt-6 pt-6 border-t border-zinc-800 space-y-4"></div>
             </div>
             <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-6 text-zinc-500 font-black uppercase text-[10px] hover:text-white">Cancelar</button>
@@ -624,6 +628,21 @@
             document.getElementById('modal-relatorio').classList.remove('hidden');
         }
         
+        function setPeriodoHoje() {
+            const agora = new Date();
+            const f = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            
+            const hoje = f(agora);
+            const amanhaDate = new Date();
+            amanhaDate.setDate(agora.getDate() + 1);
+            const amanha = f(amanhaDate);
+            
+            document.getElementById('rel-data-inicio').value = hoje;
+            document.getElementById('rel-hora-inicio').value = "18:00";
+            document.getElementById('rel-data-fim').value = amanha;
+            document.getElementById('rel-hora-fim').value = "02:00";
+        }
+
         function processarRelatorio() {
             const dataIni = document.getElementById('rel-data-inicio').value;
             const horaIni = document.getElementById('rel-hora-inicio').value;
