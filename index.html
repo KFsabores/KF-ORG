@@ -451,19 +451,70 @@
         }
 
         function addToCartFinal() {
-            const flavAs = document.querySelectorAll('.flavor-a'); 
-            const flavBs = document.querySelectorAll('.flavor-b');
-            const refriSelect = document.getElementById('promo-refri-select');
-            let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
-            let desc = []; 
-            flavAs.forEach((f, i) => { 
-                let sA = f.value; let sB = flavBs[i].value; 
-                desc.push(sB && sB !== sA ? `½ ${sA} / ½ ${sB}` : sA + ' (Inteira)'); 
-            });
-            let finalName = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
-            if(refriSelect) finalName += ` + BEBIDA: ${refriSelect.value}`;
-            cart.push({ name: finalName.toUpperCase(), price });
-            updateCartUI(); closeModal();
+    const flavAs = document.querySelectorAll('.flavor-a'); 
+    const flavBs = document.querySelectorAll('.flavor-b');
+    const refriSelect = document.getElementById('promo-refri-select');
+    
+    // Pegamos o preço base do item clicado (importante para Promos)
+    let precoFinalItem = currentItem.price || 0;
+    let desc = []; 
+
+    // Função auxiliar para buscar o preço de um sabor específico no menuData
+    const buscarPrecoSabor = (nomeSabor, tamanho) => {
+        const categorias = ['tradicional', 'especial', 'premium', 'doces'];
+        for (let cat of categorias) {
+            let achado = menuData[cat].find(s => s.name === nomeSabor);
+            if (achado) {
+                return tamanho === 25 ? achado.p25 : achado.p35;
+            }
+        }
+        return 0;
+    };
+
+    flavAs.forEach((f, i) => { 
+        let sA = f.value; 
+        let sB = flavBs[i].value; // Se for inteira, sB vem vazio "" ou "(INTEIRA)"
+        
+        if (sB && sB !== "" && sB.includes('½')) {
+            // É MEIO A MEIO
+            let nomeSaborB = sB.replace('½ ', '').trim();
+            
+            let pA = buscarPrecoSabor(sA, selectedSize);
+            let pB = buscarPrecoSabor(nomeSaborB, selectedSize);
+            
+            // Pega o maior entre os dois sabores
+            let maiorValorMetade = Math.max(pA, pB);
+            
+            // Se o maior valor da pizza escolhida for maior que o preço atual (ou se for zero/promo)
+            if (maiorValorMetade > precoFinalItem) {
+                precoFinalItem = maiorValorMetade;
+            }
+            
+            desc.push(`½ ${sA} / ${sB}`);
+        } else {
+            // É INTEIRA
+            let precoInteira = buscarPrecoSabor(sA, selectedSize);
+            if (precoInteira > precoFinalItem) {
+                precoFinalItem = precoInteira;
+            }
+            desc.push(sA + ' (Inteira)');
+        }
+    });
+
+    // Se for uma PROMOÇÃO com preço fixo e o preço calculado for 0 (porque sabores de promo não têm p25/p35 individuais no seu objeto)
+    // mantemos o preço da promoção original.
+    if (currentItem.price && precoFinalItem === 0) {
+        precoFinalItem = currentItem.price;
+    }
+
+    let finalName = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
+    if(refriSelect) finalName += ` + BEBIDA: ${refriSelect.value}`;
+    
+    cart.push({ name: finalName.toUpperCase(), price: precoFinalItem });
+    updateCartUI(); 
+    closeModal();
+}
+
         }
 
         // --- FINALIZAÇÃO ---
