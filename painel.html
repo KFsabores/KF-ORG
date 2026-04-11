@@ -392,7 +392,7 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-2 mb-4">
-                            <button onclick="alterarStatus(${p.linhaOriginal}, 'PREPARANDO', this)" class="bg-blue-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-blue-500">Cozinha</button>
+                            <button onclick="confirmarPedido(${p.linhaOriginal}, this, '${p.telefone}', '${p.nome}')" class="bg-blue-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-blue-500">Confirmado</button>
                             <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega py-2.5 rounded-xl font-black text-[8px] uppercase hover:opacity-80 transition-all">Saiu para entrega</button>
                             <button onclick="concluirPedido(${p.linhaOriginal}, this)" class="bg-emerald-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-emerald-500">Concluir</button>
                         </div>
@@ -429,6 +429,17 @@
                 else if(diff > 25) el.className = "timer-badge bg-orange-600";
                 else el.className = "timer-badge bg-zinc-700";
             });
+        }
+
+        async function confirmarPedido(linha, btn, tel, nome) {
+            const ok = await alterarStatus(linha, 'PREPARANDO', btn);
+            if (ok) {
+                const num = normalizarTelefoneBR(tel);
+                if (num) {
+                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! 🍕🌮`);
+                    window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+                }
+            }
         }
 
         async function alterarStatus(linha, status, btn) {
