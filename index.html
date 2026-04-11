@@ -450,21 +450,21 @@
             document.getElementById('btn-35').className = s===35?'flex-1 p-3 border-2 rounded-xl text-xs font-bold neon-border text-[#39FF14] flex flex-col items-center':'flex-1 p-3 border-2 rounded-xl text-xs font-bold border-zinc-700 flex flex-col items-center'; 
         }
 
-                function addToCartFinal() {
+        function addToCartFinal() {
             const flavAs = document.querySelectorAll('.flavor-a'); 
             const flavBs = document.querySelectorAll('.flavor-b');
             const refriSelect = document.getElementById('promo-refri-select');
             
-            // Define o preço inicial (da categoria ou da promoção)
-            let finalPrice = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
+            // 1. Pegamos o preço inicial (baseado no tamanho)
+            let price = currentItem.price || (selectedSize === 25 ? currentItem.p25 : currentItem.p35);
             let desc = []; 
 
-            // Função interna para encontrar o preço de um sabor em qualquer categoria
-            const getPriceByName = (name) => {
-                const categories = ['tradicional', 'especial', 'premium', 'doces'];
-                for (let c of categories) {
-                    let found = menuData[c].find(item => item.name === name);
-                    if (found) return (selectedSize === 25 ? found.p25 : found.p35);
+            // Função para buscar preço real do sabor em qualquer categoria
+            const buscarValorSabor = (nome) => {
+                const cats = ['tradicional', 'especial', 'premium', 'doces'];
+                for (let c of cats) {
+                    let achado = menuData[c].find(s => s.name === nome);
+                    if (achado) return (selectedSize === 25 ? achado.p25 : achado.p35);
                 }
                 return 0;
             };
@@ -472,29 +472,25 @@
             flavAs.forEach((f, i) => { 
                 let sA = f.value; 
                 let sB = flavBs[i].value; 
-                
-                // Se houver uma segunda metade selecionada
-                if (sB && sB !== "" && sB.includes('½')) {
-                    let nameB = sB.replace('½ ', '').trim();
+
+                // Se houver sabor B e ele não for "(INTEIRA)"
+                if (sB && sB !== "") {
+                    // Limpamos o nome do sabor B (tirando o ½ ) para buscar o preço
+                    let nomeSaborB = sB.replace('½ ', '').trim();
                     
-                    let pA = getPriceByName(sA);
-                    let pB = getPriceByName(nameB);
+                    let precoA = buscarValorSabor(sA);
+                    let precoB = buscarValorSabor(nomeSaborB);
                     
-                    // Compara as duas metades e pega a maior
-                    let maxFlavorPrice = Math.max(pA, pB);
-                    
-                    // Se o maior sabor for mais caro que o preço base, atualiza o preço final
-                    if (maxFlavorPrice > finalPrice) {
-                        finalPrice = maxFlavorPrice;
-                    }
-                    
-                    desc.push(`½ ${sA} / ${sB}`);
+                    // A MÁGICA: O preço da pizza vira o maior entre os dois
+                    let maior = Math.max(precoA, precoB);
+                    if (maior > price) price = maior;
+
+                    desc.push(`½ ${sA} / ${sB}`); 
                 } else {
-                    // Se for inteira, verifica se o valor dela é maior que o base (importante para trocas)
-                    let pInteira = getPriceByName(sA);
-                    if (pInteira > finalPrice) {
-                        finalPrice = pInteira;
-                    }
+                    // Se for inteira, mas o sabor for de uma categoria mais cara que a aberta
+                    let precoInteira = buscarValorSabor(sA);
+                    if (precoInteira > price) price = precoInteira;
+                    
                     desc.push(sA + ' (Inteira)'); 
                 }
             });
@@ -502,8 +498,9 @@
             let finalName = `${currentItem.p35 ? selectedSize+'CM ' : ''}${currentItem.name} (${desc.join(" | ")})`;
             if(refriSelect) finalName += ` + BEBIDA: ${refriSelect.value}`;
             
-            // Adiciona ao carrinho com o preço final calculado (o maior)
-            cart.push({ name: finalName.toUpperCase(), price: finalPrice });
+            // 2. Adiciona ao carrinho (Garanta que o 'price' aqui é o que calculamos acima)
+            cart.push({ name: finalName.toUpperCase(), price: price });
+            
             updateCartUI(); 
             closeModal();
         }
