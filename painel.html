@@ -395,8 +395,17 @@
                                     return [item];
                                 })
                                 .map(item => {
-                                    const isObs = item.toUpperCase().startsWith("OBS:");
-                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
+                                    const isObs = item.toUpperCase().startsWith("OBS:") || item.includes("📝");
+                                    let content = item;
+                                    let priceHtml = "";
+                                    
+                                    const match = item.match(/\(R\$\s?\d+[,.]\d{2}\)/i);
+                                    if (match) {
+                                        content = item.replace(match[0], "").trim();
+                                        priceHtml = `<div class="text-[10px] text-yellow-400 font-bold mt-1">${match[0]}</div>`;
+                                    }
+
+                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${content}${priceHtml}</div>`;
                                 }).join('')}
                         </div>
 
