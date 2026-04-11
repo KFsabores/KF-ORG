@@ -144,8 +144,8 @@
                 { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L" }
             ],
             tradicional: [
-                { name: "Mussarela", p25: 24, p35: 39 }, { name: "Presunto", p25: 24, p35: 39 },
-                { name: "Calabresa", p25: 24, p35: 39 }, { name: "3 Queijos", p25: 24, p35: 39 },
+                { name: "Mussarela", p25: 24, p35: 39 }, { name: "Presunto", p25: 24, p35: 39 }, { name: "Mista", p25: 24, p35: 39 }, 
+                { name: "Calabresa", p25: 24, p35: 39 }, { name: "3 Queijos", p25: 24, p35: 39 },{ name: "Palmito", p25: 24, p35: 39 },
                 { name: "Marguerita", p25: 24, p35: 39 }, { name: "Alho", p25: 24, p35: 39 }
             ],
             especial: [
@@ -178,7 +178,7 @@
         };
 
         const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
-        const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos"];
+        const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos", "Alho", "Mista"];
         
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
