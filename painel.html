@@ -83,8 +83,15 @@
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[110] p-4 bg-black/95">
-        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="absolute top-6 right-6 text-zinc-500 hover:text-white transition-all text-xl font-black">✕</button>
             <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Relatório de Faturamento</h2>
+            
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="setPeriodoHoje()" class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">☀️ HOJE</button>
+                <button onclick="setPeriodoSemana()" class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">📅 SEMANA</button>
+            </div>
+
             <div class="space-y-6">
                 <div>
                     <label class="text-[10px] font-black text-zinc-500 block mb-2 uppercase">Período Inicial</label>
@@ -103,7 +110,6 @@
                 <button onclick="processarRelatorio()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Processar Vendas</button>
                 <div id="resultado-relatorio" class="hidden mt-6 pt-6 border-t border-zinc-800 space-y-4"></div>
             </div>
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="w-full mt-6 text-zinc-500 font-black uppercase text-[10px] hover:text-white">Cancelar</button>
         </div>
     </div>
 
@@ -449,7 +455,7 @@
             if (ok) {
                 const num = normalizarTelefoneBR(tel);
                 if (num) {
-                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! ⏳ (Para pagamento em PIX: fagpln@gmail.com)`);
+                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! 🍕🌮`);
                     window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
                 }
             }
@@ -635,6 +641,51 @@
         function abrirModalRelatorio() {
             document.getElementById('resultado-relatorio').classList.add('hidden');
             document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        function formatarDataISO(data) {
+            const y = data.getFullYear();
+            const m = String(data.getMonth() + 1).padStart(2, '0');
+            const d = String(data.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function setPeriodoHoje() {
+            const agora = new Date();
+            // Se for antes das 12h, o turno "hoje" começou ontem
+            if (agora.getHours() < 12) {
+                agora.setDate(agora.getDate() - 1);
+            }
+            const dataInicio = formatarDataISO(agora);
+            
+            const amanha = new Date(agora);
+            amanha.setDate(amanha.getDate() + 1);
+            const dataFim = formatarDataISO(amanha);
+            
+            document.getElementById('rel-data-inicio').value = dataInicio;
+            document.getElementById('rel-hora-inicio').value = "16:00";
+            document.getElementById('rel-data-fim').value = dataFim;
+            document.getElementById('rel-hora-fim').value = "03:00";
+        }
+
+        function setPeriodoSemana() {
+            const agora = new Date();
+            const diaSemana = agora.getDay(); // 0-Dom, 1-Seg, ..., 4-Qui, 5-Sex, 6-Sab
+            
+            // Quinta-feira passada (ou hoje se for quinta)
+            let quinta = new Date(agora);
+            let diffQuinta = diaSemana - 4;
+            if (diffQuinta < 0) diffQuinta += 7; // Se for seg/ter/qua, volta pra semana passada
+            quinta.setDate(agora.getDate() - diffQuinta);
+            
+            // Segunda-feira próxima relativa a essa quinta
+            let segunda = new Date(quinta);
+            segunda.setDate(quinta.getDate() + 4); // Quinta + 4 dias = Segunda
+            
+            document.getElementById('rel-data-inicio').value = formatarDataISO(quinta);
+            document.getElementById('rel-hora-inicio').value = "16:00";
+            document.getElementById('rel-data-fim').value = formatarDataISO(segunda);
+            document.getElementById('rel-hora-fim').value = "12:00";
         }
         
         function processarRelatorio() {
