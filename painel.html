@@ -395,8 +395,17 @@
                                     return [item];
                                 })
                                 .map(item => {
-                                    const isObs = item.toUpperCase().startsWith("OBS:");
-                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1">/ ${item}</div>`;
+                                    const isObs = item.toUpperCase().startsWith("OBS:") || item.includes("📝");
+                                    let content = item;
+                                    let priceHtml = "";
+                                    
+                                    const match = item.match(/\(R\$\s?\d+[,.]\d{2}\)/i);
+                                    if (match) {
+                                        content = item.replace(match[0], "").trim();
+                                        priceHtml = `<div class="text-[10px] text-yellow-500 font-bold mt-0.5 leading-none">${match[0]}</div>`;
+                                    }
+
+                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1 flex flex-col"><span>/ ${content}</span>${priceHtml}</div>`;
                                 }).join('')}
                         </div>
 
@@ -455,7 +464,7 @@
             if (ok) {
                 const num = normalizarTelefoneBR(tel);
                 if (num) {
-                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! 🍕🌮`);
+                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! 🍕🌮\n\nNossa Chave Pix: fagpln@gmail.com`);
                     window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
                 }
             }
