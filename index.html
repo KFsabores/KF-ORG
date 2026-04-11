@@ -122,7 +122,7 @@
 
     <script>
         const WHATSAPP_NUMBER = "5521997437285";
-        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec";
+        const URL_PLANILHA = "https://script.google.com/macros/s/AKfycbyGnKIaZ4-hZ_pqJmFPxFBGFHMQsn49NHL1qKwDSkssWeD70kBm4vgq8T-AgVM7cjWs7w/exec";
         
         let estoquePausado = []; 
         let zonasEntrega = [];
@@ -137,24 +137,48 @@
             0: { abrir: 1900, fechar: 2500 }
         };
 
-        let menuData = {
-            promos: [],
-            tradicional: [],
-            especial: [],
-            premium: [],
-            doces: [],
+        const menuData = {
+            promos: [
+                { name: "2 Pizzas 25cm + Refri 1L", price: 55.00, pizzas: 2, refri: "1L", fixedDrink: "Guaraná 1L" },
+                { name: "1 Pizza 35cm + Refri 2L", price: 46.00, pizzas: 1, refri: "2L" },
+                { name: "2 Pizzas 35cm + Refri 2L", price: 85.00, pizzas: 2, refri: "2L" }
+            ],
+            tradicional: [
+                { name: "Mussarela", p25: 24, p35: 39 }, { name: "Presunto", p25: 24, p35: 39 }, { name: "Mista", p25: 24, p35: 39 }, 
+                { name: "Calabresa", p25: 24, p35: 39 }, { name: "3 Queijos", p25: 24, p35: 39 },{ name: "Palmito", p25: 24, p35: 39 },
+                { name: "Marguerita", p25: 24, p35: 39 }, { name: "Alho", p25: 24, p35: 39 }
+            ],
+            especial: [
+                { name: "Frango c/ Catupiry", p25: 29, p35: 43 }, { name: "Frango c/ Cheddar", p25: 29, p35: 43 },
+                { name: "Portuguesa", p25: 29, p35: 43 }, { name: "Peito de Peru", p25: 29, p35: 43 },
+                { name: "Lombo Canadense", p25: 29, p35: 43 }
+            ],
+            premium: [
+                { name: "Camarão c/ Catupiry", p25: 32, p35: 58 }, { name: "Camarão c/ Cheddar", p25: 32, p35: 58 },
+                { name: "Camarão c/ Alho", p25: 32, p35: 58 }, { name: "Bacon com Ovos", p25: 32, p35: 58 }
+            ],
+            doces: [
+                { name: "Banana c/ Canela", p25: 30, p35: 45 }, { name: "Prestígio", p25: 30, p35: 45 },
+                { name: "M&M", p25: 30, p35: 45 }, { name: "Paçoca", p25: 30, p35: 45 },
+                { name: "Romeu e Julieta", p25: 30, p35: 45 }, { name: "Caribe", p25: 30, p35: 45 },
+                { name: "Sensação", p25: 30, p35: 45 }, { name: "Banana Nevada", p25: 30, p35: 45 }
+            ],
             tapioca_cats: [
-                { cat: "Proteínas", items: [] },
-                { cat: "Queijos", items: [] },
-                { cat: "Frutas", items: [] },
-                { cat: "Doces", items: [] }
+                { cat: "Proteínas", items: [{ n: "Lombo Canadense", p: 10 }, { n: "Peito de Peru", p: 13 }, { n: "Calabresa", p: 10 }, { n: "Presunto", p: 10 }, { n: "Frango", p: 13 }] },
+                { cat: "Queijos", items: [{ n: "Minas", p: 10 }, { n: "Mussarela", p: 10 }, { n: "Requeijão", p: 10 }, { n: "Catupiry", p: 10 }, { n: "Cheddar", p: 10 }] },
+                { cat: "Frutas", items: [{ n: "Coco", p: 10 }, { n: "Morango", p: 14 }, { n: "Abacaxi", p: 10 }, { n: "Banana", p: 10 }] },
+                { cat: "Doces", items: [{ n: "Nutella", p: 16 }, { n: "Chocolate Branco", p: 14 }, { n: "Chocolate Preto", p: 14 }, { n: "M&M", p: 10 }, { n: "Doce de Leite", p: 10 }, { n: "Goiabada", p: 10 }, { n: "Paçoca", p: 10 }] }
             ],
             tapioca_extras: ["Leite Condensado", "Açúcar c/ Canela", "Granulado", "Orégano", "Cebola", "Tomate", "Azeitona", "Manteiga", "Alho Torrado", "Molho de Alho", "Molho de Pizza", "Nenhum"],
-            bebidas: []
+            bebidas: [
+                { name: "Água", price: 2.50 }, { name: "Água c/ Gás", price: 3.50 }, { name: "Guaracamp", price: 2.50 }, { name: "Coca Lata", price: 6.00 },
+                { name: "Coca Lata Zero", price: 6.00 }, { name: "Guaraná 1L", price: 10.00 }, { name: "Guaraná 1.5L", price: 12.00 }, { name: "Pepsi 1.5L", price: 12.00 },
+                { name: "Guaraná ZERO 1.5L", price: 12.00 }, { name: "Sukita Uva 2L", price: 12.00 }, { name: "Sukita Laranja 2L", price: 12.00 }, { name: "Sukita Limão 2L", price: 12.00 }
+            ]
         };
 
-        let SABORES_PIZZA = [];
-        let SABORES_PROMO = [];
+        const SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
+        const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos", "Alho", "Mista"];
         
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
         let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
@@ -162,17 +186,8 @@
         let lastCartSize = 0;
         const CACHE_ESTOQUE_KEY = "kf_cache_estoque_pausado";
         const CACHE_MAPA_KEY = "kf_cache_mapa_zonas";
-        const CACHE_MENU_KEY = "kf_cache_menu_v2";
 
         function carregarCacheInicial() {
-            try {
-                const cacheMenu = localStorage.getItem(CACHE_MENU_KEY);
-                if (cacheMenu) {
-                    menuData = JSON.parse(cacheMenu);
-                    SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
-                    SABORES_PROMO = menuData.tradicional.map(s => s.name);
-                }
-            } catch (e) {}
             try {
                 const cacheEstoque = JSON.parse(localStorage.getItem(CACHE_ESTOQUE_KEY) || "[]");
                 if (Array.isArray(cacheEstoque)) estoquePausado = cacheEstoque;
@@ -186,81 +201,24 @@
         function salvarCaches() {
             try { localStorage.setItem(CACHE_ESTOQUE_KEY, JSON.stringify(estoquePausado)); } catch (e) {}
             try { localStorage.setItem(CACHE_MAPA_KEY, JSON.stringify(zonasEntrega)); } catch (e) {}
-            try { localStorage.setItem(CACHE_MENU_KEY, JSON.stringify(menuData)); } catch (e) {}
         }
 
         async function init() {
             verificarStatusLoja();
             carregarCacheInicial();
+            // Renderiza imediato com cache/local para eliminar atraso visual inicial.
             switchCategory('promos');
             try {
                 const [estoque, mapa] = await Promise.all([
                     fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
                     fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
                 ]);
-                
-                if (Array.isArray(estoque)) {
-                    rebuildMenuData(estoque);
-                    estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
-                }
-                
+                estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
                 zonasEntrega = mapa;
                 salvarCaches();
+                // Re-renderiza com dados atualizados de rede.
                 switchCategory('promos');
-            } catch (e) {
-                console.error("Erro init:", e);
-                switchCategory('promos');
-            }
-        }
-
-        function rebuildMenuData(data) {
-            // Limpa arrays dinâmicos
-            menuData.promos = [];
-            menuData.tradicional = [];
-            menuData.especial = [];
-            menuData.premium = [];
-            menuData.doces = [];
-            menuData.bebidas = [];
-            menuData.tapioca_cats.forEach(c => c.items = []);
-
-            data.forEach(item => {
-                const cat = (item.categoria || "").toUpperCase();
-                const sub = (item.subcategoria || "").toUpperCase();
-                const parsePrice = (val) => parseFloat(String(val || 0).replace(',', '.')) || 0;
-                const pBase = parsePrice(item.valor);
-                const p25 = parsePrice(item.p25);
-                const p35 = parsePrice(item.p35);
-
-                if (cat === "PROMO") {
-                    const pizzasMatch = nome.match(/(\d+)\s*Pizza/i);
-                    const refriMatch = nome.match(/Refri\s*([\w\d\s]+)/i);
-                    menuData.promos.push({
-                        name: nome,
-                        price: pBase,
-                        pizzas: pizzasMatch ? parseInt(pizzasMatch[1]) : 1,
-                        refri: refriMatch ? refriMatch[1].trim() : ""
-                    });
-                } else if (cat === "PIZZA") {
-                    const pizzaObj = { name: nome, p25: p25, p35: p35 };
-                    if (sub.includes("TRADICIONAL")) menuData.tradicional.push(pizzaObj);
-                    else if (sub.includes("ESPECIAL")) menuData.especial.push(pizzaObj);
-                    else if (sub.includes("PREMIUM")) menuData.premium.push(pizzaObj);
-                    else if (sub.includes("DOCE")) menuData.doces.push(pizzaObj);
-                } else if (cat === "BEBIDA") {
-                    menuData.bebidas.push({ name: nome, price: pBase });
-                } else if (cat === "TAPIOCA") {
-                    const tapObj = { n: nome, p: pBase };
-                    const subCat = menuData.tapioca_cats.find(c => sub.includes(c.cat.toUpperCase()));
-                    if (subCat) subCat.items.push(tapObj);
-                }
-            });
-
-            // Atualiza listas globais de sabores
-            SABORES_PIZZA = [...menuData.tradicional, ...menuData.especial, ...menuData.premium, ...menuData.doces].map(s => s.name);
-            // Sabores para o combo promo (os mais simples)
-            SABORES_PROMO = menuData.tradicional.length > 0 
-                ? menuData.tradicional.map(s => s.name)
-                : SABORES_PIZZA.slice(0, 8);
+            } catch (e) {}
         }
 
         // --- GOOGLE AUTOCOMPLETE & GEOCODING ---
