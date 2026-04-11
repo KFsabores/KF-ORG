@@ -449,7 +449,7 @@
             if (ok) {
                 const num = normalizarTelefoneBR(tel);
                 if (num) {
-                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! ⏳ (Nossa Chave PIX: fagpln@gmail.com)`);
+                    const msg = encodeURIComponent(`✅ Olá, ${nome}! Seu pedido na *KF Sabores* foi confirmado e já está em preparação! ⏳ (Para pagamento em PIX: fagpln@gmail.com)`);
                     window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
                 }
             }
