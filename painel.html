@@ -16,7 +16,7 @@
             @page { margin: 0; size: auto; }
         }
 
-        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 12px; line-height: 1.2; color: #000; font-weight: bold; padding: 2px; }
+        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 16px; line-height: 1.2; color: #000; padding: 2px; text-transform: uppercase; }
         .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
         .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
         .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; transition: all 0.3s; }
@@ -555,14 +555,21 @@
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
+            
+            const itensProcessados = p.itens.split('|')
+                .map(i => i.trim())
+                .filter(i => i !== "")
+                .map(item => item.replace(/OBS:/gi, '<br><strong>OBS:</strong>'))
+                .join('<br><br>');
+
             area.innerHTML = `
                 <div class="cupom-termico">
-                    <center><strong style="font-size:16px">KF SABORES</strong><br>${p.dataFull}</center><br>
+                    <center><strong style="font-size:20px">KF SABORES</strong><br>${p.dataFull}</center><br>
                     <strong>CLIENTE:</strong> ${p.nome}<br>
                     <strong>ENDEREÇO:</strong> ${p.endereco}<br>
-                    <hr style="border:1px dashed #000; margin: 5px 0">
-                    <strong>PEDIDO:</strong><br>${p.itens.split('|').join('<br>')}<br>
-                    <hr style="border:1px dashed #000; margin: 5px 0">
+                    <hr style="border:1px dashed #000; margin: 10px 0">
+                    <strong>PEDIDO:</strong><br>${itensProcessados}<br>
+                    <hr style="border:1px dashed #000; margin: 10px 0">
                     <strong>TAXA ENTREGA:</strong> R$ ${p.taxa}<br>
                     <strong>TOTAL:</strong> ${p.total}<br>
                     <strong>FORMA PAGTO:</strong> ${p.pagto}<br>
