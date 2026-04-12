@@ -423,19 +423,25 @@
             try {
                 const response = await fetch(url);
                 const csvData = await response.text();
-                const rows = csvData.split('\n').map(row =>
-                    row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
-                );
-                const pedidosComLinha = rows.slice(1).map((row, idx) => ({
+                
+                // Divide linhas respeitando quebras de linha ("\n") dentro de aspas
+                const rows = csvData.split(/\r?\n(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                    .map(row => 
+                        row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                           .map(cell => cell.replace(/"/g, '').trim())
+                    )
+                    .filter(row => row.length >= 6 && row[0] !== "" && row[0] !== "DATA");
+
+                const pedidosComLinha = rows.map((row, idx) => ({
                     linhaOriginal: idx + 2,
-                    dataFull: row[0],
+                    dataFull: row[0] || "",
                     objData: parseDataBR(row[0]),
-                    nome: row[1],
-                    endereco: row[2],
-                    itens: row[3],
-                    pagto: row[4],
-                    total: row[5],
-                    totalNum: parseFloat(row[5].replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
+                    nome: row[1] || "Sem Nome",
+                    endereco: row[2] || "Sem Endereço",
+                    itens: row[3] || "",
+                    pagto: row[4] || "N/A",
+                    total: row[5] || "R$ 0,00",
+                    totalNum: parseFloat((row[5] || "0").replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
                     status: (row[6] || 'PENDENTE').toUpperCase(),
                     modalidade: (row[7] || "DELIVERY").toUpperCase(),
                     telefone: row[8] || "",
@@ -449,7 +455,6 @@
                 }));
 
                 todosOsPedidos = pedidosComLinha
-                    .filter(p => p.nome && p.nome !== "")
                     .filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
 
                 const pendentesAtuais = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
