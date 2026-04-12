@@ -152,6 +152,9 @@
                 <button onclick="abrirModalRelatorio()"
                     class="bg-blue-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg flex items-center gap-2">📊
                     RELATÓRIOS</button>
+                <button onclick="abrirModalVendaRapida()"
+                    class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg flex items-center gap-2">⚡
+                    VENDA RÁPIDA</button>
                 <button onclick="toggleEstoque()"
                     class="bg-orange-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg flex items-center gap-2">📦
                     ESTOQUE</button>
@@ -239,10 +242,29 @@
         </div>
     </div>
 
+    <div id="modal-venda-rapida" class="fixed inset-0 hidden flex items-center justify-center z-[110] p-4 bg-black/95">
+        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+            <button onclick="document.getElementById('modal-venda-rapida').classList.add('hidden')"
+                class="absolute top-6 right-6 text-zinc-500 hover:text-white transition-all text-xl font-black">✕</button>
+            <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Venda Rápida</h2>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[10px] font-black text-zinc-500 block mb-2 uppercase">Valor da Venda (R$)</label>
+                    <input type="text" id="venda-rapida-valor" placeholder="0,00"
+                        class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-white text-2xl font-black outline-none focus:border-[#39FF14] text-center">
+                </div>
+                <button onclick="confirmarVendaRapida(this)"
+                    class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Registrar Venda</button>
+            </div>
+        </div>
+    </div>
+
     <div id="print-area"></div>
 
     <script>
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyGnKIaZ4-hZ_pqJmFPxFBGFHMQsn49NHL1qKwDSkssWeD70kBm4vgq8T-AgVM7cjWs7w/exec';
+        const INDEX_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec';
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
         let todosOsPedidos = [];
@@ -776,6 +798,62 @@
         function abrirModalRelatorio() {
             document.getElementById('resultado-relatorio').classList.add('hidden');
             document.getElementById('modal-relatorio').classList.remove('hidden');
+        }
+
+        function abrirModalVendaRapida() {
+            document.getElementById('venda-rapida-valor').value = "";
+            document.getElementById('modal-venda-rapida').classList.remove('hidden');
+            setTimeout(() => document.getElementById('venda-rapida-valor').focus(), 100);
+        }
+
+        async function confirmarVendaRapida(btn) {
+            let valor = document.getElementById('venda-rapida-valor').value.trim();
+            if (!valor) return alert("Informe o valor!");
+
+            // Formatação básica para garantir que o R$ esteja presente se houver só número
+            if (!valor.toUpperCase().includes("R$")) {
+                valor = "R$ " + valor.replace(".", ",");
+            }
+
+            const confirmText = btn.innerHTML;
+            btn.innerHTML = "⏳ PROCESSANDO...";
+            btn.disabled = true;
+
+            const payload = {
+                nome: "Local",
+                telefone: "21967592513",
+                endereco: "RETIRADA",
+                total: valor,
+                pagamento: "Dinheiro",
+                modalidade: "RETIRADA",
+                itens: "⚡ VENDA RÁPIDA",
+                taxa: "0,00",
+                troco: "NÃO",
+                status: "CONCLUIDO"
+            };
+
+            try {
+                await fetch(INDEX_WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                });
+
+                // Como o fetch é no-cors, não temos resposta de sucesso real, 
+                // então assumimos sucesso e recarregamos.
+                setTimeout(() => {
+                    document.getElementById('modal-venda-rapida').classList.add('hidden');
+                    btn.innerHTML = confirmText;
+                    btn.disabled = false;
+                    carregarPedidos();
+                }, 1500);
+
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao registrar venda.");
+                btn.innerHTML = confirmText;
+                btn.disabled = false;
+            }
         }
 
         function formatarDataISO(data) {
