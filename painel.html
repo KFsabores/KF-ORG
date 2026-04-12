@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,182 +7,67 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Montserrat', sans-serif;
-            background-color: #09090b;
-            color: white;
-            overflow-x: hidden;
-        }
-
+        body { font-family: 'Montserrat', sans-serif; background-color: #09090b; color: white; overflow-x: hidden; }
+        
         @media print {
-            body * {
-                visibility: hidden;
-            }
-
-            #print-area,
-            #print-area * {
-                visibility: visible;
-                display: block !important;
-            }
-
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 48mm;
-                background: #fff;
-                color: #000;
-            }
-
-            @page {
-                margin: 0;
-                size: auto;
-            }
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; display: block !important; }
+            #print-area { position: absolute; left: 0; top: 0; width: 48mm; background: #fff; color: #000; }
+            @page { margin: 0; size: auto; }
         }
 
-        .cupom-termico {
-            font-family: 'Courier New', Courier, monospace;
-            width: 48mm;
-            font-size: 16px;
-            font-weight: bold;
-            line-height: 1.2;
-            color: #000;
-            padding: 2px;
-            text-transform: uppercase;
-        }
+        .cupom-termico { font-family: 'Courier New', Courier, monospace; width: 48mm; font-size: 16px; line-height: 1.2; color: #000; padding: 2px; text-transform: uppercase; }
+        .grid-custom { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; }
+        .status-badge { font-size: 10px; padding: 4px 8px; border-radius: 6px; font-weight: 900; text-transform: uppercase; }
+        .timer-badge { background: #3f3f46; color: #fff; padding: 4px 10px; border-radius: 99px; font-family: monospace; font-size: 12px; font-weight: bold; transition: all 0.3s; }
+        .excluindo { transform: scale(0.8); opacity: 0; transition: all 0.5s ease; pointer-events: none; }
+        
+        .header-pizza { color: #ef4444; border-bottom: 2px solid #ef4444; }
+        .header-tapioca { color: #f59e0b; border-bottom: 2px solid #f59e0b; }
+        .header-bebida { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
 
-        .grid-custom {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 1.5rem;
-        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
 
-        .status-badge {
-            font-size: 10px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-weight: 900;
-            text-transform: uppercase;
-        }
-
-        .timer-badge {
-            background: #3f3f46;
-            color: #fff;
-            padding: 4px 10px;
-            border-radius: 99px;
-            font-family: monospace;
-            font-size: 12px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .excluindo {
-            transform: scale(0.8);
-            opacity: 0;
-            transition: all 0.5s ease;
-            pointer-events: none;
-        }
-
-        .header-pizza {
-            color: #ef4444;
-            border-bottom: 2px solid #ef4444;
-        }
-
-        .header-tapioca {
-            color: #f59e0b;
-            border-bottom: 2px solid #f59e0b;
-        }
-
-        .header-bebida {
-            color: #3b82f6;
-            border-bottom: 2px solid #3b82f6;
-        }
-
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #09090b;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #27272a;
-            border-radius: 10px;
-        }
-
-        .btn-whats {
-            background-color: #25D366;
-            color: white;
-        }
-
-        .btn-mapa {
-            background-color: #4285F4;
-            color: white;
-        }
-
-        .btn-motoboy {
-            background-color: #a855f7;
-            color: white;
-        }
-
-        .btn-entrega {
-            background-color: #F29339;
-            color: white;
-        }
+        .btn-whats { background-color: #25D366; color: white; }
+        .btn-mapa { background-color: #4285F4; color: white; }
+        .btn-motoboy { background-color: #a855f7; color: white; }
+        .btn-entrega { background-color: #F29339; color: white; }
     </style>
 </head>
-
 <body class="p-4 md:p-8">
 
     <audio id="notificacao-som" src="assets/sounds/telefone.mp3" preload="auto" loop></audio>
 
     <div class="max-w-7xl mx-auto">
-        <div
-            class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-zinc-900 p-6 rounded-3xl border border-zinc-800 shadow-2xl">
             <div>
-                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES
-                </h1>
-                <p id="status-conexao"
-                    class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela
-                    para ativar o som 📞</p>
+                <h1 class="text-3xl font-black text-[#39FF14] italic tracking-tighter uppercase leading-none">KF SABORES</h1>
+                <p id="status-conexao" class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mt-2 italic">⚠️ Clique na tela para ativar o som 📞</p>
             </div>
-
+            
             <div class="flex flex-wrap gap-2 justify-center items-center">
-                <button onclick="abrirModalRelatorio()"
-                    class="bg-blue-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg flex items-center gap-2">📊
-                    RELATÓRIOS</button>
-                <button onclick="abrirModalVendaRapida()"
-                    class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg flex items-center gap-2">⚡
-                    VENDA RÁPIDA</button>
-                <button onclick="toggleEstoque()"
-                    class="bg-orange-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg flex items-center gap-2">📦
-                    ESTOQUE</button>
-                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank"
-                    class="bg-zinc-700 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600 transition-all shadow-lg flex items-center gap-2">📍
-                    MAPA TAXAS</a>
-                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank"
-                    class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg">🌐
-                    SITE</a>
+                <button onclick="abrirModalRelatorio()" class="bg-blue-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-blue-500 transition-all shadow-lg flex items-center gap-2">📊 RELATÓRIOS</button>
+                <button onclick="toggleEstoque()" class="bg-orange-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-orange-500 transition-all shadow-lg flex items-center gap-2">📦 ESTOQUE</button>
+                <a href="https://kfsabores.github.io/KF-ORG/mapa-taxas.html" target="_blank" class="bg-zinc-700 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-zinc-600 transition-all shadow-lg flex items-center gap-2">📍 MAPA TAXAS</a>
+                <a href="https://kfsabores.github.io/KF-ORG/?admin=true" target="_blank" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black uppercase text-[10px] hover:bg-emerald-500 transition-all shadow-lg">🌐 SITE</a>
             </div>
         </div>
 
-        <div id="painel-estoque"
-            class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border-2 border-orange-500/50 shadow-2xl">
+        <div id="painel-estoque" class="hidden mb-10 bg-zinc-900 p-8 rounded-3xl border-2 border-orange-500/50 shadow-2xl">
             <div class="flex justify-between items-center mb-8">
                 <h2 class="text-2xl font-black text-orange-500 uppercase italic">Controle de Disponibilidade</h2>
-                <button onclick="toggleEstoque()"
-                    class="text-zinc-500 font-bold uppercase text-xs hover:text-white">Fechar ✕</button>
+                <button onclick="toggleEstoque()" class="text-zinc-500 font-bold uppercase text-xs hover:text-white">Fechar ✕</button>
             </div>
-
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
                     <h3 class="header-pizza font-black mb-4 pb-2 text-center uppercase tracking-widest">🍕 Pizzas</h3>
                     <div id="lista-pizza" class="space-y-2"></div>
                 </div>
                 <div>
-                    <h3 class="header-tapioca font-black mb-4 pb-2 text-center uppercase tracking-widest">🌮 Tapiocas
-                    </h3>
+                    <h3 class="header-tapioca font-black mb-4 pb-2 text-center uppercase tracking-widest">🌮 Tapiocas</h3>
                     <div id="lista-tapioca" class="space-y-2"></div>
                 </div>
                 <div>
@@ -194,69 +78,37 @@
         </div>
 
         <div id="lista-pedidos" class="grid-custom">
-            <div
-                class="col-span-full text-center py-20 text-zinc-700 font-black uppercase tracking-widest animate-pulse">
-                Sincronizando com a planilha...</div>
+            <div class="col-span-full text-center py-20 text-zinc-700 font-black uppercase tracking-widest animate-pulse">Sincronizando com a planilha...</div>
         </div>
     </div>
 
     <div id="modal-relatorio" class="fixed inset-0 hidden flex items-center justify-center z-[110] p-4 bg-black/95">
         <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
-            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')"
-                class="absolute top-6 right-6 text-zinc-500 hover:text-white transition-all text-xl font-black">✕</button>
-            <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Relatório de Faturamento
-            </h2>
-
+            <button onclick="document.getElementById('modal-relatorio').classList.add('hidden')" class="absolute top-6 right-6 text-zinc-500 hover:text-white transition-all text-xl font-black">✕</button>
+            <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Relatório de Faturamento</h2>
+            
             <div class="grid grid-cols-2 gap-3 mb-6">
-                <button onclick="setPeriodoHoje()"
-                    class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">☀️
-                    HOJE</button>
-                <button onclick="setPeriodoSemana()"
-                    class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">📅
-                    SEMANA</button>
+                <button onclick="setPeriodoHoje()" class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">☀️ HOJE</button>
+                <button onclick="setPeriodoSemana()" class="bg-zinc-800 border border-zinc-700 text-white py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-zinc-700 transition-all">📅 SEMANA</button>
             </div>
 
             <div class="space-y-6">
                 <div>
                     <label class="text-[10px] font-black text-zinc-500 block mb-2 uppercase">Período Inicial</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="rel-data-inicio"
-                            class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
-                        <input type="time" id="rel-hora-inicio" value="00:00"
-                            class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
+                        <input type="date" id="rel-data-inicio" class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
+                        <input type="time" id="rel-hora-inicio" value="00:00" class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
                     </div>
                 </div>
                 <div>
                     <label class="text-[10px] font-black text-zinc-500 block mb-2 uppercase">Período Final</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="date" id="rel-data-fim"
-                            class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
-                        <input type="time" id="rel-hora-fim" value="23:59"
-                            class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
+                        <input type="date" id="rel-data-fim" class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
+                        <input type="time" id="rel-hora-fim" value="23:59" class="bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-sm outline-none focus:border-[#39FF14]">
                     </div>
                 </div>
-                <button onclick="processarRelatorio()"
-                    class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Processar
-                    Vendas</button>
+                <button onclick="processarRelatorio()" class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Processar Vendas</button>
                 <div id="resultado-relatorio" class="hidden mt-6 pt-6 border-t border-zinc-800 space-y-4"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-venda-rapida" class="fixed inset-0 hidden flex items-center justify-center z-[110] p-4 bg-black/95">
-        <div class="bg-zinc-900 border border-zinc-700 w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
-            <button onclick="document.getElementById('modal-venda-rapida').classList.add('hidden')"
-                class="absolute top-6 right-6 text-zinc-500 hover:text-white transition-all text-xl font-black">✕</button>
-            <h2 class="text-2xl font-black text-[#39FF14] italic uppercase mb-6 text-center">Venda Rápida</h2>
-
-            <div class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-black text-zinc-500 block mb-2 uppercase">Valor da Venda (R$)</label>
-                    <input type="text" id="venda-rapida-valor" placeholder="0,00"
-                        class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-white text-2xl font-black outline-none focus:border-[#39FF14] text-center">
-                </div>
-                <button onclick="confirmarVendaRapida(this)"
-                    class="w-full bg-[#39FF14] text-black py-4 rounded-2xl font-black uppercase text-xs hover:scale-105 transition-all shadow-[0_0_20px_rgba(57,255,20,0.3)]">Registrar Venda</button>
             </div>
         </div>
     </div>
@@ -265,10 +117,9 @@
 
     <script>
         const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyGnKIaZ4-hZ_pqJmFPxFBGFHMQsn49NHL1qKwDSkssWeD70kBm4vgq8T-AgVM7cjWs7w/exec';
-        const INDEX_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec';
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
-        let todosOsPedidos = [];
+        let todosOsPedidos = []; 
         let pedidosExcluidosLocalmente = new Set();
         let totalPedidosAnterior = 0;
         let primeiraCarga = true;
@@ -281,7 +132,7 @@
 
         function garantirAudioContext() {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => { });
+            if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
             if (audioCtx && !compressor) {
                 compressor = audioCtx.createDynamicsCompressor();
                 compressor.threshold.setValueAtTime(-22, audioCtx.currentTime);
@@ -362,13 +213,13 @@
         }
 
         function parseDataBR(stringData) {
-            if (!stringData) return new Date();
+            if(!stringData) return new Date();
             try {
                 const partes = stringData.split(' ');
                 const dataP = partes[0].split('/');
-                const horaP = partes[1] ? partes[1].split(':') : ["00", "00"];
-                return new Date(dataP[2], dataP[1] - 1, dataP[0], horaP[0], horaP[1]);
-            } catch (e) { return new Date(); }
+                const horaP = partes[1] ? partes[1].split(':') : ["00","00"];
+                return new Date(dataP[2], dataP[1]-1, dataP[0], horaP[0], horaP[1]);
+            } catch(e) { return new Date(); }
         }
 
         function extrairHoraConclusao(status) {
@@ -423,12 +274,12 @@
             try {
                 const response = await fetch(url);
                 const csvData = await response.text();
-                const rows = csvData.split('\n').map(row =>
+                const rows = csvData.split('\n').map(row => 
                     row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.replace(/"/g, '').trim())
                 );
                 const pedidosComLinha = rows.slice(1).map((row, idx) => ({
                     linhaOriginal: idx + 2,
-                    dataFull: row[0],
+                    dataFull: row[0], 
                     objData: parseDataBR(row[0]),
                     nome: row[1],
                     endereco: row[2],
@@ -480,10 +331,10 @@
         function renderizarPedidos() {
             const container = document.getElementById('lista-pedidos');
             container.innerHTML = "";
-
+            
             const agora = new Date();
             let inicioTurno = new Date(agora);
-
+            
             // Se agora é antes das 12:00, o turno atual começou ontem às 12h
             if (agora.getHours() < 12) {
                 inicioTurno.setDate(agora.getDate() - 1);
@@ -502,9 +353,9 @@
                 const isPendente = p.status.includes("PENDENTE");
                 const isCozinha = p.status.includes("PREPARANDO");
                 const horaConclusao = extrairHoraConclusao(p.status) || (p.status.includes("CONCLU") ? obterHorarioConclusao(p.chaveAlerta) : "");
-
-                let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" :
-                    (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
+                
+                let corBorda = isPendente ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]" : 
+                               (isCozinha ? "border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]" : "border-zinc-700");
                 let espessuraBorda = isPendente ? "border-4" : (isCozinha ? "border-[3px]" : "border-2");
                 let corStatus = isPendente ? "bg-yellow-600" : (isCozinha ? "bg-blue-600" : "bg-zinc-700");
 
@@ -533,29 +384,29 @@
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
                             ${p.itens
-                        .split('|')
-                        .flatMap(i => {
-                            const item = i.trim();
-                            if (!item) return [];
-                            const matchObs = item.match(/^(.*?)(\s*OBS:.*)$/i);
-                            if (matchObs && matchObs[1].trim()) {
-                                return [matchObs[1].trim(), matchObs[2].trim()];
-                            }
-                            return [item];
-                        })
-                        .map(item => {
-                            const isObs = item.toUpperCase().startsWith("OBS:") || item.includes("📝");
-                            let content = item;
-                            let priceHtml = "";
+                                .split('|')
+                                .flatMap(i => {
+                                    const item = i.trim();
+                                    if (!item) return [];
+                                    const matchObs = item.match(/^(.*?)(\s*OBS:.*)$/i);
+                                    if (matchObs && matchObs[1].trim()) {
+                                        return [matchObs[1].trim(), matchObs[2].trim()];
+                                    }
+                                    return [item];
+                                })
+                                .map(item => {
+                                    const isObs = item.toUpperCase().startsWith("OBS:") || item.includes("📝");
+                                    let content = item;
+                                    let priceHtml = "";
+                                    
+                                    const match = item.match(/\(R\$\s?\d+[,.]\d{2}\)/i);
+                                    if (match) {
+                                        content = item.replace(match[0], "").trim();
+                                        priceHtml = `<div class="text-[10px] text-yellow-500 font-bold mt-0.5 leading-none">${match[0]}</div>`;
+                                    }
 
-                            const match = item.match(/\(R\$\s?\d+[,.]\d{2}\)/i);
-                            if (match) {
-                                content = item.replace(match[0], "").trim();
-                                priceHtml = `<div class="text-[10px] text-yellow-500 font-bold mt-0.5 leading-none">${match[0]}</div>`;
-                            }
-
-                            return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1 flex flex-col"><span>/ ${content}</span>${priceHtml}</div>`;
-                        }).join('')}
+                                    return `<div class="${isObs ? 'mt-3 mb-2' : 'mb-2'} text-sm font-bold uppercase text-zinc-300 border-b border-zinc-800/20 pb-1 flex flex-col"><span>/ ${content}</span>${priceHtml}</div>`;
+                                }).join('')}
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 mb-5">
@@ -594,16 +445,16 @@
                 if (status.includes("CONCLU")) {
                     el.innerText = "OK";
                     el.className = "timer-badge bg-zinc-800 opacity-40";
-                    return;
+                    return; 
                 }
 
                 const dataPedido = new Date(el.getAttribute('data-hora'));
                 const diff = Math.floor((agora - dataPedido) / 60000);
-
+                
                 el.innerText = (diff < 0 ? 0 : diff) + "m";
-
-                if (diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
-                else if (diff > 25) el.className = "timer-badge bg-orange-600";
+                
+                if(diff > 45) el.className = "timer-badge bg-red-600 animate-pulse";
+                else if(diff > 25) el.className = "timer-badge bg-orange-600";
                 else el.className = "timer-badge bg-zinc-700";
             });
         }
@@ -623,20 +474,20 @@
             pararSom();
             const txt = btn.innerHTML;
             btn.innerHTML = "⏳";
-
+            
             // Pausa imediata no visual
             const card = document.getElementById(`card-${linha}`);
             if (card) {
                 const badge = card.querySelector('.timer-badge');
-                if (badge) badge.setAttribute('data-status', status.toUpperCase());
+                if(badge) badge.setAttribute('data-status', status.toUpperCase());
             }
 
             try {
                 await fetch(`${WEB_APP_URL}?row=${linha}&status=${encodeURIComponent(status)}&t=${new Date().getTime()}`, { mode: 'no-cors' });
                 setTimeout(carregarPedidos, 1500);
                 return true;
-            } catch (e) {
-                btn.innerHTML = txt;
+            } catch (e) { 
+                btn.innerHTML = txt; 
                 return false;
             }
         }
@@ -644,7 +495,7 @@
         async function concluirPedido(linha, btn) {
             const pedido = todosOsPedidos.find(p => p.linhaOriginal === linha);
             const idKey = pedido ? pedido.chaveAlerta : String(linha);
-
+            
             const hora = gerarStatusConcluido();
             salvarHorarioConclusao(idKey, hora);
             const ok = await alterarStatus(linha, 'CONCLUIDO', btn);
@@ -653,7 +504,7 @@
 
         function abrirWhats(tel) {
             const num = normalizarTelefoneBR(tel);
-            if (!num) return alert("Telefone inválido ou não disponível.");
+            if(!num) return alert("Telefone inválido ou não disponível.");
             window.open(`https://wa.me/${num}`, '_blank');
         }
 
@@ -682,7 +533,7 @@
 
         function enviarEntrega(tel, nome) {
             const num = normalizarTelefoneBR(tel);
-            if (!num) return alert("Telefone inválido ou não disponível.");
+            if(!num) return alert("Telefone inválido ou não disponível.");
             const msg = encodeURIComponent(`🚀 Olá, ${nome}! Seu pedido da *KF Sabores* acabou de sair para entrega!`);
             window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
@@ -717,13 +568,13 @@
                 try {
                     const pedido = todosOsPedidos.find(p => p.linhaOriginal === linha);
                     const idKey = pedido ? pedido.chaveAlerta : String(linha);
-
+                    
                     await fetch(`${WEB_APP_URL}?action=delete&row=${linha}&t=${new Date().getTime()}`, { mode: 'no-cors' });
                     removerHorarioConclusao(idKey);
-                    setTimeout(() => { if (card) card.remove(); }, 500);
-                } catch (e) {
+                    setTimeout(() => { if(card) card.remove(); }, 500);
+                } catch(e) {
                     pedidosExcluidosLocalmente.delete(linha);
-                    if (card) card.classList.remove('excluindo');
+                    if(card) card.classList.remove('excluindo');
                     alert("Erro ao excluir.");
                 }
             }
@@ -732,7 +583,7 @@
         function imprimir(dados) {
             const p = JSON.parse(decodeURIComponent(dados));
             const area = document.getElementById('print-area');
-
+            
             const itensProcessados = p.itens.split('|')
                 .map(i => i.trim())
                 .filter(i => i !== "")
@@ -755,10 +606,10 @@
             window.print();
         }
 
-        function toggleEstoque() {
+        function toggleEstoque() { 
             const p = document.getElementById('painel-estoque');
-            if (p.classList.contains('hidden')) carregarEstoque();
-            p.classList.toggle('hidden');
+            if(p.classList.contains('hidden')) carregarEstoque();
+            p.classList.toggle('hidden'); 
         }
 
         async function carregarEstoque() {
@@ -783,11 +634,11 @@
                             </button>
                         </div>`;
                     const cat = i.categoria.toUpperCase();
-                    if (cat.includes("PIZZA")) cols.pizza.innerHTML += itemHtml;
-                    else if (cat.includes("TAPIOCA")) cols.tapioca.innerHTML += itemHtml;
-                    else if (cat.includes("BEBIDA")) cols.bebida.innerHTML += itemHtml;
+                    if(cat.includes("PIZZA")) cols.pizza.innerHTML += itemHtml;
+                    else if(cat.includes("TAPIOCA")) cols.tapioca.innerHTML += itemHtml;
+                    else if(cat.includes("BEBIDA")) cols.bebida.innerHTML += itemHtml;
                 });
-            } catch (e) { console.error("Erro estoque:", e); }
+            } catch(e) { console.error("Erro estoque:", e); }
         }
 
         async function mudarStatusEstoque(item, status, btn) {
@@ -799,62 +650,6 @@
         function abrirModalRelatorio() {
             document.getElementById('resultado-relatorio').classList.add('hidden');
             document.getElementById('modal-relatorio').classList.remove('hidden');
-        }
-
-        function abrirModalVendaRapida() {
-            document.getElementById('venda-rapida-valor').value = "";
-            document.getElementById('modal-venda-rapida').classList.remove('hidden');
-            setTimeout(() => document.getElementById('venda-rapida-valor').focus(), 100);
-        }
-
-        async function confirmarVendaRapida(btn) {
-            let valor = document.getElementById('venda-rapida-valor').value.trim();
-            if (!valor) return alert("Informe o valor!");
-
-            // Formatação básica para garantir que o R$ esteja presente se houver só número
-            if (!valor.toUpperCase().includes("R$")) {
-                valor = "R$ " + valor.replace(".", ",");
-            }
-
-            const confirmText = btn.innerHTML;
-            btn.innerHTML = "⏳ PROCESSANDO...";
-            btn.disabled = true;
-
-            const payload = {
-                nome: "Local",
-                telefone: "21967592513",
-                endereco: "RETIRADA",
-                total: valor,
-                pagamento: "Dinheiro",
-                modalidade: "RETIRADA",
-                itens: "⚡ VENDA RÁPIDA",
-                taxa: "0,00",
-                troco: "NÃO",
-                status: "CONCLUIDO"
-            };
-
-            try {
-                await fetch(INDEX_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(payload)
-                });
-
-                // Como o fetch é no-cors, não temos resposta de sucesso real, 
-                // então assumimos sucesso e recarregamos.
-                setTimeout(() => {
-                    document.getElementById('modal-venda-rapida').classList.add('hidden');
-                    btn.innerHTML = confirmText;
-                    btn.disabled = false;
-                    carregarPedidos();
-                }, 1500);
-
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao registrar venda.");
-                btn.innerHTML = confirmText;
-                btn.disabled = false;
-            }
         }
 
         function formatarDataISO(data) {
@@ -871,11 +666,11 @@
                 agora.setDate(agora.getDate() - 1);
             }
             const dataInicio = formatarDataISO(agora);
-
+            
             const amanha = new Date(agora);
             amanha.setDate(amanha.getDate() + 1);
             const dataFim = formatarDataISO(amanha);
-
+            
             document.getElementById('rel-data-inicio').value = dataInicio;
             document.getElementById('rel-hora-inicio').value = "16:00";
             document.getElementById('rel-data-fim').value = dataFim;
@@ -885,39 +680,39 @@
         function setPeriodoSemana() {
             const agora = new Date();
             const diaSemana = agora.getDay(); // 0-Dom, 1-Seg, ..., 4-Qui, 5-Sex, 6-Sab
-
+            
             // Quinta-feira passada (ou hoje se for quinta)
             let quinta = new Date(agora);
             let diffQuinta = diaSemana - 4;
             if (diffQuinta < 0) diffQuinta += 7; // Se for seg/ter/qua, volta pra semana passada
             quinta.setDate(agora.getDate() - diffQuinta);
-
+            
             // Segunda-feira próxima relativa a essa quinta
             let segunda = new Date(quinta);
             segunda.setDate(quinta.getDate() + 4); // Quinta + 4 dias = Segunda
-
+            
             document.getElementById('rel-data-inicio').value = formatarDataISO(quinta);
             document.getElementById('rel-hora-inicio').value = "16:00";
             document.getElementById('rel-data-fim').value = formatarDataISO(segunda);
             document.getElementById('rel-hora-fim').value = "12:00";
         }
-
+        
         function processarRelatorio() {
             const dataIni = document.getElementById('rel-data-inicio').value;
             const horaIni = document.getElementById('rel-hora-inicio').value;
             const dataFim = document.getElementById('rel-data-fim').value;
             const horaFim = document.getElementById('rel-hora-fim').value;
-
-            if (!dataIni || !dataFim) return alert("Selecione as datas!");
-
+            
+            if(!dataIni || !dataFim) return alert("Selecione as datas!");
+            
             const inicio = new Date(`${dataIni}T${horaIni}`);
             const fim = new Date(`${dataFim}T${horaFim}`);
-
+            
             let totalDelivery = 0, qtdDelivery = 0;
             let totalBalcao = 0, qtdBalcao = 0;
 
             todosOsPedidos.forEach(p => {
-                if ((p.status.includes('CONCLU')) && p.objData >= inicio && p.objData <= fim) {
+                if((p.status.includes('CONCLU')) && p.objData >= inicio && p.objData <= fim) {
                     if (p.modalidade.includes('RETIRADA') || p.modalidade.includes('BALCÃO') || p.modalidade.includes('BALCAO')) {
                         totalBalcao += p.totalNum;
                         qtdBalcao++;
@@ -936,16 +731,16 @@
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <div class="bg-zinc-800 p-3 rounded-2xl border-l-4 border-blue-500">
                         <p class="text-[9px] uppercase font-black text-zinc-500">🚚 Delivery (${qtdDelivery})</p>
-                        <p class="text-sm font-black text-white">R$ ${totalDelivery.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p class="text-sm font-black text-white">R$ ${totalDelivery.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                     <div class="bg-zinc-800 p-3 rounded-2xl border-l-4 border-orange-500">
                         <p class="text-[9px] uppercase font-black text-zinc-500">🛍️ Balcão (${qtdBalcao})</p>
-                        <p class="text-sm font-black text-white">R$ ${totalBalcao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p class="text-sm font-black text-white">R$ ${totalBalcao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                 </div>
                 <div class="bg-[#39FF14] p-6 rounded-3xl text-black text-center shadow-lg">
                     <p class="font-black text-[10px] uppercase opacity-60">Faturamento Total (Líquido)</p>
-                    <p class="text-4xl font-black italic">R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <p class="text-4xl font-black italic">R$ ${totalGeral.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     <p class="font-bold text-[11px] mt-2 uppercase">${qtdGeral} Pedidos Concluídos</p>
                 </div>`;
             resDiv.classList.remove('hidden');
@@ -981,9 +776,8 @@
         });
 
         setInterval(carregarPedidos, 10000);
-        setInterval(atualizarCronometros, 30000);
+        setInterval(atualizarCronometros, 30000); 
         carregarPedidos();
     </script>
 </body>
-
 </html>
