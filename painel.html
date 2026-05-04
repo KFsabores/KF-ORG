@@ -264,7 +264,7 @@
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbywb6oFJsFUO19kijIyLvC2xncwxsV-0h66ASOJY_fJiDfRtSGkwfE5_Y4VNvWr1AbPjA/exec';
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx2v2XLsH3Pc4MTr-exvtMA-tmPMenuQBBDF6501450xqz4rBo7kwsk86eeiFsXCAI44Q/exec';
         const INDEX_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec';
         const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
 
@@ -782,7 +782,7 @@
                     const itemHtml = `
                         <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800 hover:border-zinc-700 transition-all">
                             <span class="text-[11px] font-black uppercase text-zinc-300 leading-tight">${i.nome}</span>
-                            <button onclick="mudarStatusEstoque('${i.nome}', '${isOff ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                            <button onclick="mudarStatusEstoque('${i.nome}', '${i.categoria}', '${isOff ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
                                 class="px-4 py-2 rounded-xl text-[10px] font-black transition-all ${isOff ? 'bg-red-600' : 'bg-green-600'}">
                                 ${isOff ? 'OFF' : 'ON'}
                             </button>
@@ -795,9 +795,9 @@
             } catch (e) { console.error("Erro estoque:", e); }
         }
 
-        async function mudarStatusEstoque(item, status, btn) {
+        async function mudarStatusEstoque(item, categoria, status, btn) {
             btn.innerHTML = "⏳";
-            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, status }) });
+            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, categoria, status }) });
             carregarEstoque();
         }
 
