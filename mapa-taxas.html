@@ -15,17 +15,10 @@
 </head>
 <body class="bg-zinc-950 p-4 md:p-8 text-white">
     <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <header class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-2xl font-black uppercase italic text-[#39FF14]">Editor de Geofencing</h1>
                 <p class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Paciência, RJ - Gestão de Taxas</p>
-            </div>
-            <div class="flex flex-1 max-w-md w-full relative">
-                <input type="text" id="input-endereco" placeholder="Buscar endereço (Ex: Rua A, 123)..." 
-                    class="bg-zinc-900 border border-zinc-700 rounded-l-xl w-full py-2 px-4 text-xs text-white outline-none focus:border-[#39FF14]">
-                <button onclick="buscarEAdicionarEndereco()" class="bg-[#39FF14] text-black px-4 py-2 rounded-r-xl font-bold text-xs uppercase hover:bg-green-500 transition-colors">
-                    Incluir
-                </button>
             </div>
             <div id="status-save" class="hidden text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full border border-green-500/50 animate-pulse">
                 Sincronizado com a Planilha
@@ -59,7 +52,7 @@
         let map;
         let drawingManager;
         let poligonos = [];
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbywb6oFJsFUO19kijIyLvC2xncwxsV-0h66ASOJY_fJiDfRtSGkwfE5_Y4VNvWr1AbPjA/exec";
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbx2v2XLsH3Pc4MTr-exvtMA-tmPMenuQBBDF6501450xqz4rBo7kwsk86eeiFsXCAI44Q/exec";
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -83,51 +76,9 @@
                 adicionarPoligonoArray(polygon, 0);
                 atualizarListaSidebar();
             });
-            // INICIALIZAR AUTOCOMPLETE
-            const inputEnd = document.getElementById('input-endereco');
-            const autocomplete = new google.maps.places.Autocomplete(inputEnd);
-            autocomplete.bindTo('bounds', map);
 
             // CARREGAR DADOS EXISTENTES AO ABRIR
             carregarDadosSalvos();
-        }
-
-        async function buscarEAdicionarEndereco() {
-            const endereco = document.getElementById('input-endereco').value;
-            if(!endereco) return alert("Digite um endereço primeiro!");
-
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: endereco }, (results, status) => {
-                if (status === "OK" && results[0].geometry) {
-                    const loc = results[0].geometry.location;
-                    map.setCenter(loc);
-                    map.setZoom(18);
-
-                    // Cria um quadrado pequeno (aprox. 50 metros ao redor do local)
-                    const offset = 0.0005;
-                    const path = [
-                        { lat: loc.lat() + offset, lng: loc.lng() - offset },
-                        { lat: loc.lat() + offset, lng: loc.lng() + offset },
-                        { lat: loc.lat() - offset, lng: loc.lng() + offset },
-                        { lat: loc.lat() - offset, lng: loc.lng() - offset }
-                    ];
-
-                    const polygon = new google.maps.Polygon({
-                        path: path,
-                        editable: true,
-                        draggable: true,
-                        fillOpacity: 0.8,
-                        strokeWeight: 3,
-                        map: map
-                    });
-
-                    adicionarPoligonoArray(polygon, 0); // Começa com valor R$ 0.00
-                    atualizarListaSidebar();
-                    document.getElementById('input-endereco').value = "";
-                } else {
-                    alert("Não foi possível encontrar esse endereço no mapa.");
-                }
-            });
         }
 
         function adicionarPoligonoArray(polygon, preco, corExistente = null) {
