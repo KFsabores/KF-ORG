@@ -510,6 +510,10 @@
 
         // --- FINALIZAÇÃO ---
         async function finalizeOrder() {
+            const btn = document.querySelector('button[onclick="finalizeOrder()"]');
+            if(btn && btn.disabled) return;
+            if(modalidadeAtual === 'ENTREGA' && taxaEntrega === null) { alert('Aguarde o cálculo da taxa...'); return; }
+            if(btn) { btn.disabled = true; btn.innerText = 'PROCESSANDO...'; }
             if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
@@ -535,7 +539,7 @@
             
             fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i => `${i.name} (R$ ${i.price.toFixed(2)})`).join(" | ") + (obs ? " | 📝 OBS: " + obs.toUpperCase() : ""), taxa: taxaEntrega.toFixed(2), troco: troco, latitude: geoFinal ? geoFinal.lat : "", longitude: geoFinal ? geoFinal.lng : "", localizacao_link: geoLink, localizacao_fonte: geoFinal ? geoFinal.fonte : "nao_informada" }) });
             
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`);
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
             cart = []; updateCartUI(); toggleCart();
         }
 
