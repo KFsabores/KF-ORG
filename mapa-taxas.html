@@ -83,10 +83,8 @@
                 adicionarPoligonoArray(polygon, 0);
                 atualizarListaSidebar();
             });
-            // INICIALIZAR AUTOCOMPLETE
-            const inputEnd = document.getElementById('input-endereco');
-            const autocomplete = new google.maps.places.Autocomplete(inputEnd);
-            autocomplete.bindTo('bounds', map);
+            // Autocomplete removido para evitar bloqueios de permissão da chave da API.
+            // A busca continuará funcionando normalmente pelo Geocoder no botão "Incluir"
 
             // CARREGAR DADOS EXISTENTES AO ABRIR
             carregarDadosSalvos();
