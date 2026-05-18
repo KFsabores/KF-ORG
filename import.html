@@ -26,8 +26,16 @@
         <h1 class="text-3xl font-black text-[#39FF14] italic uppercase mb-4">MIGRAÇÃO DE DADOS</h1>
         <p class="text-zinc-400 mb-8">Esta ferramenta vai puxar todos os pedidos antigos da sua Planilha do Google e salvar no novo banco de dados (Firebase).</p>
         
-        <button id="btn-import" onclick="iniciarImportacao()" class="bg-[#39FF14] text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:scale-105 transition-all shadow-lg w-full">
-            🚀 IMPORTAR PEDIDOS DA PLANILHA AGORA
+        <button id="btn-import" onclick="iniciarImportacao()" class="bg-[#39FF14] text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:scale-105 transition-all shadow-lg w-full mb-4">
+            🚀 1. IMPORTAR PEDIDOS DA PLANILHA
+        </button>
+
+        <button id="btn-estoque" onclick="popularEstoque()" class="bg-orange-500 text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:scale-105 transition-all shadow-lg w-full mb-4">
+            📦 2. CRIAR ESTOQUE INICIAL NO BANCO
+        </button>
+
+        <button id="btn-mapa" onclick="popularMapa()" class="bg-blue-500 text-white px-8 py-4 rounded-xl font-black uppercase text-sm hover:scale-105 transition-all shadow-lg w-full">
+            🗺️ 3. IMPORTAR MAPA DA PLANILHA
         </button>
 
         <div id="status" class="mt-8 text-xl font-bold text-zinc-300"></div>
@@ -118,6 +126,115 @@
             } catch (e) {
                 console.error(e);
                 status.innerText = "❌ ERRO: " + e.message;
+            }
+        }
+
+        async function popularEstoque() {
+            const btn = document.getElementById('btn-estoque');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            status.innerText = "⏳ Criando itens do estoque no Firebase...";
+
+            const itensPizza = [
+                "Calabresa", "Mussarela", "Presunto", "Margarida", "Napolitana", "Bacon", "Milho", "Alho", "3 Queijos", "Mista",
+                "Peperone", "Frango c/ Catupiry", "Calabresa c/ Catupiry", "Bacon c/ Milho", "Margherita", "Lombo Canadense", "4 Queijos", "Portuguesa",
+                "Baiana", "Frango c/ Bacon", "Palmito", "Camarão", "Carne Seca", "Coração",
+                "Chocolate", "Chocolate c/ Morango", "Chocolate Branco", "Chocolate Branco c/ Morango", "Banana c/ Canela", "Banana c/ Chocolate", "Romeu e Julieta", "Confete"
+            ];
+            
+            const itensTapioca = [
+                "Frango c/ Catupiry", "Carne Seca", "Camarão", "Pizza", "Queijo",
+                "Banana com Canela", "Brigadeiro", "Romeu e Julieta", "Doce de Leite"
+            ];
+
+            const itensBebida = [
+                "Água", "Água c/ Gás", "Guaracamp", "Coca Lata", "Coca Lata Zero", "Guaraná 1L", "Guaraná 1.5L", "Pepsi 1.5L",
+                "Guaraná ZERO 1.5L", "Sukita Uva 2L", "Sukita Laranja 2L", "Sukita Limão 2L"
+            ];
+
+            try {
+                const batch = db.batch();
+                
+                itensPizza.forEach(nome => {
+                    const ref = db.collection("estoque").doc(nome);
+                    batch.set(ref, { categoria: "PIZZA", status: "DISPONÍVEL" });
+                });
+                
+                itensTapioca.forEach(nome => {
+                    const ref = db.collection("estoque").doc(nome);
+                    batch.set(ref, { categoria: "TAPIOCA", status: "DISPONÍVEL" });
+                });
+                
+                itensBebida.forEach(nome => {
+                    const ref = db.collection("estoque").doc(nome);
+                    batch.set(ref, { categoria: "BEBIDA", status: "DISPONÍVEL" });
+                });
+
+                await batch.commit();
+
+                status.innerText = "✅ ESTOQUE CRIADO COM SUCESSO!";
+                btn.innerText = "📦 ESTOQUE CRIADO!";
+            } catch (e) {
+                console.error(e);
+                status.innerText = "❌ ERRO AO CRIAR ESTOQUE: " + e.message;
+            }
+        }
+
+        async function popularMapa() {
+            const btn = document.getElementById('btn-mapa');
+            const status = document.getElementById('status');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            status.innerText = "⏳ Baixando mapa antigo da planilha...";
+
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=CONFIG_TAXAS&t=${new Date().getTime()}`;
+                const response = await fetch(url);
+                const csvData = await response.text();
+                
+                const rows = csvData.split(/\r?\n(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                    .map(row => 
+                        row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                           .map(cell => cell.replace(/^"|"$/g, '').trim()) // remove aspas externas da celula csv
+                    )
+                    .filter(row => row.length >= 3 && row[0] !== "" && row[0] !== "PREÇO");
+
+                if(rows.length === 0) {
+                    status.innerText = "⚠️ Nenhum polígono encontrado na planilha.";
+                    return;
+                }
+
+                const batch = db.batch();
+                
+                rows.forEach(row => {
+                    let pontosFormatados = [];
+                    try {
+                        let jsonString = row[2].replace(/""/g, '"'); // reverte escape de aspas do csv
+                        pontosFormatados = JSON.parse(jsonString);
+                    } catch(e) {
+                        console.warn("Erro ao fazer parse dos pontos da área:", row[0]);
+                    }
+
+                    const payload = {
+                        preco: row[0],
+                        cor: row[1],
+                        pontos: pontosFormatados
+                    };
+
+                    const newRef = db.collection("config_taxas").doc();
+                    batch.set(newRef, payload);
+                });
+
+                await batch.commit();
+
+                status.innerText = `✅ SUCESSO! ${rows.length} áreas importadas para o mapa.`;
+                btn.innerText = "🗺️ MAPA IMPORTADO!";
+            } catch (e) {
+                console.error(e);
+                status.innerText = "❌ ERRO AO IMPORTAR MAPA: " + e.message;
             }
         }
     </script>

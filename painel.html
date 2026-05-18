@@ -550,9 +550,9 @@
                         <p class="text-[10px] font-bold text-zinc-500 mb-4 uppercase italic">📍 ${p.endereco}</p>
                         
                         <div class="grid grid-cols-3 gap-1 mb-4">
-                            <button onclick="abrirWhats('${p.telefone}')" class="btn-whats p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
-                            <button onclick="abrirMapa('${p.endereco}', '${p.localizacaoLink}', '${p.latitude}', '${p.longitude}')" class="btn-mapa p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
-                            <button onclick="chamarMotoboy('${p.nome}', '${p.endereco}', '${p.pagto}', '${p.total}', '${p.telefone}', '${p.localizacaoLink}', '${p.latitude}', '${p.longitude}')" class="btn-motoboy p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">🏍️ Motoboy</button>
+                            <button onclick="abrirWhats('${(p.telefone||'').replace(/'/g, "\\'")}')" class="btn-whats p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">WhatsApp</button>
+                            <button onclick="abrirMapa('${(p.endereco||'').replace(/'/g, "\\'")}', '${(p.localizacaoLink||'').replace(/'/g, "\\'")}', '${p.latitude}', '${p.longitude}')" class="btn-mapa p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">Mapa</button>
+                            <button onclick="chamarMotoboy('${(p.nome||'').replace(/'/g, "\\'")}', '${(p.endereco||'').replace(/'/g, "\\'")}', '${p.pagto}', '${p.total}', '${(p.telefone||'').replace(/'/g, "\\'")}', '${(p.localizacaoLink||'').replace(/'/g, "\\'")}', '${p.latitude}', '${p.longitude}')" class="btn-motoboy p-2 rounded-xl text-[7px] font-black uppercase hover:opacity-80 transition-all">🏍️ Motoboy</button>
                         </div>
 
                         <div class="bg-black/40 p-4 rounded-2xl mb-4 border border-zinc-800/50 flex-grow">
@@ -583,7 +583,7 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 mb-5">
-                            <div class="bg-zinc-800 p-2 rounded-xl text-center relative cursor-pointer hover:bg-zinc-700 transition-colors" onclick="editarTaxa(${p.linhaOriginal})" title="Clique para editar a taxa">
+                            <div class="bg-zinc-800 p-2 rounded-xl text-center relative cursor-pointer hover:bg-zinc-700 transition-colors" onclick="editarTaxa('${p.linhaOriginal}')" title="Clique para editar a taxa">
                                 <p class="text-[8px] font-black text-zinc-500 uppercase">Taxa Entrega</p>
                                 <p class="text-xs font-black text-orange-500">R$ ${p.taxa} <span class="text-[10px] ml-1 opacity-50">✏️</span></p>
                             </div>
@@ -593,14 +593,14 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-2 mb-4">
-                            <button onclick="confirmarPedido(${p.linhaOriginal}, this, '${p.telefone}', '${p.nome}')" class="bg-blue-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-blue-500">Confirmado</button>
-                            <button onclick="enviarEntrega('${p.telefone}', '${p.nome}')" class="btn-entrega py-2.5 rounded-xl font-black text-[8px] uppercase hover:opacity-80 transition-all">Saiu para entrega</button>
-                            <button onclick="concluirPedido(${p.linhaOriginal}, this)" class="bg-emerald-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-emerald-500">Concluir</button>
+                            <button onclick="confirmarPedido('${p.linhaOriginal}', this, '${(p.telefone||'').replace(/'/g, "\\'")}', '${(p.nome||'').replace(/'/g, "\\'")}')" class="bg-blue-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-blue-500">Confirmado</button>
+                            <button onclick="enviarEntrega('${(p.telefone||'').replace(/'/g, "\\'")}', '${(p.nome||'').replace(/'/g, "\\'")}')" class="btn-entrega py-2.5 rounded-xl font-black text-[8px] uppercase hover:opacity-80 transition-all">Saiu para entrega</button>
+                            <button onclick="concluirPedido('${p.linhaOriginal}', this)" class="bg-emerald-600 py-2.5 rounded-xl font-black text-[8px] uppercase hover:bg-emerald-500">Concluir</button>
                         </div>
                         <div class="flex justify-between items-center pt-4 border-t border-zinc-800">
                             <span class="text-xl font-black text-[#39FF14] italic">${p.total}</span>
                             <div class="flex gap-2">
-                                <button onclick="cancelarPedido(${p.linhaOriginal})" class="bg-red-900/20 text-red-500 p-2 rounded-xl hover:bg-red-600 hover:text-white transition-all">🗑️</button>
+                                <button onclick="cancelarPedido('${p.linhaOriginal}')" class="bg-red-900/20 text-red-500 p-2 rounded-xl hover:bg-red-600 hover:text-white transition-all">🗑️</button>
                                 <button onclick="imprimir('${encodeURIComponent(JSON.stringify(p))}')" class="bg-white text-black font-black px-2.5 py-2 rounded-xl text-[8px] uppercase hover:bg-zinc-200">Imprimir</button>
                             </div>
                         </div>
