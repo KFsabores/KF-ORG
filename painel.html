@@ -808,12 +808,12 @@
             db.collection("estoque").onSnapshot(snapshot => {
                 Object.values(cols).forEach(c => c.innerHTML = "");
                 snapshot.forEach(doc => {
-                    const i = { nome: doc.id, ...doc.data() };
+                    const i = { id: doc.id, ...doc.data() };
                     const isOff = i.status === 'PAUSADO';
                     const itemHtml = `
                         <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800 hover:border-zinc-700 transition-all">
                             <span class="text-[11px] font-black uppercase text-zinc-300 leading-tight">${i.nome}</span>
-                            <button onclick="mudarStatusEstoque('${i.nome}', '${i.categoria}', '${isOff ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
+                            <button onclick="mudarStatusEstoque('${i.id}', '${(i.nome||'').replace(/'/g, "\\'")}', '${i.categoria}', '${isOff ? 'DISPONÍVEL' : 'PAUSADO'}', this)" 
                                 class="px-4 py-2 rounded-xl text-[10px] font-black transition-all ${isOff ? 'bg-red-600' : 'bg-green-600'}">
                                 ${isOff ? 'OFF' : 'ON'}
                             </button>
@@ -826,9 +826,9 @@
             });
         }
 
-        async function mudarStatusEstoque(item, categoria, status, btn) {
+        async function mudarStatusEstoque(id, nome, categoria, status, btn) {
             btn.innerHTML = "⏳";
-            await db.collection("estoque").doc(item).set({ categoria: categoria, status: status });
+            await db.collection("estoque").doc(id).set({ nome: nome, categoria: categoria, status: status });
         }
 
         function abrirModalRelatorio() {
