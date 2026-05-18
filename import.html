@@ -135,46 +135,41 @@
             
             btn.disabled = true;
             btn.classList.add('opacity-50');
-            status.innerText = "⏳ Criando itens do estoque no Firebase...";
-
-            const itensPizza = [
-                "Calabresa", "Mussarela", "Presunto", "Margarida", "Napolitana", "Bacon", "Milho", "Alho", "3 Queijos", "Mista",
-                "Peperone", "Frango c/ Catupiry", "Calabresa c/ Catupiry", "Bacon c/ Milho", "Margherita", "Lombo Canadense", "4 Queijos", "Portuguesa",
-                "Baiana", "Frango c/ Bacon", "Palmito", "Camarão", "Carne Seca", "Coração",
-                "Chocolate", "Chocolate c/ Morango", "Chocolate Branco", "Chocolate Branco c/ Morango", "Banana c/ Canela", "Banana c/ Chocolate", "Romeu e Julieta", "Confete"
-            ];
-            
-            const itensTapioca = [
-                "Frango c/ Catupiry", "Carne Seca", "Camarão", "Pizza", "Queijo",
-                "Banana com Canela", "Brigadeiro", "Romeu e Julieta", "Doce de Leite"
-            ];
-
-            const itensBebida = [
-                "Água", "Água c/ Gás", "Guaracamp", "Coca Lata", "Coca Lata Zero", "Guaraná 1L", "Guaraná 1.5L", "Pepsi 1.5L",
-                "Guaraná ZERO 1.5L", "Sukita Uva 2L", "Sukita Laranja 2L", "Sukita Limão 2L"
-            ];
+            status.innerText = "⏳ Puxando o seu estoque original da planilha...";
 
             try {
+                const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=ESTOQUE&t=${new Date().getTime()}`;
+                const response = await fetch(url);
+                const csvData = await response.text();
+                
+                const rows = csvData.split(/\r?\n(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                    .map(row => 
+                        row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                           .map(cell => cell.replace(/^"|"$/g, '').trim())
+                    )
+                    .filter(row => row.length >= 2 && row[0] !== "" && row[0].toUpperCase() !== "ITEM");
+
                 const batch = db.batch();
+                let counter = 0;
                 
-                itensPizza.forEach(nome => {
-                    const ref = db.collection("estoque").doc(nome);
-                    batch.set(ref, { categoria: "PIZZA", status: "DISPONÍVEL" });
-                });
-                
-                itensTapioca.forEach(nome => {
-                    const ref = db.collection("estoque").doc(nome);
-                    batch.set(ref, { categoria: "TAPIOCA", status: "DISPONÍVEL" });
-                });
-                
-                itensBebida.forEach(nome => {
-                    const ref = db.collection("estoque").doc(nome);
-                    batch.set(ref, { categoria: "BEBIDA", status: "DISPONÍVEL" });
+                rows.forEach(row => {
+                    const nome = row[0];
+                    const categoria = row[1];
+                    const st = row[2] || "DISPONÍVEL";
+                    
+                    // Cria uma chave única baseada na categoria e no nome para evitar itens duplicados (ex: TAPIOCA_FRANGO)
+                    const chaveUnica = `${categoria}_${nome}`.replace(/[^a-zA-Z0-9_]/g, '_');
+                    
+                    const ref = db.collection("estoque").doc(chaveUnica);
+                    batch.set(ref, { nome: nome, categoria: categoria, status: st });
+                    counter++;
                 });
 
-                await batch.commit();
+                if(counter > 0) {
+                    await batch.commit();
+                }
 
-                status.innerText = "✅ ESTOQUE CRIADO COM SUCESSO!";
+                status.innerText = `✅ SUCESSO! ${counter} itens de estoque importados da planilha!`;
                 btn.innerText = "📦 ESTOQUE CRIADO!";
             } catch (e) {
                 console.error(e);
