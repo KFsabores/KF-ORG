@@ -65,6 +65,25 @@
             status.innerText = "⏳ Baixando dados da planilha...";
 
             try {
+                // 1. Limpa o banco de dados antes para evitar duplicação caso clique duas vezes
+                status.innerText = "⏳ Limpando banco de dados para evitar duplicação...";
+                const pedidosAntigos = await db.collection("pedidos").get();
+                if (!pedidosAntigos.empty) {
+                    let batchDel = db.batch();
+                    let delCounter = 0;
+                    for (const doc of pedidosAntigos.docs) {
+                        batchDel.delete(doc.ref);
+                        delCounter++;
+                        if (delCounter >= 400) {
+                            await batchDel.commit();
+                            batchDel = db.batch();
+                            delCounter = 0;
+                        }
+                    }
+                    if (delCounter > 0) await batchDel.commit();
+                }
+
+                status.innerText = "⏳ Baixando dados da planilha...";
                 const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
                 const response = await fetch(url);
                 const csvData = await response.text();
