@@ -132,6 +132,22 @@
             color: white;
         }
     </style>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjvO26MEbyQMiaTj43aUg7PwiKQmH0g34",
+            authDomain: "kf-sabores-delivery.firebaseapp.com",
+            projectId: "kf-sabores-delivery",
+            storageBucket: "kf-sabores-delivery.firebasestorage.app",
+            messagingSenderId: "926954054172",
+            appId: "1:926954054172:web:fdde663c1f315ec9e9f5d9"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
 </head>
 
 <body class="p-4 md:p-8">
@@ -264,12 +280,9 @@
     <div id="print-area"></div>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbywb6oFJsFUO19kijIyLvC2xncwxsV-0h66ASOJY_fJiDfRtSGkwfE5_Y4VNvWr1AbPjA/exec';
-        const INDEX_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx6XgE6wBcZPPjmtpAoyy6MseNXuS0eQ6VoA4TXfUwLoT0eG_AsJvAU3o6mlRxWISRcfQ/exec';
-        const SPREADSHEET_ID = '1JPwiFeHtkgi10DgEXwZY1qW1-TQ_cawIEUkDKb_ux9o';
-
         let todosOsPedidos = [];
         let pedidosExcluidosLocalmente = new Set();
+        let taxasManuais = {};
         let totalPedidosAnterior = 0;
         let primeiraCarga = true;
         let audioDesbloqueado = false;
@@ -418,47 +431,52 @@
             return num;
         }
 
-        async function carregarPedidos() {
-            const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PEDIDOSKF&t=${new Date().getTime()}`;
-            try {
-                const response = await fetch(url);
-                const csvData = await response.text();
+        function carregarPedidos() {
+            db.collection("pedidos").onSnapshot(snapshot => {
+                const pendentesAnterior = todosOsPedidos.filter(p => p.status.includes("PENDENTE")).length;
+
+                todosOsPedidos = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    
+                    let idString = doc.id;
+                    let taxaFinal = taxasManuais[idString] !== undefined ? taxasManuais[idString] : (data.taxa || "0,00");
+                    let totalStr = data.total || "R$ 0,00";
+                    let totalNumOrig = data.totalNum || 0;
+                    let totalNum = totalNumOrig;
+                    
+                    if (taxasManuais[idString] !== undefined) {
+                        let taxaAntigaNum = parseFloat((data.taxa || "0,00").replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+                        let taxaNovaNum = parseFloat(taxasManuais[idString].replace(",", ".")) || 0;
+                        totalNum = totalNumOrig - taxaAntigaNum + taxaNovaNum;
+                        totalStr = "R$ " + totalNum.toFixed(2).replace(".", ",");
+                    }
+                    
+                    return {
+                        id: doc.id,
+                        linhaOriginal: doc.id, // For compatibility
+                        dataFull: data.dataFull || "",
+                        objData: new Date(data.objData || Date.now()),
+                        nome: data.nome || "Sem Nome",
+                        endereco: data.endereco || "Sem Endereço",
+                        itens: data.itens || "",
+                        pagto: data.pagamento || "N/A",
+                        total: totalStr,
+                        totalNum: totalNum,
+                        status: data.status || '🟡 PENDENTE',
+                        modalidade: data.modalidade || "DELIVERY",
+                        telefone: data.telefone || "",
+                        taxa: taxaFinal,
+                        troco: data.troco || "NÃO",
+                        latitude: data.latitude || "",
+                        longitude: data.longitude || "",
+                        localizacaoLink: data.localizacaoLink || "",
+                        localizacaoFonte: data.localizacaoFonte || "",
+                        chaveAlerta: doc.id
+                    };
+                });
                 
-                // Divide linhas respeitando quebras de linha ("\n") dentro de aspas
-                const rows = csvData.split(/\r?\n(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-                    .map(row => 
-                        row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-                           .map(cell => cell.replace(/"/g, '').trim())
-                    )
-                    .filter(row => row.length >= 6 && row[0] !== "" && row[0] !== "DATA");
-
-                const pedidosComLinha = rows.map((row, idx) => ({
-                    linhaOriginal: idx + 2,
-                    dataFull: row[0] || "",
-                    objData: parseDataBR(row[0]),
-                    nome: row[1] || "Sem Nome",
-                    endereco: row[2] || "Sem Endereço",
-                    itens: row[3] || "",
-                    pagto: row[4] || "N/A",
-                    total: row[5] || "R$ 0,00",
-                    totalNum: parseFloat((row[5] || "0").replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
-                    status: (row[6] || 'PENDENTE').toUpperCase(),
-                    modalidade: (row[7] || "DELIVERY").toUpperCase(),
-                    telefone: row[8] || "",
-                    taxa: row[9] || "0,00",
-                    troco: row[10] || "NÃO",
-                    latitude: row[11] || "",
-                    longitude: row[12] || "",
-                    localizacaoLink: row[13] || "",
-                    localizacaoFonte: row[14] || "",
-                    chaveAlerta: `${row[0] || ""}|${row[1] || ""}|${row[3] || ""}|${row[5] || ""}`
-                }));
-
-                todosOsPedidos = pedidosComLinha
-                    .filter(p => !pedidosExcluidosLocalmente.has(p.linhaOriginal));
-
                 const pendentesAtuais = todosOsPedidos.filter(p => p.status.includes("PENDENTE"));
-
+                
                 if (primeiraCarga) {
                     pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.chaveAlerta));
                 } else {
@@ -476,10 +494,11 @@
                     if (pendentesAtuais.length === 0) pararSom();
                     pendentesAtuais.forEach(p => pedidosPendentesVistos.add(p.chaveAlerta));
                 }
+                
                 totalPedidosAnterior = todosOsPedidos.length;
                 primeiraCarga = false;
                 renderizarPedidos();
-            } catch (e) { console.error("Erro ao carregar pedidos:", e); }
+            });
         }
 
         function renderizarPedidos() {
@@ -564,9 +583,9 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-3 mb-5">
-                            <div class="bg-zinc-800 p-2 rounded-xl text-center">
+                            <div class="bg-zinc-800 p-2 rounded-xl text-center relative cursor-pointer hover:bg-zinc-700 transition-colors" onclick="editarTaxa(${p.linhaOriginal})" title="Clique para editar a taxa">
                                 <p class="text-[8px] font-black text-zinc-500 uppercase">Taxa Entrega</p>
-                                <p class="text-xs font-black text-orange-500">R$ ${p.taxa}</p>
+                                <p class="text-xs font-black text-orange-500">R$ ${p.taxa} <span class="text-[10px] ml-1 opacity-50">✏️</span></p>
                             </div>
                             <div class="bg-zinc-800 p-2 rounded-xl text-center">
                                 <p class="text-[8px] font-black text-zinc-500 uppercase">Troco para</p>
@@ -624,21 +643,24 @@
             }
         }
 
-        async function alterarStatus(linha, status, btn) {
+        async function alterarStatus(id, status, btn) {
             pararSom();
             const txt = btn.innerHTML;
             btn.innerHTML = "⏳";
 
-            // Pausa imediata no visual
-            const card = document.getElementById(`card-${linha}`);
+            const card = document.getElementById(`card-${id}`);
             if (card) {
                 const badge = card.querySelector('.timer-badge');
                 if (badge) badge.setAttribute('data-status', status.toUpperCase());
             }
 
             try {
-                await fetch(`${WEB_APP_URL}?row=${linha}&status=${encodeURIComponent(status)}&t=${new Date().getTime()}`, { mode: 'no-cors' });
-                setTimeout(carregarPedidos, 1500);
+                let statusFinal = status.toUpperCase();
+                if (statusFinal.includes("CONCLUIDO") || statusFinal.includes("CONCLUÍDO")) statusFinal = "🟢 CONCLUÍDO";
+                else if (statusFinal.includes("PREPARANDO")) statusFinal = "🟡 PREPARANDO";
+                else if (statusFinal.includes("SAIU")) statusFinal = "🔵 SAIU PARA ENTREGA";
+
+                await db.collection("pedidos").doc(String(id)).update({ status: statusFinal });
                 return true;
             } catch (e) {
                 btn.innerHTML = txt;
@@ -654,6 +676,23 @@
             salvarHorarioConclusao(idKey, hora);
             const ok = await alterarStatus(linha, 'CONCLUIDO', btn);
             if (!ok) removerHorarioConclusao(idKey);
+        }
+
+        function editarTaxa(linha) {
+            const p = todosOsPedidos.find(ped => ped.linhaOriginal === linha);
+            if (!p) return;
+            const novaTaxa = prompt(`Editar Taxa de Entrega para o cliente ${p.nome}\n\nDigite o novo valor (ex: 5,00):`, p.taxa);
+            if (novaTaxa !== null) {
+                let taxaNum = parseFloat(novaTaxa.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+                taxasManuais[linha] = taxaNum.toFixed(2).replace(".", ",");
+                
+                let taxaAntigaNum = parseFloat(p.taxa.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+                p.taxa = taxasManuais[linha];
+                p.totalNum = p.totalNum - taxaAntigaNum + taxaNum;
+                p.total = "R$ " + p.totalNum.toFixed(2).replace(".", ",");
+                
+                renderizarPedidos();
+            }
         }
 
         function abrirWhats(tel) {
@@ -714,21 +753,13 @@
             window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
         }
 
-        async function cancelarPedido(linha) {
-            if (confirm("🚨 APAGAR DEFINITIVAMENTE DA PLANILHA?")) {
-                const card = document.getElementById(`card-${linha}`);
-                if (card) card.classList.add('excluindo');
-                pedidosExcluidosLocalmente.add(linha);
+        async function cancelarPedido(id) {
+            if (confirm("🚨 APAGAR DEFINITIVAMENTE DO BANCO DE DADOS?")) {
                 try {
-                    const pedido = todosOsPedidos.find(p => p.linhaOriginal === linha);
-                    const idKey = pedido ? pedido.chaveAlerta : String(linha);
-
-                    await fetch(`${WEB_APP_URL}?action=delete&row=${linha}&t=${new Date().getTime()}`, { mode: 'no-cors' });
-                    removerHorarioConclusao(idKey);
-                    setTimeout(() => { if (card) card.remove(); }, 500);
+                    await db.collection("pedidos").doc(String(id)).delete();
+                    const pedido = todosOsPedidos.find(p => p.linhaOriginal === id);
+                    if(pedido) removerHorarioConclusao(pedido.chaveAlerta);
                 } catch (e) {
-                    pedidosExcluidosLocalmente.delete(linha);
-                    if (card) card.classList.remove('excluindo');
                     alert("Erro ao excluir.");
                 }
             }
@@ -766,18 +797,18 @@
             p.classList.toggle('hidden');
         }
 
-        async function carregarEstoque() {
+        function carregarEstoque() {
             const cols = {
                 pizza: document.getElementById('lista-pizza'),
                 tapioca: document.getElementById('lista-tapioca'),
                 bebida: document.getElementById('lista-bebida')
             };
             Object.values(cols).forEach(c => c.innerHTML = "<p class='text-center text-zinc-600 text-[10px] animate-pulse uppercase font-black'>Carregando...</p>");
-            try {
-                const res = await fetch(`${WEB_APP_URL}?action=getEstoque`);
-                const dados = await res.json();
+            
+            db.collection("estoque").onSnapshot(snapshot => {
                 Object.values(cols).forEach(c => c.innerHTML = "");
-                dados.forEach(i => {
+                snapshot.forEach(doc => {
+                    const i = { nome: doc.id, ...doc.data() };
                     const isOff = i.status === 'PAUSADO';
                     const itemHtml = `
                         <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800 hover:border-zinc-700 transition-all">
@@ -787,18 +818,17 @@
                                 ${isOff ? 'OFF' : 'ON'}
                             </button>
                         </div>`;
-                    const cat = i.categoria.toUpperCase();
+                    const cat = (i.categoria || "").toUpperCase();
                     if (cat.includes("PIZZA")) cols.pizza.innerHTML += itemHtml;
                     else if (cat.includes("TAPIOCA")) cols.tapioca.innerHTML += itemHtml;
                     else if (cat.includes("BEBIDA")) cols.bebida.innerHTML += itemHtml;
                 });
-            } catch (e) { console.error("Erro estoque:", e); }
+            });
         }
 
         async function mudarStatusEstoque(item, categoria, status, btn) {
             btn.innerHTML = "⏳";
-            await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'updateStock', item, categoria, status }) });
-            carregarEstoque();
+            await db.collection("estoque").doc(item).set({ categoria: categoria, status: status });
         }
 
         function abrirModalRelatorio() {
@@ -839,21 +869,15 @@
             };
 
             try {
-                await fetch(INDEX_WEB_APP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(payload)
-                });
+                payload.dataFull = new Date().toLocaleString('pt-BR');
+                payload.objData = new Date().getTime();
+                payload.totalNum = parseFloat(payload.total.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
+                
+                await db.collection("pedidos").add(payload);
 
-                // Como o fetch é no-cors, não temos resposta de sucesso real, 
-                // então assumimos sucesso e recarregamos.
-                setTimeout(() => {
-                    document.getElementById('modal-venda-rapida').classList.add('hidden');
-                    btn.innerHTML = confirmText;
-                    btn.disabled = false;
-                    carregarPedidos();
-                }, 1500);
-
+                document.getElementById('modal-venda-rapida').classList.add('hidden');
+                btn.innerHTML = confirmText;
+                btn.disabled = false;
             } catch (e) {
                 console.error(e);
                 alert("Erro ao registrar venda.");
@@ -985,7 +1009,6 @@
             }
         });
 
-        setInterval(carregarPedidos, 10000);
         setInterval(atualizarCronometros, 30000);
         carregarPedidos();
     </script>

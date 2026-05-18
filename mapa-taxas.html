@@ -12,6 +12,22 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #18181b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjvO26MEbyQMiaTj43aUg7PwiKQmH0g34",
+            authDomain: "kf-sabores-delivery.firebaseapp.com",
+            projectId: "kf-sabores-delivery",
+            storageBucket: "kf-sabores-delivery.firebasestorage.app",
+            messagingSenderId: "926954054172",
+            appId: "1:926954054172:web:fdde663c1f315ec9e9f5d9"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
 </head>
 <body class="bg-zinc-950 p-4 md:p-8 text-white">
     <div class="max-w-7xl mx-auto">
@@ -59,7 +75,6 @@
         let map;
         let drawingManager;
         let poligonos = [];
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbywb6oFJsFUO19kijIyLvC2xncwxsV-0h66ASOJY_fJiDfRtSGkwfE5_Y4VNvWr1AbPjA/exec";
 
         async function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -138,11 +153,10 @@
 
         async function carregarDadosSalvos() {
             try {
-                const response = await fetch(`${webAppUrl}?action=getMapa`);
-                const dados = await response.json();
-                
-                if (dados && dados.length > 0) {
-                    dados.forEach(area => {
+                const snapshot = await db.collection("config_taxas").get();
+                if (!snapshot.empty) {
+                    snapshot.forEach(doc => {
+                        const area = doc.data();
                         const polygon = new google.maps.Polygon({
                             path: area.pontos,
                             editable: true,
@@ -155,7 +169,7 @@
                     });
                     atualizarListaSidebar();
                 } else {
-                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva. Comece a desenhar!";
+                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
                 }
             } catch (e) {
                 console.error("Erro ao carregar:", e);
@@ -206,12 +220,17 @@
             });
 
             try {
-                await fetch(webAppUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: "salvarMapa", dados: JSON.stringify(dadosParaSalvar) })
+                const snapshot = await db.collection("config_taxas").get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                
+                dadosParaSalvar.forEach(d => {
+                    const newRef = db.collection("config_taxas").doc();
+                    batch.set(newRef, d);
                 });
-                alert("Mapa salvo com sucesso em CONFIG_TAXAS!");
+                await batch.commit();
+
+                alert("Mapa salvo com sucesso no Firebase!");
                 document.getElementById('status-save').classList.remove('hidden');
             } catch (e) {
                 alert("Erro ao salvar: " + e.message);

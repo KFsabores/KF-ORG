@@ -30,6 +30,22 @@
         }
         .animate-pop { animation: cart-pop 0.3s ease-out; }
     </style>
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjvO26MEbyQMiaTj43aUg7PwiKQmH0g34",
+            authDomain: "kf-sabores-delivery.firebaseapp.com",
+            projectId: "kf-sabores-delivery",
+            storageBucket: "kf-sabores-delivery.firebasestorage.app",
+            messagingSenderId: "926954054172",
+            appId: "1:926954054172:web:fdde663c1f315ec9e9f5d9"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
 </head>
 <body class="pb-24">
 
@@ -206,19 +222,19 @@
         async function init() {
             verificarStatusLoja();
             carregarCacheInicial();
-            // Renderiza imediato com cache/local para eliminar atraso visual inicial.
             switchCategory('promos');
             try {
-                const [estoque, mapa] = await Promise.all([
-                    fetch(`${URL_PLANILHA}?action=getEstoque`).then(res => res.json()),
-                    fetch(`${URL_PLANILHA}?action=getMapa`).then(res => res.json())
-                ]);
-                estoquePausado = estoque.filter(item => item.status === "PAUSADO").map(item => item.nome);
-                zonasEntrega = mapa;
+                const estoqueRef = await db.collection("estoque").where("status", "==", "PAUSADO").get();
+                estoquePausado = estoqueRef.docs.map(doc => doc.id);
+                
+                const mapaRef = await db.collection("config_taxas").get();
+                zonasEntrega = mapaRef.docs.map(doc => doc.data());
+                
                 salvarCaches();
-                // Re-renderiza com dados atualizados de rede.
                 switchCategory('promos');
-            } catch (e) {}
+            } catch (e) {
+                console.error("Erro ao carregar do firebase", e);
+            }
         }
 
         // --- GOOGLE AUTOCOMPLETE & GEOCODING ---
@@ -541,7 +557,27 @@
             if(geoLink) msg += `%0A*📌 LOCALIZAÇÃO:* ${encodeURIComponent(geoLink)}%0A`;
             msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
-            fetch(URL_PLANILHA, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ nome: n, telefone: tel, endereco: a, total: totalStr, pagamento: pagto, modalidade: modalidadeAtual, itens: cart.map(i => `${i.name} (R$ ${i.price.toFixed(2)})`).join(" | ") + (obs ? " | 📝 OBS: " + obs.toUpperCase() : ""), taxa: taxaEntrega.toFixed(2), troco: troco, latitude: geoFinal ? geoFinal.lat : "", longitude: geoFinal ? geoFinal.lng : "", localizacao_link: geoLink, localizacao_fonte: geoFinal ? geoFinal.fonte : "nao_informada" }) });
+            try {
+                await db.collection("pedidos").add({
+                    nome: n.toUpperCase(),
+                    telefone: tel,
+                    endereco: a.toUpperCase(),
+                    total: totalStr,
+                    totalNum: parseFloat(totalStr.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
+                    pagamento: pagto.toUpperCase(),
+                    modalidade: modalidadeAtual,
+                    itens: cart.map(i => `${i.name} (R$ ${i.price.toFixed(2)})`).join(" | ") + (obs ? " | 📝 OBS: " + obs.toUpperCase() : ""),
+                    taxa: taxaEntrega.toFixed(2).replace(".", ","),
+                    troco: troco,
+                    latitude: geoFinal ? geoFinal.lat : "",
+                    longitude: geoFinal ? geoFinal.lng : "",
+                    localizacaoLink: geoLink,
+                    localizacaoFonte: geoFinal ? geoFinal.fonte : "nao_informada",
+                    status: "🟡 PENDENTE",
+                    dataFull: new Date().toLocaleString('pt-BR'),
+                    objData: new Date().getTime()
+                });
+            } catch (e) { console.error("Erro ao salvar no Firebase", e); }
             
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
             cart = []; updateCartUI(); toggleCart();
