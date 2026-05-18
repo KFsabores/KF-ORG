@@ -149,13 +149,20 @@
                     )
                     .filter(row => row.length >= 2 && row[0] !== "" && row[0].toUpperCase() !== "ITEM");
 
+                const batchDeletar = db.batch();
+                const snapSujeira = await db.collection("estoque").get();
+                snapSujeira.forEach(doc => batchDeletar.delete(doc.ref));
+                await batchDeletar.commit();
+
                 const batch = db.batch();
                 let counter = 0;
                 
                 rows.forEach(row => {
                     const nome = row[0];
-                    const categoria = row[1];
-                    const st = row[2] || "DISPONÍVEL";
+                    const st = row[1] || "DISPONÍVEL"; // Coluna B = Status
+                    const categoria = row[2] || "";    // Coluna C = Categoria
+                    
+                    if (!categoria) return; // Ignora se não tiver categoria
                     
                     // Cria uma chave única baseada na categoria e no nome para evitar itens duplicados (ex: TAPIOCA_FRANGO)
                     const chaveUnica = `${categoria}_${nome}`.replace(/[^a-zA-Z0-9_]/g, '_');
