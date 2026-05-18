@@ -225,7 +225,7 @@
             switchCategory('promos');
             try {
                 const estoqueRef = await db.collection("estoque").where("status", "==", "PAUSADO").get();
-                estoquePausado = estoqueRef.docs.map(doc => doc.id);
+                estoquePausado = estoqueRef.docs.map(doc => doc.data().nome);
                 
                 const mapaRef = await db.collection("config_taxas").get();
                 zonasEntrega = mapaRef.docs.map(doc => doc.data());
