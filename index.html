@@ -245,6 +245,7 @@
             const input = document.getElementById('cust-addr');
             const autocomplete = new google.maps.places.Autocomplete(input);
             autocomplete.addListener('place_changed', async () => {
+                if (localizacaoPedido && localizacaoPedido.fonte === 'gps_usuario') return; // Protege o GPS
                 const place = autocomplete.getPlace();
                 if (place.geometry) await verificarLocalizacao(place.geometry.location);
             });
@@ -255,6 +256,8 @@
 
         async function geocodificarEndereco(endereco) {
             if (!endereco || endereco.length < 5 || endereco === "RETIRADA NA LOJA") return;
+            if (localizacaoPedido && localizacaoPedido.fonte === 'gps_usuario') return; // Protege o GPS
+            
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: endereco }, (results, status) => {
                 if (status === "OK" && results[0].geometry) { verificarLocalizacao(results[0].geometry.location); }
@@ -320,8 +323,11 @@
             
             const loc = await capturarLocalizacaoAtual();
             if (loc) {
-                document.getElementById('cust-addr').value = "Localização por GPS 📍";
+                const input = document.getElementById('cust-addr');
+                if(!input.value) input.placeholder = "📍 GPS ATIVADO! Digite o nome da Rua e Nº...";
+                
                 await verificarLocalizacao(loc);
+                document.getElementById('distancia-info').innerText += " (GPS ATIVO ✅)";
             } else {
                 alert("Não conseguimos acessar o seu GPS. Verifique se a localização está ativada no celular ou digite o seu endereço completo no campo.");
             }
