@@ -553,9 +553,9 @@
         async function finalizeOrder() {
             const btn = document.querySelector('button[onclick="finalizeOrder()"]');
             if(btn && btn.disabled) return;
-            if(modalidadeAtual === 'ENTREGA' && taxaEntrega === null) { alert('Aguarde o cálculo da taxa...'); return; }
-            if(btn) { btn.disabled = true; btn.innerText = 'PROCESSANDO...'; }
+            
             if (!estaAberto()) { alert("LOJA FECHADA!"); return; }
+            
             const n = document.getElementById('cust-name').value;
             const tel = document.getElementById('cust-phone').value;
             const a = document.getElementById('cust-addr').value;
@@ -565,6 +565,9 @@
             const troco = document.getElementById('troco-val').value;
             
             if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
+            if(modalidadeAtual === 'ENTREGA' && taxaEntrega === null) { alert('Aguarde o cálculo da taxa...'); return; }
+
+            if(btn) { btn.disabled = true; btn.innerText = 'PROCESSANDO...'; }
 
             let geoFinal = localizacaoPedido;
             if (!geoFinal) {
@@ -598,10 +601,17 @@
                     dataFull: new Date().toLocaleString('pt-BR'),
                     objData: new Date().getTime()
                 });
-            } catch (e) { console.error("Erro ao salvar no Firebase", e); }
-            
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
-            cart = []; updateCartUI(); toggleCart();
+                
+                cart = [];
+                updateCartUI();
+                window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+                toggleCart();
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao enviar pedido. Tente novamente.");
+            } finally {
+                if(btn) { btn.disabled = false; btn.innerText = 'FINALIZAR PEDIDO'; }
+            }
         }
 
         function toggleCart() { document.getElementById('cart-modal').classList.toggle('hidden'); }
