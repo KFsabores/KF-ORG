@@ -293,6 +293,16 @@
                 } else if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
                     localizacaoPedido = { lat: loc.lat, lng: loc.lng, fonte: loc.fonte || "maps_geocode" };
                 }
+                
+                let latLngObj;
+                if (loc && typeof loc.lat === 'function') {
+                    latLngObj = loc;
+                } else if (loc && typeof loc.lat === 'number') {
+                    latLngObj = new google.maps.LatLng(loc.lat, loc.lng);
+                } else {
+                    throw new Error("Localização inválida");
+                }
+
                 let dadosTratados = zonasEntrega;
                 if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
@@ -300,7 +310,7 @@
                     if (zona.pontos) {
                         const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).replace(',','.')), lng: parseFloat(String(p.lng).replace(',','.')) }));
                         const poly = new google.maps.Polygon({ paths: caminhos });
-                        if (google.maps.geometry.poly.containsLocation(loc, poly)) { zonaAchada = zona; break; }
+                        if (google.maps.geometry.poly.containsLocation(latLngObj, poly)) { zonaAchada = zona; break; }
                     }
                 }
                 if (zonaAchada) {
