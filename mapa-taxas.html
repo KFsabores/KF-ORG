@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Editor de Áreas - KF Sabores</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places"></script>
     <style>
         #map { height: 600px; width: 100%; border-radius: 20px; }
         .gm-style-iw { color: black !important; }
@@ -27,9 +28,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
-
-    <!-- GOOGLE MAPS - síncrono para garantir que esteja pronto ao usar -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places"></script>
 </head>
 <body class="bg-zinc-950 p-4 md:p-8 text-white">
     <div class="max-w-7xl mx-auto">
@@ -59,11 +57,8 @@
                 <h2 class="font-bold mb-4 uppercase text-xs text-zinc-400">📍 Áreas Configuradas</h2>
                 
                 <div id="lista-areas" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                    <div id="placeholder-msg" class="text-center py-6 text-zinc-600 text-sm italic">
-                        <div id="msg-texto">⌛ Carregando áreas...</div>
-                        <button id="btn-recarregar" onclick="carregarDadosSalvos()" class="hidden mt-4 bg-zinc-700 hover:bg-zinc-600 text-white text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-colors">
-                            🔄 Tentar Novamente
-                        </button>
+                    <div id="placeholder-msg" class="text-center py-10 text-zinc-600 text-sm italic">
+                        Carregando áreas salvas...
                     </div>
                 </div>
 
@@ -80,11 +75,10 @@
         let map;
         let drawingManager;
         let poligonos = [];
-        let carregandoTimeout = null;
 
-        function initMap() {
+        async function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: -22.9235, lng: -43.6364 },
+                center: { lat: -22.9235, lng: -43.6364 }, // Paciência, RJ
                 zoom: 15,
                 styles: [
                     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -105,6 +99,7 @@
                 atualizarListaSidebar();
             });
 
+            // CARREGAR DADOS EXISTENTES AO ABRIR
             carregarDadosSalvos();
         }
 
@@ -146,49 +141,26 @@
         }
 
         function adicionarPoligonoArray(polygon, preco, corExistente = null, nomeExistente = null) {
-            const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+            const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
             polygon.setOptions({ fillColor: cor, strokeColor: cor });
             const id = Date.now() + Math.random();
             poligonos.push({ id: id, obj: polygon, preco: preco, nome: nomeExistente || `Área ${poligonos.length + 1}` });
             document.getElementById('placeholder-msg').style.display = 'none';
         }
 
-        function setMsgPlaceholder(texto, mostrarBotao = false) {
-            document.getElementById('msg-texto').innerText = texto;
-            document.getElementById('placeholder-msg').style.display = 'block';
-            const btn = document.getElementById('btn-recarregar');
-            if (mostrarBotao) btn.classList.remove('hidden');
-            else btn.classList.add('hidden');
-        }
-
         async function carregarDadosSalvos() {
-            // Remove polígonos antigos do mapa se for um reload
-            poligonos.forEach(p => p.obj.setMap(null));
-            poligonos = [];
-
-            setMsgPlaceholder("⌛ Conectando ao Firebase...");
-            if (carregandoTimeout) clearTimeout(carregandoTimeout);
-
-            // Timeout de 10 segundos para detectar travamento
-            carregandoTimeout = setTimeout(() => {
-                setMsgPlaceholder("⚠️ Tempo esgotado. Verifique a conexão.", true);
-            }, 10000);
-
             try {
                 const snapshot = await db.collection("config_taxas").get();
-                clearTimeout(carregandoTimeout);
-
                 if (!snapshot.empty) {
                     snapshot.forEach(doc => {
                         const area = doc.data();
-                        if (!area.pontos || !Array.isArray(area.pontos) || area.pontos.length < 3) return;
+                        if (!area.pontos || !Array.isArray(area.pontos)) return;
 
+                        // Converte coordenadas com segurança (aceita número ou string com vírgula)
                         const pontosFormatados = area.pontos.map(p => ({
                             lat: parseFloat(String(p.lat).replace(',','.')),
                             lng: parseFloat(String(p.lng).replace(',','.'))
-                        })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
-
-                        if (pontosFormatados.length < 3) return;
+                        }));
 
                         const polygon = new google.maps.Polygon({
                             path: pontosFormatados,
@@ -200,19 +172,13 @@
                         });
                         adicionarPoligonoArray(polygon, area.preco, area.cor, area.nome);
                     });
-
-                    if (poligonos.length > 0) {
-                        atualizarListaSidebar();
-                    } else {
-                        setMsgPlaceholder("Nenhuma área válida encontrada. Comece a desenhar!", false);
-                    }
+                    atualizarListaSidebar();
                 } else {
-                    setMsgPlaceholder("Nenhuma área salva. Comece a desenhar no mapa!", false);
+                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
                 }
             } catch (e) {
-                clearTimeout(carregandoTimeout);
                 console.error("Erro ao carregar:", e);
-                setMsgPlaceholder("❌ Erro: " + (e.message || "Falha na conexão."), true);
+                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados: " + e.message;
             }
         }
 
@@ -220,17 +186,16 @@
             const container = document.getElementById('lista-areas');
             container.innerHTML = poligonos.map(p => `
                 <div class="p-4 bg-zinc-800/50 rounded-xl border-l-4" style="border-color: ${p.obj.fillColor}">
-                    <div class="flex justify-between items-center mb-2">
-                        <input type="text" value="${(p.nome || '').replace(/"/g,"'")}" placeholder="Nome da Área"
+                    <div class="flex justify-between items-center mb-2 text-[10px] font-bold uppercase text-zinc-400">
+                        <input type="text" value="${(p.nome || '').replace(/"/g, "'")}" placeholder="Nome da área"
                             onchange="atualizarNome(${p.id}, this.value)"
-                            class="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white font-bold text-[10px] w-2/3 outline-none focus:border-[#39FF14] uppercase">
-                        <button onclick="removerArea(${p.id})" class="text-red-500 text-[10px] font-black uppercase hover:text-red-400">✕ Remover</button>
+                            class="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white font-bold text-[10px] w-2/3 outline-none focus:border-[#39FF14]">
+                        <button onclick="removerArea(${p.id})" class="text-red-500">Remover</button>
                     </div>
-                    <div class="relative mt-2">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#39FF14] font-bold text-sm">R$</span>
-                        <input type="number" step="0.50" min="0" value="${parseFloat(p.preco || 0).toFixed(2)}"
-                            onchange="atualizarPreco(${p.id}, this.value)"
-                            class="bg-zinc-950 border border-zinc-700 rounded-lg w-full py-2 pl-10 text-white font-black outline-none focus:border-[#39FF14]">
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-[#39FF14] font-bold text-sm">R$</span>
+                        <input type="number" step="0.50" value="${parseFloat(p.preco || 0).toFixed(2)}" onchange="atualizarPreco(${p.id}, this.value)" 
+                            class="bg-zinc-950 border border-zinc-700 rounded-lg w-full py-2 pl-10 text-white font-black outline-none">
                     </div>
                 </div>
             `).join('');
@@ -251,11 +216,8 @@
             if (index > -1) {
                 poligonos[index].obj.setMap(null);
                 poligonos.splice(index, 1);
-                if(poligonos.length === 0) {
-                    setMsgPlaceholder("Nenhuma área. Comece a desenhar no mapa!", false);
-                } else {
-                    atualizarListaSidebar();
-                }
+                if(poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
+                atualizarListaSidebar();
             }
         }
 
@@ -280,20 +242,20 @@
                 });
                 await batch.commit();
 
+                alert("Mapa salvo com sucesso no Firebase!");
                 const statusEl = document.getElementById('status-save');
                 statusEl.classList.remove('hidden');
                 setTimeout(() => statusEl.classList.add('hidden'), 3000);
-                alert("Mapa salvo com sucesso no Firebase! ✅");
             } catch (e) {
                 alert("Erro ao salvar: " + e.message);
             } finally {
-                btn.innerText = "Salvar Alterações";
+                btn.innerText = "SALVAR ALTERAÇÕES";
                 btn.disabled = false;
             }
         }
 
-        // Inicializa o mapa quando o DOM estiver pronto
-        window.addEventListener('load', initMap);
+        // Mesma inicialização do código original que funcionava
+        google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
