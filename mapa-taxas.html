@@ -157,8 +157,15 @@
                 if (!snapshot.empty) {
                     snapshot.forEach(doc => {
                         const area = doc.data();
+                        if (!area.pontos || !Array.isArray(area.pontos)) return;
+                        
+                        const pontosFormatados = area.pontos.map(p => ({
+                            lat: parseFloat(String(p.lat).replace(',','.')),
+                            lng: parseFloat(String(p.lng).replace(',','.'))
+                        }));
+                        
                         const polygon = new google.maps.Polygon({
-                            path: area.pontos,
+                            path: pontosFormatados,
                             editable: true,
                             draggable: true,
                             fillOpacity: 0.45,
@@ -173,7 +180,7 @@
                 }
             } catch (e) {
                 console.error("Erro ao carregar:", e);
-                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
+                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados: " + e.message;
             }
         }
 
