@@ -678,20 +678,27 @@
             if (!ok) removerHorarioConclusao(idKey);
         }
 
-        function editarTaxa(linha) {
+        async function editarTaxa(linha) {
             const p = todosOsPedidos.find(ped => ped.linhaOriginal === linha);
             if (!p) return;
             const novaTaxa = prompt(`Editar Taxa de Entrega para o cliente ${p.nome}\n\nDigite o novo valor (ex: 5,00):`, p.taxa);
             if (novaTaxa !== null) {
                 let taxaNum = parseFloat(novaTaxa.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
-                taxasManuais[linha] = taxaNum.toFixed(2).replace(".", ",");
+                let taxaStr = taxaNum.toFixed(2).replace(".", ",");
                 
                 let taxaAntigaNum = parseFloat(p.taxa.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0;
-                p.taxa = taxasManuais[linha];
-                p.totalNum = p.totalNum - taxaAntigaNum + taxaNum;
-                p.total = "R$ " + p.totalNum.toFixed(2).replace(".", ",");
+                let novoTotalNum = p.totalNum - taxaAntigaNum + taxaNum;
+                let novoTotalStr = "R$ " + novoTotalNum.toFixed(2).replace(".", ",");
                 
-                renderizarPedidos();
+                try {
+                    await db.collection("pedidos").doc(String(linha)).update({
+                        taxa: taxaStr,
+                        total: novoTotalStr,
+                        totalNum: novoTotalNum
+                    });
+                } catch (e) {
+                    alert("Erro ao atualizar a taxa no banco de dados: " + e.message);
+                }
             }
         }
 

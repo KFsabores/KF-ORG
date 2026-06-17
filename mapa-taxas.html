@@ -143,11 +143,11 @@
             });
         }
 
-        function adicionarPoligonoArray(polygon, preco, corExistente = null) {
+        function adicionarPoligonoArray(polygon, preco, corExistente = null, nomeExistente = null) {
             const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
             polygon.setOptions({ fillColor: cor, strokeColor: cor });
             const id = Date.now() + Math.random();
-            poligonos.push({ id: id, obj: polygon, preco: preco });
+            poligonos.push({ id: id, obj: polygon, preco: preco, nome: nomeExistente || `Área ${poligonos.length + 1}` });
             document.getElementById('placeholder-msg').style.display = 'none';
         }
 
@@ -165,7 +165,7 @@
                             strokeWeight: 2,
                             map: map
                         });
-                        adicionarPoligonoArray(polygon, area.preco, area.cor);
+                        adicionarPoligonoArray(polygon, area.preco, area.cor, area.nome);
                     });
                     atualizarListaSidebar();
                 } else {
@@ -182,7 +182,8 @@
             container.innerHTML = poligonos.map(p => `
                 <div class="p-4 bg-zinc-800/50 rounded-xl border-l-4" style="border-color: ${p.obj.fillColor}">
                     <div class="flex justify-between items-center mb-2 text-[10px] font-bold uppercase text-zinc-400">
-                        <span>Taxa de Entrega:</span>
+                        <input type="text" value="${p.nome || ''}" placeholder="Nome da Área" onchange="atualizarNome(${p.id}, this.value)" 
+                            class="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white font-bold text-[10px] w-2/3 outline-none focus:border-[#39FF14]">
                         <button onclick="removerArea(${p.id})" class="text-red-500">Remover</button>
                     </div>
                     <div class="relative">
@@ -197,6 +198,11 @@
         function atualizarPreco(id, valor) {
             const p = poligonos.find(x => x.id === id);
             if(p) p.preco = parseFloat(valor);
+        }
+
+        function atualizarNome(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.nome = valor;
         }
 
         function removerArea(id) {
@@ -216,7 +222,7 @@
 
             const dadosParaSalvar = poligonos.map(p => {
                 const path = p.obj.getPath().getArray().map(latLng => ({ lat: latLng.lat(), lng: latLng.lng() }));
-                return { preco: p.preco, cor: p.obj.fillColor, pontos: path };
+                return { preco: p.preco, cor: p.obj.fillColor, pontos: path, nome: p.nome || "" };
             });
 
             try {
