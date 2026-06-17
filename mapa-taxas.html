@@ -13,6 +13,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
     
+    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
     <script>
@@ -20,55 +21,53 @@
             apiKey: "AIzaSyBjvO26MEbyQMiaTj43aUg7PwiKQmH0g34",
             authDomain: "kf-sabores-delivery.firebaseapp.com",
             projectId: "kf-sabores-delivery",
-            storageBucket: "kf-sabores-delivery.appspot.com",
-            messagingSenderId: "1090158226066",
-            appId: "1:1090158226066:web:65db1f99c08e50b18f0293"
+            storageBucket: "kf-sabores-delivery.firebasestorage.app",
+            messagingSenderId: "926954054172",
+            appId: "1:926954054172:web:fdde663c1f315ec9e9f5d9"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
 </head>
-<body class="bg-zinc-950 text-white min-h-screen font-[Montserrat]">
-
-    <div class="flex h-screen overflow-hidden">
-        <div class="w-96 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col justify-between">
+<body class="bg-zinc-950 p-4 md:p-8 text-white">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
-                <div class="flex items-center gap-3 mb-6">
-                    <span class="text-2xl">🗺️</span>
-                    <h1 class="text-xl font-black tracking-wider text-white">MAPA DE TAXAS</h1>
-                </div>
-                
-                <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
-                    Desenhe polígonos no mapa para definir as regiões de entrega e seus respectivos valores.
-                </p>
-
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-zinc-400 mb-2 uppercase">Testar ou Buscar Endereço</label>
-                    <input id="pac-input" type="text" placeholder="Digite uma rua, bairro..." 
-                           class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition">
-                </div>
-
-                <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[340px]">
-                    <div id="placeholder-msg" class="text-center py-8 text-zinc-500 text-sm">
-                        Nenhuma região desenhada ainda. Use a ferramenta do mapa para criar.
-                    </div>
-                    <div id="lista-regioes" class="space-y-3"></div>
-                </div>
+                <h1 class="text-2xl font-black uppercase italic text-[#39FF14]">Editor de Geofencing</h1>
+                <p class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Paciência, RJ - Gestão de Taxas</p>
             </div>
-
-            <div class="pt-4 border-t border-zinc-800">
-                <button id="btn-salvar" onclick="salvarConfiguracoes()" 
-                        class="w-full bg-[#39FF14] text-black font-black py-4 rounded-xl text-sm tracking-wider hover:bg-[#2ecc12] transition duration-200 disabled:opacity-50">
-                    SALVAR ALTERAÇÕES
+            <div class="flex flex-1 max-w-md w-full relative">
+                <input type="text" id="input-endereco" placeholder="Buscar endereço (Ex: Rua A, 123)..." 
+                    class="bg-zinc-900 border border-zinc-700 rounded-l-xl w-full py-2 px-4 text-xs text-white outline-none focus:border-[#39FF14]">
+                <button onclick="buscarEAdicionarEndereco()" class="bg-[#39FF14] text-black px-4 py-2 rounded-r-xl font-bold text-xs uppercase hover:bg-green-500 transition-colors">
+                    Incluir
                 </button>
-                <p id="status-save" class="text-center text-xs text-[#39FF14] mt-2 font-bold hidden">
-                    ✅ Configurações salvas no Firebase!
-                </p>
             </div>
-        </div>
+            <div id="status-save" class="hidden text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full border border-green-500/50 animate-pulse">
+                Salvo no Firebase ✅
+            </div>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-3 relative">
+                <div id="map" class="border border-zinc-800 shadow-2xl"></div>
+            </div>
 
-        <div class="flex-1 p-6 relative">
-            <div id="map" class="w-full h-full border border-zinc-800 shadow-2xl"></div>
+            <div class="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex flex-col h-[600px]">
+                <h2 class="font-bold mb-4 uppercase text-xs text-zinc-400">📍 Áreas Configuradas</h2>
+                
+                <div id="lista-areas" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <div id="placeholder-msg" class="text-center py-10 text-zinc-600 text-sm italic">
+                        Carregando áreas salvas...
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-zinc-800">
+                    <button onclick="salvarConfiguracoes()" id="btn-salvar" class="w-full bg-[#39FF14] hover:bg-[#32e612] text-black font-black py-4 rounded-xl uppercase text-xs transition-all shadow-lg active:scale-95">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -77,209 +76,153 @@
         let drawingManager;
         let poligonos = [];
 
-        // Backup fixo das coordenadas recuperadas
-        const coordenadasBackup = [
-            { nome: "Região 1", preco: 0, cor: "#39FF14", pontos: [{"lat":-22.926557299388815,"lng":-43.65098906488182},{"lat":-22.92888926872166,"lng":-43.64892912835838},{"lat":-22.932327862114548,"lng":-43.64476633996727},{"lat":-22.934501640480708,"lng":-43.644737186524886},{"lat":-22.93446211754915,"lng":-43.63832903833153},{"lat":-22.939509858218475,"lng":-43.639817151506435},{"lat":-22.939944593623046,"lng":-43.63792887635995},{"lat":-22.938877513319692,"lng":-43.635826024492275},{"lat":-22.9386799049331,"lng":-43.63402358003427},{"lat":-22.9386799049331,"lng":-43.63269320436288},{"lat":-22.938008034261227,"lng":-43.6282300085621},{"lat":-22.936861894243396,"lng":-43.62471095033456},{"lat":-22.93287008948002,"lng":-43.62445345826913},{"lat":-22.931035366047844,"lng":-43.623414458955004},{"lat":-22.929849642734187,"lng":-43.62274927111931},{"lat":-22.926410986424152,"lng":-43.6229638478405},{"lat":-22.925403087859745,"lng":-43.62304967852898},{"lat":-22.92398015947334,"lng":-43.62309259387322},{"lat":-22.92269555851055,"lng":-43.62298530551262},{"lat":-22.919968211472614,"lng":-43.62326425525017},{"lat":-22.920343387725236,"lng":-43.62637036988082},{"lat":-22.92024457004664,"lng":-43.62600558945479},{"lat":-22.9195799837119,"lng":-43.62686389633956},{"lat":-22.919849298611616,"lng":-43.62713211724105},{"lat":-22.91802115322687,"lng":-43.627421795814655},{"lat":-22.915810497014284,"lng":-43.62839715479318},{"lat":-22.916329305997845,"lng":-43.63076286314431},{"lat":-22.916230485392187,"lng":-43.631186524726225},{"lat":-22.916714705671442,"lng":-43.63387946257718},{"lat":-22.91720880621386,"lng":-43.6365534016736},{"lat":-22.917515147645492,"lng":-43.6381198117383},{"lat":-22.91774243277636,"lng":-43.638978118623065},{"lat":-22.919027080697457,"lng":-43.64085566493349},{"lat":-22.920795922136946,"lng":-43.64502918216066},{"lat":-22.921942198113893,"lng":-43.647475356782245},{"lat":-22.92402774611181,"lng":-43.64965389288268},{"lat":-22.925905217256936,"lng":-43.65051219976745}] },
-            { nome: "Região 2", preco: 0, cor: "#FF1493", pontos: [{"lat":-22.94065460335705,"lng":-43.63360230080988},{"lat":-22.947689181637134,"lng":-43.63836590402033},{"lat":-22.949348972634716,"lng":-43.64064041726496},{"lat":-22.946306006921088,"lng":-43.64888016335871},{"lat":-22.945555134726405,"lng":-43.646519819425606},{"lat":-22.943697513417515,"lng":-43.646679709712856},{"lat":-22.94286758580699,"lng":-43.64740927056491},{"lat":-22.942413099482966,"lng":-43.64612181023776},{"lat":-22.941780768145776,"lng":-43.64477726525485},{"lat":-22.93915260937451,"lng":-43.647065947811},{"lat":-22.937650781454252,"lng":-43.641486953060024},{"lat":-22.934449461075467,"lng":-43.640456984798305},{"lat":-22.934508745474016,"lng":-43.63833267525851},{"lat":-22.93950830302073,"lng":-43.63964159325778},{"lat":-22.93992327776014,"lng":-43.63801081017672},{"lat":-22.93990351708711,"lng":-43.637731860439175},{"lat":-22.939686149493387,"lng":-43.63715250329196},{"lat":-22.93966638878574,"lng":-43.63702375725924},{"lat":-22.93925141325887,"lng":-43.63642294243991}] },
-            { nome: "Região 3", preco: 0, cor: "#00FFFF", pontos: [{"lat":-22.94981469697898,"lng":-43.638013137923735},{"lat":-22.9537664847568,"lng":-43.63638235484268},{"lat":-22.955860885477865,"lng":-43.64097429667618},{"lat":-22.957481060016732,"lng":-43.643549217330474},{"lat":-22.95752057622647,"lng":-43.64363504801895},{"lat":-22.957836705488724,"lng":-43.64384962474014},{"lat":-22.95813243425621,"lng":-43.64404204683904},{"lat":-22.95991064370082,"lng":-43.64498618441228},{"lat":-22.959515488066906,"lng":-43.64876273470525},{"lat":-22.959436456801573,"lng":-43.64884856539373},{"lat":-22.959594519286053,"lng":-43.64876273470525},{"lat":-22.959594519286053,"lng":-43.64936354952459},{"lat":-22.958685657477634,"lng":-43.649406464868825},{"lat":-22.956314684882532,"lng":-43.64944938021306},{"lat":-22.953232358378198,"lng":-43.64906314211492},{"lat":-22.951928276023295,"lng":-43.64970687227849},{"lat":-22.950387071579964,"lng":-43.65103724794988},{"lat":-22.94920151775454,"lng":-43.65232470827703},{"lat":-22.94849018047333,"lng":-43.65309718447332},{"lat":-22.946672301544005,"lng":-43.65326884585027},{"lat":-22.945881911784006,"lng":-43.65399840670232},{"lat":-22.941455643826465,"lng":-43.65223887758855},{"lat":-22.934934538962576,"lng":-43.65236762362127},{"lat":-22.930270768319534,"lng":-43.651938470178884},{"lat":-22.92702974837636,"lng":-43.65202430086736},{"lat":-22.926871647858828,"lng":-43.650908501917165},{"lat":-22.93240505617337,"lng":-43.64485743837957},{"lat":-22.934539310391358,"lng":-43.64423516588811},{"lat":-22.934440503068306,"lng":-43.64054444628362},{"lat":-22.9377011066597,"lng":-43.64146712618474},{"lat":-22.93916341246247,"lng":-43.64708903627996},{"lat":-22.941811331421416,"lng":-43.64485743837957},{"lat":-22.9428388681123,"lng":-43.6474752743781},{"lat":-22.943984957526673,"lng":-43.646445306116384},{"lat":-22.945407675712293,"lng":-43.6465740521491},{"lat":-22.946198068241944,"lng":-43.64910605745916},{"lat":-22.946909417571856,"lng":-43.648891480737966},{"lat":-22.947857877528598,"lng":-43.64584449129705},{"lat":-22.947857877528598,"lng":-43.645157845789235},{"lat":-22.949596703517184,"lng":-43.64048007326726}] },
-            { nome: "Região 4", preco: 0, cor: "#FF8C00", pontos: [{"lat":-22.94576088629165,"lng":-43.65543066086543},{"lat":-22.951135450431064,"lng":-43.65877805771601},{"lat":-22.964966067558226,"lng":-43.65654645981562},{"lat":-22.96583537338875,"lng":-43.64830671372187},{"lat":-22.96259520506825,"lng":-43.641011105201365},{"lat":-22.959275927748518,"lng":-43.64212690415156},{"lat":-22.960461393286415,"lng":-43.64581762375605},{"lat":-22.959813193921633,"lng":-43.64959860187217},{"lat":-22.956928529167342,"lng":-43.64983463626548},{"lat":-22.953332491068995,"lng":-43.64931965213462},{"lat":-22.952241700343528,"lng":-43.64967590668606},{"lat":-22.94933711483343,"lng":-43.65225082734036},{"lat":-22.948112032862294,"lng":-43.653602660683866},{"lat":-22.946447518819518,"lng":-43.65394977916538},{"lat":-22.945907459360804,"lng":-43.654293101919286},{"lat":-22.94181711937285,"lng":-43.65238336910068},{"lat":-22.938319484249114,"lng":-43.6524048267728},{"lat":-22.93444629133486,"lng":-43.65261940349399},{"lat":-22.927213399813695,"lng":-43.652082961691015},{"lat":-22.92673909835058,"lng":-43.652340453756445},{"lat":-22.9308101318582,"lng":-43.65667490352451},{"lat":-22.93395225365925,"lng":-43.65465788234531}] },
-            { nome: "Região 5", preco: 0, cor: "#9400D3", pontos: [{"lat":-22.9156455393337,"lng":-43.62865456767189},{"lat":-22.91979596064445,"lng":-43.62702378459083},{"lat":-22.920230759330707,"lng":-43.625993816329114},{"lat":-22.91983548785541,"lng":-43.62316140360939},{"lat":-22.928570718603854,"lng":-43.62277516551124},{"lat":-22.929637880129974,"lng":-43.622689334822766},{"lat":-22.930191219833315,"lng":-43.619942752791516},{"lat":-22.92864976789413,"lng":-43.61492165751564},{"lat":-22.920863191292913,"lng":-43.61685284800636},{"lat":-22.920550531296623,"lng":-43.6178486995541},{"lat":-22.918831096035596,"lng":-43.61767703817715},{"lat":-22.917427862586152,"lng":-43.61793453024258},{"lat":-22.916736122440472,"lng":-43.617011850341456},{"lat":-22.916815178635815,"lng":-43.61668998525967},{"lat":-22.916913998815154,"lng":-43.61587459371914},{"lat":-22.91566885928983,"lng":-43.61585313604702},{"lat":-22.91543168855948,"lng":-43.61714059637417},{"lat":-22.915589802425817,"lng":-43.618063276275294},{"lat":-22.916242020174767,"lng":-43.61935073660244},{"lat":-22.916162963645096,"lng":-43.61922199056973},{"lat":-22.9155107455157,"lng":-43.61789161489834},{"lat":-22.913692423855966,"lng":-43.617998903258936},{"lat":-22.914008655462077,"lng":-43.62008029745449},{"lat":-22.914700409528297,"lng":-43.624243085845606},{"lat":-22.914917817219965,"lng":-43.62587386892666}] },
-            { nome: "Região 6", preco: 0, cor: "#0000FF", pontos: [{"lat":-22.92699566766774,"lng":-43.61223005979971},{"lat":-22.931778122304774,"lng":-43.605535266098535},{"lat":-22.93134336067947,"lng":-43.59823965757803},{"lat":-22.92430793309895,"lng":-43.59463476866201},{"lat":-22.914386568868935,"lng":-43.59738135069326},{"lat":-22.913991280348128,"lng":-43.599312541183984},{"lat":-22.9107894008455,"lng":-43.602059123215234},{"lat":-22.913240228982726,"lng":-43.618023631271875},{"lat":-22.91521667101029,"lng":-43.617551562485254},{"lat":-22.9154933705943,"lng":-43.61510538786367},{"lat":-22.917311668093223,"lng":-43.61557745665029},{"lat":-22.91691638810341,"lng":-43.61716532438711},{"lat":-22.917627891254973,"lng":-43.617766139206445},{"lat":-22.920592447510888,"lng":-43.61669325560049},{"lat":-22.926916617412143,"lng":-43.61514830320791}] },
-            { nome: "Região 7", preco: 0, cor: "#FF0000", pontos: [{"lat":-22.91646055055447,"lng":-43.647325780334214},{"lat":-22.920492365916136,"lng":-43.64515855545018},{"lat":-22.917863794019745,"lng":-43.63985851043675},{"lat":-22.915788569665814,"lng":-43.62998798126195},{"lat":-22.913495903912967,"lng":-43.61874416107152},{"lat":-22.911993791531252,"lng":-43.61107473950188},{"lat":-22.899146097881655,"lng":-43.61004477124016},{"lat":-22.894955509962557,"lng":-43.61609583477776},{"lat":-22.908633743053134,"lng":-43.6300433216552},{"lat":-22.90851515158542,"lng":-43.6335194645385}] }
-        ];
-
         async function initMap() {
-            // Centralizado na Zona Oeste do Rio de Janeiro (Campo Grande/Santa Cruz)
-            const centroInicial = { lat: -22.9190, lng: -43.6250 };
-
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: centroInicial,
-                zoom: 12,
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -22.9235, lng: -43.6364 }, // Paciência, RJ
+                zoom: 15,
                 styles: [
-                    { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
-                    { "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#212121" }] },
-                    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#18181b" }] },
-                    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#2c2c2c" }] },
-                    { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#8a8a8a" }] },
-                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-                ],
-                disableDefaultUI: false
-            });
-
-            const input = document.getElementById("pac-input");
-            const autocomplete = new google.maps.places.Autocomplete(input);
-            autocomplete.bindTo("bounds", map);
-
-            autocomplete.addListener("place_changed", () => {
-                const place = autocomplete.getPlace();
-                if (!place.geometry || !place.geometry.location) return;
-
-                if (place.geometry.viewport) {
-                    map.fitBounds(place.geometry.viewport);
-                } else {
-                    map.setCenter(place.geometry.location);
-                    map.setZoom(15);
-                }
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                ]
             });
 
             drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
                 drawingControl: true,
-                drawingControlOptions: {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                },
-                polygonOptions: {
-                    fillColor: "#39FF14",
-                    fillOpacity: 0.3,
-                    strokeWeight: 2,
-                    strokeColor: "#39FF14",
-                    editable: true,
-                    draggable: true
-                }
+                drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
+                polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
             });
             drawingManager.setMap(map);
 
-            google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
-                adicionarPoligonoLista(polygon, 0, "#39FF14", "Nova Região");
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                adicionarPoligonoArray(polygon, 0);
+                atualizarListaSidebar();
             });
 
-            // ATENÇÃO: Proteção para carregar os polígonos somente após o mapa estar totalmente pronto na tela
-            google.maps.event.addListenerOnce(map, 'idle', async function() {
-                console.log("Mapa do Google está carregado e pronto. Renderizando as regiões...");
-                await carregarConfiguracoes();
+            // CARREGAR DADOS EXISTENTES AO ABRIR
+            carregarDadosSalvos();
+        }
+
+        async function buscarEAdicionarEndereco() {
+            const endereco = document.getElementById('input-endereco').value;
+            if(!endereco) return alert("Digite um endereço primeiro!");
+
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: endereco }, (results, status) => {
+                if (status === "OK" && results[0].geometry) {
+                    const loc = results[0].geometry.location;
+                    map.setCenter(loc);
+                    map.setZoom(18);
+
+                    const offset = 0.0005;
+                    const path = [
+                        { lat: loc.lat() + offset, lng: loc.lng() - offset },
+                        { lat: loc.lat() + offset, lng: loc.lng() + offset },
+                        { lat: loc.lat() - offset, lng: loc.lng() + offset },
+                        { lat: loc.lat() - offset, lng: loc.lng() - offset }
+                    ];
+
+                    const polygon = new google.maps.Polygon({
+                        path: path,
+                        editable: true,
+                        draggable: true,
+                        fillOpacity: 0.8,
+                        strokeWeight: 3,
+                        map: map
+                    });
+
+                    adicionarPoligonoArray(polygon, 0);
+                    atualizarListaSidebar();
+                    document.getElementById('input-endereco').value = "";
+                } else {
+                    alert("Não foi possível encontrar esse endereço no mapa.");
+                }
             });
         }
 
-        function adicionarPoligonoLista(polygon, preco = 0, cor = "#39FF14", nome = "") {
-            document.getElementById('placeholder-msg').style.display = 'none';
-
+        function adicionarPoligonoArray(polygon, preco, corExistente = null, nomeExistente = null) {
+            const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
             polygon.setOptions({ fillColor: cor, strokeColor: cor });
+            const id = Date.now() + Math.random();
+            poligonos.push({ id: id, obj: polygon, preco: preco, nome: nomeExistente || `Área ${poligonos.length + 1}` });
+            document.getElementById('placeholder-msg').style.display = 'none';
+        }
 
-            const item = { 
-                obj: polygon, 
-                preco: parseFloat(preco) || 0, 
-                nome: nome || "Nova Região" 
-            };
-            
-            poligonos.push(item);
-            atualizarListaSidebar();
+        function carregarDadosSalvos() {
+            document.getElementById('placeholder-msg').innerText = "⌛ Conectando ao Firebase...";
+            document.getElementById('placeholder-msg').style.display = 'block';
 
-            const infoWindow = new google.maps.InfoWindow();
-            google.maps.event.addListener(polygon, 'click', function (event) {
-                infoWindow.setContent(`
-                    <div style="padding: 5px; font-family: sans-serif; color: black !important;">
-                        <b>${item.nome}</b><br>
-                        <span>Taxa: R$ ${parseFloat(item.preco).toFixed(2)}</span>
-                    </div>
-                `);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
+            db.collection("config_taxas").onSnapshot(snapshot => {
+                // Limpa polígonos anteriores
+                poligonos.forEach(p => p.obj.setMap(null));
+                poligonos = [];
+
+                if (!snapshot.empty) {
+                    snapshot.forEach(doc => {
+                        const area = doc.data();
+                        if (!area.pontos || !Array.isArray(area.pontos)) return;
+
+                        const pontosFormatados = area.pontos.map(p => ({
+                            lat: parseFloat(String(p.lat).replace(',','.')),
+                            lng: parseFloat(String(p.lng).replace(',','.'))
+                        }));
+
+                        const polygon = new google.maps.Polygon({
+                            path: pontosFormatados,
+                            editable: true,
+                            draggable: true,
+                            fillOpacity: 0.45,
+                            strokeWeight: 2,
+                            map: map
+                        });
+                        adicionarPoligonoArray(polygon, area.preco, area.cor, area.nome);
+                    });
+                    atualizarListaSidebar();
+                } else {
+                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva. Comece a desenhar no mapa!";
+                }
+            }, error => {
+                console.error("Erro ao carregar:", error);
+                document.getElementById('placeholder-msg').innerText = "❌ Erro: " + error.message;
             });
         }
 
         function atualizarListaSidebar() {
-            const container = document.getElementById("lista-regioes");
-            container.innerHTML = "";
-
-            poligonos.forEach((p, idx) => {
-                const div = document.createElement("div");
-                div.className = "bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-3 relative";
-                div.innerHTML = `
-                    <div>
-                        <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Nome da Região</label>
-                        <input type="text" value="${p.nome}" oninput="atualizarDados(${idx}, 'nome', this.value)" 
-                               placeholder="Ex: Campo Grande, Centro..."
-                               class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]">
+            const container = document.getElementById('lista-areas');
+            container.innerHTML = poligonos.map(p => `
+                <div class="p-4 bg-zinc-800/50 rounded-xl border-l-4" style="border-color: ${p.obj.fillColor}">
+                    <div class="flex justify-between items-center mb-2 text-[10px] font-bold uppercase text-zinc-400">
+                        <input type="text" value="${(p.nome || '').replace(/"/g, "'")}" placeholder="Nome da área"
+                            onchange="atualizarNome(${p.id}, this.value)"
+                            class="bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-white font-bold text-[10px] w-2/3 outline-none focus:border-[#39FF14]">
+                        <button onclick="removerArea(${p.id})" class="text-red-500">Remover</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Taxa (R$)</label>
-                            <input type="number" step="0.50" value="${p.preco}" oninput="atualizarDados(${idx}, 'preco', this.value)" 
-                                   class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Cor</label>
-                            <input type="color" value="${p.obj.fillColor}" onchange="atualizarDados(${idx}, 'cor', this.value)" 
-                                   class="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg p-1 cursor-pointer">
-                        </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-[#39FF14] font-bold text-sm">R$</span>
+                        <input type="number" step="0.50" value="${parseFloat(p.preco || 0).toFixed(2)}" onchange="atualizarPreco(${p.id}, this.value)" 
+                            class="bg-zinc-950 border border-zinc-700 rounded-lg w-full py-2 pl-10 text-white font-black outline-none">
                     </div>
-                    <button onclick="removerPoligono(${idx})" class="text-xs text-red-500 font-bold hover:text-red-400 flex items-center gap-1 pt-1">
-                        🗑️ Remover Área
-                    </button>
-                `;
-                container.appendChild(div);
-            });
+                </div>
+            `).join('');
         }
 
-        function atualizarDados(index, campo, valor) {
-            if (campo === 'preco') {
-                poligonos[index].preco = parseFloat(valor) || 0;
-            } else if (campo === 'nome') {
-                poligonos[index].nome = valor;
-            } else if (campo === 'cor') {
-                poligonos[index].obj.setOptions({ fillColor: valor, strokeColor: valor });
-            }
+        function atualizarPreco(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.preco = parseFloat(valor) || 0;
         }
 
-        function removerPoligono(index) {
-            poligonos[index].obj.setMap(null);
-            poligonos.splice(index, 1);
-            if (poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
-            atualizarListaSidebar();
+        function atualizarNome(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.nome = valor;
         }
 
-        async function carregarConfiguracoes() {
-            try {
-                const docSnap = await db.collection("config_taxas").doc("dados_globais").get();
-                
-                let regioesParaRenderizar = [];
-
-                if (docSnap.exists && docSnap.data().regioes && docSnap.data().regioes.length > 0) {
-                    console.log("Dados unificados encontrados no Firebase!");
-                    regioesParaRenderizar = docSnap.data().regioes;
-                } else {
-                    console.log("Documento do Firebase vazio. Renderizando as áreas de backup...");
-                    regioesParaRenderizar = coordenadasBackup;
-                }
-                
-                poligonos.forEach(p => p.obj.setMap(null));
-                poligonos = [];
-
-                regioesParaRenderizar.forEach(regiao => {
-                    const polygon = new google.maps.Polygon({
-                        paths: regiao.pontos,
-                        fillColor: regiao.cor || "#39FF14",
-                        fillOpacity: 0.35,
-                        strokeWeight: 2,
-                        strokeColor: regiao.cor || "#39FF14",
-                        editable: true,
-                        draggable: true
-                    });
-                    
-                    // Força a vinculação física ao mapa ativo
-                    polygon.setMap(map);
-                    adicionarPoligonoLista(polygon, regiao.preco, regiao.cor, regiao.nome);
-                });
-
-            } catch (e) {
-                console.error("Erro ao conectar ao Firebase, ativando backup local...", e);
-                coordenadasBackup.forEach(regiao => {
-                    const polygon = new google.maps.Polygon({
-                        paths: regiao.pontos,
-                        fillColor: regiao.cor,
-                        fillOpacity: 0.35,
-                        strokeWeight: 2,
-                        strokeColor: regiao.cor,
-                        editable: true,
-                        draggable: true
-                    });
-                    polygon.setMap(map);
-                    adicionarPoligonoLista(polygon, regiao.preco, regiao.cor, regiao.nome);
-                });
+        function removerArea(id) {
+            const index = poligonos.findIndex(x => x.id === id);
+            if (index > -1) {
+                poligonos[index].obj.setMap(null);
+                poligonos.splice(index, 1);
+                if(poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
+                atualizarListaSidebar();
             }
         }
 
@@ -289,37 +232,34 @@
             btn.disabled = true;
 
             const dadosParaSalvar = poligonos.map(p => {
-                const path = p.obj.getPath().getArray().map(latLng => ({ 
-                    lat: latLng.lat(), 
-                    lng: latLng.lng() 
-                }));
-                return { 
-                    preco: parseFloat(p.preco) || 0, 
-                    cor: p.obj.fillColor, 
-                    pontos: path, 
-                    nome: p.nome || "" 
-                };
+                const path = p.obj.getPath().getArray().map(latLng => ({ lat: latLng.lat(), lng: latLng.lng() }));
+                return { preco: parseFloat(p.preco) || 0, cor: p.obj.fillColor, pontos: path, nome: p.nome || "" };
             });
 
             try {
-                await db.collection("config_taxas").doc("dados_globais").set({
-                    regioes: dadosParaSalvar,
-                    ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp()
+                const snapshot = await db.collection("config_taxas").get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                
+                dadosParaSalvar.forEach(d => {
+                    const newRef = db.collection("config_taxas").doc();
+                    batch.set(newRef, d);
                 });
+                await batch.commit();
 
-                alert("Mapa e taxas salvos com sucesso no Firebase!");
+                alert("Mapa salvo com sucesso no Firebase!");
                 const statusEl = document.getElementById('status-save');
                 statusEl.classList.remove('hidden');
                 setTimeout(() => statusEl.classList.add('hidden'), 3000);
             } catch (e) {
-                alert("Erro ao salvar mapa: " + e.message);
-                console.error(e);
+                alert("Erro ao salvar: " + e.message);
             } finally {
                 btn.innerText = "SALVAR ALTERAÇÕES";
                 btn.disabled = false;
             }
         }
 
+        // Mesma inicialização do código original que funcionava
         google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
