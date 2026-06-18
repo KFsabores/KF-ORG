@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <title>Editor de Áreas - KF Sabores</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places&v=weekly"></script>
     <style>
         #map { height: 600px; width: 100%; border-radius: 20px; }
         .gm-style-iw { color: black !important; }
@@ -39,7 +38,7 @@
                 </div>
                 
                 <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
-                    Use o botão nativo do topo do mapa ou o botão azul abaixo para desenhar as regiões de entrega.
+                    Use os botões nativos que aparecerão no topo do mapa para desenhar as suas regiões.
                 </p>
 
                 <div class="mb-6">
@@ -48,7 +47,7 @@
                            class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition">
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[240px]">
+                <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[280px]">
                     <div id="placeholder-msg" class="text-center py-8 text-zinc-500 text-sm">
                         Nenhuma região carregada ou desenhada ainda.
                     </div>
@@ -57,13 +56,6 @@
             </div>
 
             <div class="pt-4 border-t border-zinc-800 space-y-3">
-                <button id="btn-desenhar" onclick="ativarDesenho()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm tracking-wider transition duration-200 shadow-md flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/xl" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                    INICIAR DESENHO
-                </button>
-
                 <button id="btn-salvar" onclick="salvarConfiguracoes()" 
                         class="w-full bg-[#39FF14] text-black font-black py-4 rounded-xl text-sm tracking-wider hover:bg-[#2ecc12] transition duration-200 disabled:opacity-50">
                     SALVAR ALTERAÇÕES
@@ -84,8 +76,22 @@
         let drawingManager;
         let poligonos = [];
 
+        // Carregamento dinâmico e isolado da API do Google Maps para evitar conflitos de cache ou outras abas
+        function carregarScriptGoogleMaps() {
+            if (window.google && window.google.maps && window.google.maps.drawing) {
+                initMap();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places&v=weekly";
+            script.async = true;
+            script.defer = true;
+            script.onload = initMap;
+            document.head.appendChild(script);
+        }
+
         async function initMap() {
-            // Centro em Campo Grande / Zona Oeste do RJ
+            // Focado na Zona Oeste do Rio
             const centroInicial = { lat: -22.9035, lng: -43.5593 };
 
             map = new google.maps.Map(document.getElementById("map"), {
@@ -120,45 +126,35 @@
                 }
             });
 
-            // REATIVADO: Botão nativo original da API do Google Maps posicionado no topo
-            drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
-                drawingControl: true, // Reativado para aparecer no mapa!
-                drawingControlOptions: {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                },
-                polygonOptions: {
-                    fillColor: "#39FF14",
-                    fillOpacity: 0.3,
-                    strokeWeight: 2,
-                    strokeColor: "#39FF14",
-                    editable: true,
-                    draggable: true
-                }
-            });
-            drawingManager.setMap(map);
-
-            google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
-                adicionarPoligonoLista(polygon, 0, "#39FF14", "Nova Região");
-                drawingManager.setDrawingMode(null);
-            });
-
-            // Executa o carregamento vindo do banco
-            await carregarConfiguracoes();
-        }
-
-        // Função do botão lateral de atalho
-        function ativarDesenho() {
-            if (drawingManager) {
-                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
-                const btn = document.getElementById('btn-desenhar');
-                btn.innerText = "CLIQUE NO MAPA...";
-                
-                google.maps.event.addListenerOnce(drawingManager, 'polygoncomplete', function() {
-                    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg> INICIAR DESENHO`;
+            // Criação nativa do DrawingManager garantindo a existência da biblioteca
+            if (google.maps.drawing && google.maps.drawing.DrawingManager) {
+                drawingManager = new google.maps.drawing.DrawingManager({
+                    drawingMode: null,
+                    drawingControl: true,
+                    drawingControlOptions: {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                    },
+                    polygonOptions: {
+                        fillColor: "#39FF14",
+                        fillOpacity: 0.3,
+                        strokeWeight: 2,
+                        strokeColor: "#39FF14",
+                        editable: true,
+                        draggable: true
+                    }
                 });
+                drawingManager.setMap(map);
+
+                google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
+                    adicionarPoligonoLista(polygon, 0, "#39FF14", "Nova Região");
+                    drawingManager.setDrawingMode(null);
+                });
+            } else {
+                console.error("Biblioteca drawing não pôde ser instanciada devido a um conflito externo.");
             }
+
+            await carregarConfiguracoes();
         }
 
         function adicionarPoligonoLista(polygon, preco = 0, cor = "#39FF14", nome = "") {
@@ -246,8 +242,8 @@
                     if(doc.id !== "dados_globais") {
                         const data = doc.data();
                         
-                        // Garante que o array de pontos existe e é válido antes de tentar renderizar
-                        if (data.pontos && Array.isArray(data.pontos) && data.pontos.length > 0) {
+                        // Renderiza o polígono apenas se as coordenadas internas existirem e forem válidas
+                        if (data.pontos && Array.isArray(data.pontos) && data.pontos.length > 0 && data.pontos[0].lat) {
                             const polygon = new google.maps.Polygon({
                                 paths: data.pontos,
                                 fillColor: data.cor || "#39FF14",
@@ -257,11 +253,9 @@
                                 editable: true,
                                 draggable: true
                             });
-                            
                             polygon.setMap(map);
                             adicionarPoligonoLista(polygon, data.preco, data.cor, data.nome);
                             
-                            // Inclui os pontos no enquadramento automático da tela
                             data.pontos.forEach(pt => {
                                 if(pt.lat && pt.lng) {
                                     bounds.extend(new google.maps.LatLng(pt.lat, pt.lng));
@@ -272,7 +266,6 @@
                     }
                 });
 
-                // Se encontrou dados válidos salvos, enquadra o mapa automaticamente neles
                 if (temPontos) {
                     map.fitBounds(bounds);
                 }
@@ -317,7 +310,8 @@
             }
         }
 
-        google.maps.event.addDomListener(window, 'load', initMap);
+        // Inicialização protegida contra injeções duplicadas
+        window.addEventListener('DOMContentLoaded', carregarScriptGoogleMaps);
     </script>
 </body>
 </html>
