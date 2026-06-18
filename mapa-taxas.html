@@ -87,12 +87,25 @@
                 ]
             });
 
-            drawingManager = new google.maps.drawing.DrawingManager({
-                drawingControl: true,
-                drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
-                polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
-            });
-            drawingManager.setMap(map);
+            drawingManager = new google.maps.DrawingManager({
+    drawingMode: null,
+    drawingControl: true, //  Alterado para true para exibir os botões
+    drawingControlOptions: {
+        position: google.maps.ControlPosition.TOP_CENTER,
+        drawingModes: [google.maps.DrawingMode.POLYGON] // Mantém apenas o botão de polígono
+    },
+    polygonOptions: {
+        editable: true,
+        draggable: true,
+        fillColor: '#39FF14', // Mantém o seu verde neon padrão
+        fillOpacity: 0.4,
+        strokeColor: '#39FF14',
+        strokeWeight: 2,
+        clickable: true,
+        zIndex: 1
+    }
+});
+drawingManager.setMap(map);
 
             google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
                 adicionarPoligonoArray(polygon, 0);
