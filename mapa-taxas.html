@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Editor de Áreas - KF Sabores</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places"></script>
     <style>
         #map { height: 600px; width: 100%; border-radius: 20px; }
         .gm-style-iw { color: black !important; }
@@ -38,7 +39,7 @@
                 </div>
                 
                 <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
-                    Use os botões nativos que aparecerão no topo do mapa para desenhar as suas regiões.
+                    Clique no ícone de polígono (pentágono) que aparecerá no topo do mapa para desenhar.
                 </p>
 
                 <div class="mb-6">
@@ -76,22 +77,8 @@
         let drawingManager;
         let poligonos = [];
 
-        // Carregamento dinâmico e isolado da API do Google Maps para evitar conflitos de cache ou outras abas
-        function carregarScriptGoogleMaps() {
-            if (window.google && window.google.maps && window.google.maps.drawing) {
-                initMap();
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyAuRZ6dXoe3EWdUAfztvgQNkgSbzzfuXPY&libraries=drawing,geometry,places&v=weekly";
-            script.async = true;
-            script.defer = true;
-            script.onload = initMap;
-            document.head.appendChild(script);
-        }
-
         async function initMap() {
-            // Focado na Zona Oeste do Rio
+            // Focado na Zona Oeste (Campo Grande / Santa Cruz)
             const centroInicial = { lat: -22.9035, lng: -43.5593 };
 
             map = new google.maps.Map(document.getElementById("map"), {
@@ -107,26 +94,30 @@
                     { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#2c2c2c" }] },
                     { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#8a8a8a" }] },
                     { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-                ]
+                ],
+                disableDefaultUI: false
             });
 
-            const input = document.getElementById("pac-input");
-            const autocomplete = new google.maps.places.Autocomplete(input);
-            autocomplete.bindTo("bounds", map);
+            // Inicialização segura da busca de endereço
+            if (google.maps.places && google.maps.places.Autocomplete) {
+                const input = document.getElementById("pac-input");
+                const autocomplete = new google.maps.places.Autocomplete(input);
+                autocomplete.bindTo("bounds", map);
 
-            autocomplete.addListener("place_changed", () => {
-                const place = autocomplete.getPlace();
-                if (!place.geometry || !place.geometry.location) return;
+                autocomplete.addListener("place_changed", () => {
+                    const place = autocomplete.getPlace();
+                    if (!place.geometry || !place.geometry.location) return;
 
-                if (place.geometry.viewport) {
-                    map.fitBounds(place.geometry.viewport);
-                } else {
-                    map.setCenter(place.geometry.location);
-                    map.setZoom(15);
-                }
-            });
+                    if (place.geometry.viewport) {
+                        map.fitBounds(place.geometry.viewport);
+                    } else {
+                        map.setCenter(place.geometry.location);
+                        map.setZoom(15);
+                    }
+                });
+            }
 
-            // Criação nativa do DrawingManager garantindo a existência da biblioteca
+            // VOLTOU O MODELO ORIGINAL: Barra cinza nativa direto no topo central do mapa
             if (google.maps.drawing && google.maps.drawing.DrawingManager) {
                 drawingManager = new google.maps.drawing.DrawingManager({
                     drawingMode: null,
@@ -148,10 +139,7 @@
 
                 google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
                     adicionarPoligonoLista(polygon, 0, "#39FF14", "Nova Região");
-                    drawingManager.setDrawingMode(null);
                 });
-            } else {
-                console.error("Biblioteca drawing não pôde ser instanciada devido a um conflito externo.");
             }
 
             await carregarConfiguracoes();
@@ -241,8 +229,7 @@
                 snapshot.forEach(doc => {
                     if(doc.id !== "dados_globais") {
                         const data = doc.data();
-                        
-                        // Renderiza o polígono apenas se as coordenadas internas existirem e forem válidas
+                        // Ignora dados corrompidos ou em branco das tentativas anteriores
                         if (data.pontos && Array.isArray(data.pontos) && data.pontos.length > 0 && data.pontos[0].lat) {
                             const polygon = new google.maps.Polygon({
                                 paths: data.pontos,
@@ -257,10 +244,8 @@
                             adicionarPoligonoLista(polygon, data.preco, data.cor, data.nome);
                             
                             data.pontos.forEach(pt => {
-                                if(pt.lat && pt.lng) {
-                                    bounds.extend(new google.maps.LatLng(pt.lat, pt.lng));
-                                    temPontos = true;
-                                }
+                                bounds.extend(new google.maps.LatLng(pt.lat, pt.lng));
+                                temPontos = true;
                             });
                         }
                     }
@@ -310,8 +295,7 @@
             }
         }
 
-        // Inicialização protegida contra injeções duplicadas
-        window.addEventListener('DOMContentLoaded', carregarScriptGoogleMaps);
+        google.maps.event.addDomListener(window, 'load', initMap);
     </script>
 </body>
 </html>
