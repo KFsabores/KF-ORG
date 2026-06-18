@@ -193,44 +193,72 @@
         }
 
         function importarCoordenadasManualmente() {
-            const textarea = document.getElementById('txt-coordenadas-import');
-            const texto = textarea.value.trim();
+    const textarea = document.getElementById('txt-coordenadas-import');
+    const texto = textarea.value.trim();
 
-            if (!texto) {
-                alert("Por favor, cole as coordenadas no campo de texto.");
+    if (!texto) {
+        alert("Por favor, cole as coordenadas no campo de texto.");
+        return;
+    }
+
+    // Divide o texto por quebras de linha para processar cada polígono individualmente
+    const linhas = texto.split('\n');
+    let poligonosCriados = 0;
+
+    linhas.forEach((linha) => {
+        let linhaLimpa = linha.trim();
+        if (!linhaLimpa) return;
+
+        // Se a linha terminar com vírgula por ter sido copiada de uma lista, remove
+        if (linhaLimpa.endsWith(',')) {
+            linhaLimpa = linhaLimpa.slice(0, -1);
+        }
+
+        try {
+            // Converte a linha de texto para o Array de objetos [{lat: ..., lng: ...}]
+            const pontos = JSON.parse(linhaLimpa);
+
+            if (!Array.isArray(pontos) || pontos.length < 3) {
+                console.warn("Linha ignorada por pontos insuficientes:", linhaLimpa);
                 return;
             }
 
-            try {
-                const pontos = JSON.parse(texto);
+            // Cria o objeto do Polígono no mapa
+            const polygon = new google.maps.Polygon({
+                path: pontos,
+                editable: true,
+                draggable: true,
+                fillOpacity: 0.45,
+                strokeWeight: 2,
+                map: map
+            });
 
-                if (!Array.isArray(pontos) || pontos.length < 3) {
-                    alert("Dados inválidos. O array precisa ter pelo menos 3 coordenadas.");
-                    return;
-                }
+            // Adiciona no array do sistema usando a função padrão que gera o ID e joga na barra lateral
+            adicionarPoligonoArray(polygon, 0);
+            poligonosCriados++;
 
-                const polygon = new google.maps.Polygon({
-                    path: pontos,
-                    editable: true,
-                    draggable: true,
-                    fillOpacity: 0.45,
-                    strokeWeight: 2,
-                    map: map
-                });
-
-                adicionarPoligonoArray(polygon, 0);
-                atualizarListaSidebar();
-                
-                // Centraliza a tela no primeiro ponto gerado
-                map.setCenter(pontos[0]);
-                textarea.value = "";
-                
-                alert("Polígono gerado no mapa!");
-            } catch (e) {
-                alert("Erro ao ler as coordenadas. Certifique-se de colar no formato correto JSON.");
-                console.error(e);
-            }
+        } catch (e) {
+            console.error("Erro ao processar linha de coordenadas:", e);
         }
+    });
+
+    if (poligonosCriados > 0) {
+        // Atualiza a lista visual da barra lateral com os novos campos de preço
+        atualizarListaSidebar();
+        
+        // Foca o mapa no primeiro ponto do último polígono criado
+        if (poligonos.length > 0) {
+            const ultimoPoligono = poligonos[poligonos.length - 1].obj;
+            const primeiroPonto = ultimoPoligono.getPath().getAt(0);
+            map.setCenter(primeiroPonto);
+        }
+
+        textarea.value = "";
+        alert(`${poligonosCriados} polígono(s) gerado(s) com sucesso! Defina os valores na barra lateral.`);
+    } else {
+        alert("Não foi possível gerar nenhum polígono. Verifique o formato do texto.");
+    }
+}
 
         function atualizarListaSidebar() {
             const container = document.getElementById('lista-areas');
