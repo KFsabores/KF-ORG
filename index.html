@@ -200,7 +200,7 @@
         const SABORES_PROMO = ["Calabresa", "Mussarela", "Presunto", "3 Queijos", "Alho", "Mista"];
         
         let cart = []; let currentItem = null; let selectedSize = 35; let tapRecheios = []; let tapExtra = "Nenhum"; 
-        let modalidadeAtual = "DELIVERY"; let taxaEntrega = null; let enderecoCalculado = "";
+        let modalidadeAtual = "DELIVERY"; let taxaEntrega = 0;
         let localizacaoPedido = null;
         let lastCartSize = 0;
         const CACHE_ESTOQUE_KEY = "kf_cache_estoque_pausado";
@@ -265,49 +265,35 @@
         }
 
         async function verificarLocalizacao(loc) {
-            taxaEntrega = null;
             const infoDistancia = document.getElementById('distancia-info');
             infoDistancia.innerText = "⌛ CALCULANDO TAXA...";
             infoDistancia.style.color = "#FFD700";
             try {
-                let latLngObj = null;
                 if (loc && typeof loc.lat === 'function' && typeof loc.lng === 'function') {
-                    latLngObj = loc;
                     localizacaoPedido = { lat: loc.lat(), lng: loc.lng(), fonte: "maps_autocomplete" };
                 } else if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
-                    latLngObj = new google.maps.LatLng(loc.lat, loc.lng);
                     localizacaoPedido = { lat: loc.lat, lng: loc.lng, fonte: loc.fonte || "maps_geocode" };
                 }
-                
                 let dadosTratados = zonasEntrega;
                 if (typeof zonasEntrega === 'string') { dadosTratados = JSON.parse(zonasEntrega); }
                 let zonaAchada = null;
-                if (latLngObj) {
-                    for (const zona of dadosTratados) {
-                        if (zona.pontos) {
-                            const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).replace(',','.')), lng: parseFloat(String(p.lng).replace(',','.')) }));
-                            const poly = new google.maps.Polygon({ paths: caminhos });
-                            if (google.maps.geometry.poly.containsLocation(latLngObj, poly)) { zonaAchada = zona; break; }
-                        }
+                for (const zona of dadosTratados) {
+                    if (zona.pontos) {
+                        const caminhos = zona.pontos.map(p => ({ lat: parseFloat(String(p.lat).replace(',','.')), lng: parseFloat(String(p.lng).replace(',','.')) }));
+                        const poly = new google.maps.Polygon({ paths: caminhos });
+                        if (google.maps.geometry.poly.containsLocation(loc, poly)) { zonaAchada = zona; break; }
                     }
                 }
-                
                 if (zonaAchada) {
                     taxaEntrega = parseFloat(String(zonaAchada.preco).replace(',','.'));
-                    const nomeZona = zonaAchada.nome || "Taxa de Entrega";
-                    infoDistancia.innerText = `🛵 ENTREGA: ${nomeZona.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
+                    infoDistancia.innerText = `🛵 ENTREGA: ${zonaAchada.nome.toUpperCase()} | R$ ${taxaEntrega.toFixed(2)}`;
                     infoDistancia.style.color = "#39FF14";
                 } else {
                     taxaEntrega = 0;
                     infoDistancia.innerText = `⚠️ FORA DA ÁREA PADRÃO (A COMBINAR)`;
                     infoDistancia.style.color = "#ff4444";
                 }
-                enderecoCalculado = document.getElementById('cust-addr').value;
-            } catch(e) { 
-                taxaEntrega = 0;
-                infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR"; 
-                enderecoCalculado = document.getElementById('cust-addr').value;
-            }
+            } catch(e) { infoDistancia.innerText = "⚠️ VALOR A CONFIRMAR"; }
             updateCartUI();
         }
 
@@ -352,10 +338,10 @@
 
         function updateCartUI() {
             const subtotal = cart.reduce((acc, i) => acc + i.price, 0);
-            const taxaExibida = (modalidadeAtual === 'DELIVERY' && taxaEntrega !== null) ? taxaEntrega : 0;
+            const taxa = modalidadeAtual === 'DELIVERY' ? taxaEntrega : 0;
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
-            document.getElementById('taxa-valor').innerText = (modalidadeAtual === 'DELIVERY' && taxaEntrega === null) ? "Calculando..." : taxaExibida.toFixed(2);
-            document.getElementById('cart-total').innerText = (subtotal + taxaExibida).toFixed(2);
+            document.getElementById('taxa-valor').innerText = taxa.toFixed(2);
+            document.getElementById('cart-total').innerText = (subtotal + taxa).toFixed(2);
             
             const cartCountEl = document.getElementById('cart-count');
             cartCountEl.innerText = cart.length;
@@ -417,15 +403,7 @@
             document.getElementById('mode-retirada').classList.toggle('active', tipo === 'RETIRADA');
             document.getElementById('area-endereco').classList.toggle('hidden', tipo === 'RETIRADA');
             document.getElementById('row-taxa').classList.toggle('hidden', tipo === 'RETIRADA');
-            if(tipo === 'RETIRADA') { 
-                taxaEntrega = 0; 
-                document.getElementById('cust-addr').value = "RETIRADA NA LOJA"; 
-            } else {
-                if (document.getElementById('cust-addr').value === "RETIRADA NA LOJA") {
-                    document.getElementById('cust-addr').value = "";
-                    taxaEntrega = null;
-                }
-            }
+            if(tipo === 'RETIRADA') { taxaEntrega = 0; document.getElementById('cust-addr').value = "RETIRADA NA LOJA"; }
             updateCartUI();
         }
 
@@ -592,18 +570,8 @@
             const obs = document.getElementById('cust-obs').value;
             const troco = document.getElementById('troco-val').value;
             
-            if(!n || !tel || (modalidadeAtual==='DELIVERY' && (!a || a.trim() === "" || a === "RETIRADA NA LOJA")) || cart.length === 0) { 
-                alert("Preencha todos os campos corretamente!"); 
-                return; 
-            }
-            
-            if(modalidadeAtual === 'DELIVERY') {
-                if (taxaEntrega === null || a !== enderecoCalculado) {
-                    alert('Aguarde o cálculo/confirmação da taxa de entrega para o endereço informado...');
-                    geocodificarEndereco(a);
-                    return;
-                }
-            }
+            if(!n || !tel || (modalidadeAtual==='DELIVERY' && !a) || cart.length === 0) { alert("Preencha todos os campos!"); return; }
+            if(modalidadeAtual === 'ENTREGA' && taxaEntrega === null) { alert('Aguarde o cálculo da taxa...'); return; }
 
             if(btn) { btn.disabled = true; btn.innerText = 'PROCESSANDO...'; }
 
@@ -613,24 +581,23 @@
             }
             const geoLink = geoFinal ? `https://www.google.com/maps?q=${geoFinal.lat},${geoFinal.lng}` : "";
             
-            const totalFormatadoStr = "R$ " + parseFloat(totalStr).toFixed(2).replace(".", ",");
             let msg = `*🔥 NOVO PEDIDO KF SABORES*%0A%0A*👤 CLIENTE:* ${n.toUpperCase()}%0A*📍 END:* ${a.toUpperCase()}%0A*🚚 MOD:* ${modalidadeAtual}%0A*💳 PAGTO:* ${pagto}${pagto==='Dinheiro'?' (Troco p/ '+troco+')':''}%0A%0A*🍕 ITENS:*%0A`;
             cart.forEach(i => msg += `• ${i.name}%0A`);
             if(obs) msg += `%0A*📝 OBS:* ${obs.toUpperCase()}%0A`;
             if(geoLink) msg += `%0A*📌 LOCALIZAÇÃO:* ${encodeURIComponent(geoLink)}%0A`;
-            msg += `%0A*💰 TOTAL: ${encodeURIComponent(totalFormatadoStr)}*`;
+            msg += `%0A*💰 TOTAL: R$ ${totalStr}*`;
             
             try {
                 await db.collection("pedidos").add({
                     nome: n.toUpperCase(),
                     telefone: tel,
                     endereco: a.toUpperCase(),
-                    total: totalFormatadoStr,
-                    totalNum: parseFloat(totalStr) || 0,
+                    total: totalStr,
+                    totalNum: parseFloat(totalStr.replace("R$", "").replace(/\s/g, "").replace(",", ".")) || 0,
                     pagamento: pagto.toUpperCase(),
                     modalidade: modalidadeAtual,
                     itens: cart.map(i => `${i.name} (R$ ${i.price.toFixed(2)})`).join(" | ") + (obs ? " | 📝 OBS: " + obs.toUpperCase() : ""),
-                    taxa: (taxaEntrega !== null && taxaEntrega !== undefined) ? taxaEntrega.toFixed(2).replace(".", ",") : "0,00",
+                    taxa: taxaEntrega.toFixed(2).replace(".", ","),
                     troco: troco,
                     latitude: geoFinal ? geoFinal.lat : "",
                     longitude: geoFinal ? geoFinal.lng : "",

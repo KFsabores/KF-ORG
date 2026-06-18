@@ -13,6 +13,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
     
+    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
     <script>
@@ -20,55 +21,53 @@
             apiKey: "AIzaSyBjvO26MEbyQMiaTj43aUg7PwiKQmH0g34",
             authDomain: "kf-sabores-delivery.firebaseapp.com",
             projectId: "kf-sabores-delivery",
-            storageBucket: "kf-sabores-delivery.appspot.com",
-            messagingSenderId: "1090158226066",
-            appId: "1:1090158226066:web:65db1f99c08e50b18f0293"
+            storageBucket: "kf-sabores-delivery.firebasestorage.app",
+            messagingSenderId: "926954054172",
+            appId: "1:926954054172:web:fdde663c1f315ec9e9f5d9"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
 </head>
-<body class="bg-zinc-950 text-white min-h-screen font-[Montserrat]">
-
-    <div class="flex h-screen overflow-hidden">
-        <div class="w-96 bg-zinc-900 border-r border-zinc-800 p-6 flex flex-col justify-between">
+<body class="bg-zinc-950 p-4 md:p-8 text-white">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
             <div>
-                <div class="flex items-center gap-3 mb-6">
-                    <span class="text-2xl">🗺️</span>
-                    <h1 class="text-xl font-black tracking-wider text-white">MAPA DE TAXAS</h1>
-                </div>
-                
-                <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
-                    Clique no ícone de polígono (pentágono) que aparecerá no topo do mapa para desenhar.
-                </p>
-
-                <div class="mb-6">
-                    <label class="block text-xs font-bold text-zinc-400 mb-2 uppercase">Testar ou Buscar Endereço</label>
-                    <input id="pac-input" type="text" placeholder="Digite uma rua, bairro..." 
-                           class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition">
-                </div>
-
-                <div class="flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[280px]">
-                    <div id="placeholder-msg" class="text-center py-8 text-zinc-500 text-sm">
-                        Nenhuma região carregada ou desenhada ainda.
-                    </div>
-                    <div id="lista-regioes" class="space-y-3"></div>
-                </div>
+                <h1 class="text-2xl font-black uppercase italic text-[#39FF14]">Editor de Geofencing</h1>
+                <p class="text-zinc-500 text-[10px] uppercase tracking-widest font-bold">Paciência, RJ - Gestão de Taxas</p>
             </div>
-
-            <div class="pt-4 border-t border-zinc-800 space-y-3">
-                <button id="btn-salvar" onclick="salvarConfiguracoes()" 
-                        class="w-full bg-[#39FF14] text-black font-black py-4 rounded-xl text-sm tracking-wider hover:bg-[#2ecc12] transition duration-200 disabled:opacity-50">
-                    SALVAR ALTERAÇÕES
+            <div class="flex flex-1 max-w-md w-full relative">
+                <input type="text" id="input-endereco" placeholder="Buscar endereço (Ex: Rua A, 123)..." 
+                    class="bg-zinc-900 border border-zinc-700 rounded-l-xl w-full py-2 px-4 text-xs text-white outline-none focus:border-[#39FF14]">
+                <button onclick="buscarEAdicionarEndereco()" class="bg-[#39FF14] text-black px-4 py-2 rounded-r-xl font-bold text-xs uppercase hover:bg-green-500 transition-colors">
+                    Incluir
                 </button>
-                <p id="status-save" class="text-center text-xs text-[#39FF14] mt-2 font-bold hidden">
-                    ✅ Configurações salvas no Firebase!
-                </p>
             </div>
-        </div>
+            <div id="status-save" class="hidden text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full border border-green-500/50 animate-pulse">
+                Sincronizado com a Planilha
+            </div>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-3 relative">
+                <div id="map" class="border border-zinc-800 shadow-2xl"></div>
+            </div>
 
-        <div class="flex-1 p-6 relative">
-            <div id="map" class="w-full h-full border border-zinc-800 shadow-2xl"></div>
+            <div class="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex flex-col h-[600px]">
+                <h2 class="font-bold mb-4 uppercase text-xs text-zinc-400">📍 Áreas Configuradas</h2>
+                
+                <div id="lista-areas" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                    <div id="placeholder-msg" class="text-center py-10 text-zinc-600 text-sm italic">
+                        Carregando áreas salvas...
+                    </div>
+                </div>
+
+                <div class="pt-4 mt-4 border-t border-zinc-800">
+                    <button onclick="salvarConfiguracoes()" id="btn-salvar" class="w-full bg-[#39FF14] hover:bg-[#32e612] text-black font-black py-4 rounded-xl uppercase text-xs transition-all shadow-lg active:scale-95">
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -78,184 +77,135 @@
         let poligonos = [];
 
         async function initMap() {
-            // Focado na Zona Oeste (Campo Grande / Santa Cruz)
-            const centroInicial = { lat: -22.9035, lng: -43.5593 };
-
-            map = new google.maps.Map(document.getElementById("map"), {
-                center: centroInicial,
-                zoom: 12,
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -22.9235, lng: -43.6364 }, // Paciência, RJ
+                zoom: 15,
                 styles: [
-                    { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
-                    { "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#212121" }] },
-                    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#18181b" }] },
-                    { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-                    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#2c2c2c" }] },
-                    { "featureType": "road", "elementType": "labels.text.fill", "stylers": [{ "color": "#8a8a8a" }] },
-                    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-                ],
-                disableDefaultUI: false
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] }
+                ]
             });
 
-            // Inicialização segura da busca de endereço
-            if (google.maps.places && google.maps.places.Autocomplete) {
-                const input = document.getElementById("pac-input");
-                const autocomplete = new google.maps.places.Autocomplete(input);
-                autocomplete.bindTo("bounds", map);
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingControl: true,
+                drawingControlOptions: { position: google.maps.ControlPosition.TOP_CENTER, drawingModes: ['polygon'] },
+                polygonOptions: { editable: true, draggable: true, fillOpacity: 0.45, strokeWeight: 2 }
+            });
+            drawingManager.setMap(map);
 
-                autocomplete.addListener("place_changed", () => {
-                    const place = autocomplete.getPlace();
-                    if (!place.geometry || !place.geometry.location) return;
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                adicionarPoligonoArray(polygon, 0);
+                atualizarListaSidebar();
+            });
+            // Autocomplete removido para evitar bloqueios de permissão da chave da API.
+            // A busca continuará funcionando normalmente pelo Geocoder no botão "Incluir"
 
-                    if (place.geometry.viewport) {
-                        map.fitBounds(place.geometry.viewport);
-                    } else {
-                        map.setCenter(place.geometry.location);
-                        map.setZoom(15);
-                    }
-                });
-            }
-
-            // VOLTOU O MODELO ORIGINAL: Barra cinza nativa direto no topo central do mapa
-            if (google.maps.drawing && google.maps.drawing.DrawingManager) {
-                drawingManager = new google.maps.drawing.DrawingManager({
-                    drawingMode: null,
-                    drawingControl: true,
-                    drawingControlOptions: {
-                        position: google.maps.ControlPosition.TOP_CENTER,
-                        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                    },
-                    polygonOptions: {
-                        fillColor: "#39FF14",
-                        fillOpacity: 0.3,
-                        strokeWeight: 2,
-                        strokeColor: "#39FF14",
-                        editable: true,
-                        draggable: true
-                    }
-                });
-                drawingManager.setMap(map);
-
-                google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
-                    adicionarPoligonoLista(polygon, 0, "#39FF14", "Nova Região");
-                });
-            }
-
-            await carregarConfiguracoes();
+            // CARREGAR DADOS EXISTENTES AO ABRIR
+            carregarDadosSalvos();
         }
 
-        function adicionarPoligonoLista(polygon, preco = 0, cor = "#39FF14", nome = "") {
-            document.getElementById('placeholder-msg').style.display = 'none';
+        async function buscarEAdicionarEndereco() {
+            const endereco = document.getElementById('input-endereco').value;
+            if(!endereco) return alert("Digite um endereço primeiro!");
 
-            const id = Date.now() + Math.random().toString(36).substr(2, 5);
-            polygon.setOptions({ fillColor: cor, strokeColor: cor });
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: endereco }, (results, status) => {
+                if (status === "OK" && results[0].geometry) {
+                    const loc = results[0].geometry.location;
+                    map.setCenter(loc);
+                    map.setZoom(18);
 
-            const item = { id: id, obj: polygon, preco: preco, nome: nome };
-            poligonos.push(item);
+                    // Cria um quadrado pequeno (aprox. 50 metros ao redor do local)
+                    const offset = 0.0005;
+                    const path = [
+                        { lat: loc.lat() + offset, lng: loc.lng() - offset },
+                        { lat: loc.lat() + offset, lng: loc.lng() + offset },
+                        { lat: loc.lat() - offset, lng: loc.lng() + offset },
+                        { lat: loc.lat() - offset, lng: loc.lng() - offset }
+                    ];
 
-            atualizarListaSidebar();
+                    const polygon = new google.maps.Polygon({
+                        path: path,
+                        editable: true,
+                        draggable: true,
+                        fillOpacity: 0.8,
+                        strokeWeight: 3,
+                        map: map
+                    });
 
-            const infoWindow = new google.maps.InfoWindow();
-            google.maps.event.addListener(polygon, 'click', function (event) {
-                infoWindow.setContent(`
-                    <div style="padding: 5px; font-family: sans-serif;">
-                        <b style="color:#000;">${item.nome || 'Sem nome'}</b><br>
-                        <span style="color:#333;">Taxa: R$ ${parseFloat(item.preco).toFixed(2)}</span>
-                    </div>
-                `);
-                infoWindow.setPosition(event.latLng);
-                infoWindow.open(map);
+                    adicionarPoligonoArray(polygon, 0); // Começa com valor R$ 0.00
+                    atualizarListaSidebar();
+                    document.getElementById('input-endereco').value = "";
+                } else {
+                    alert("Não foi possível encontrar esse endereço no mapa.");
+                }
             });
+        }
+
+        function adicionarPoligonoArray(polygon, preco, corExistente = null) {
+            const cor = corExistente || '#' + Math.floor(Math.random()*16777215).toString(16);
+            polygon.setOptions({ fillColor: cor, strokeColor: cor });
+            const id = Date.now() + Math.random();
+            poligonos.push({ id: id, obj: polygon, preco: preco });
+            document.getElementById('placeholder-msg').style.display = 'none';
+        }
+
+        async function carregarDadosSalvos() {
+            try {
+                const snapshot = await db.collection("config_taxas").get();
+                if (!snapshot.empty) {
+                    snapshot.forEach(doc => {
+                        const area = doc.data();
+                        const polygon = new google.maps.Polygon({
+                            path: area.pontos,
+                            editable: true,
+                            draggable: true,
+                            fillOpacity: 0.45,
+                            strokeWeight: 2,
+                            map: map
+                        });
+                        adicionarPoligonoArray(polygon, area.preco, area.cor);
+                    });
+                    atualizarListaSidebar();
+                } else {
+                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
+                }
+            } catch (e) {
+                console.error("Erro ao carregar:", e);
+                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
+            }
         }
 
         function atualizarListaSidebar() {
-            const container = document.getElementById("lista-regioes");
-            container.innerHTML = "";
-
-            poligonos.forEach((p, idx) => {
-                const div = document.createElement("div");
-                div.className = "bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-3 relative";
-                div.innerHTML = `
-                    <div>
-                        <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Nome da Região</label>
-                        <input type="text" value="${p.nome}" onchange="atualizarDados(${idx}, 'nome', this.value)" 
-                               placeholder="Ex: Setor 1, Centro..."
-                               class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]">
+            const container = document.getElementById('lista-areas');
+            container.innerHTML = poligonos.map(p => `
+                <div class="p-4 bg-zinc-800/50 rounded-xl border-l-4" style="border-color: ${p.obj.fillColor}">
+                    <div class="flex justify-between items-center mb-2 text-[10px] font-bold uppercase text-zinc-400">
+                        <span>Taxa de Entrega:</span>
+                        <button onclick="removerArea(${p.id})" class="text-red-500">Remover</button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Taxa (R$)</label>
-                            <input type="number" step="0.50" value="${p.preco}" onchange="atualizarDados(${idx}, 'preco', this.value)" 
-                                   class="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#39FF14]">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Cor</label>
-                            <input type="color" value="${p.obj.fillColor}" onchange="atualizarDados(${idx}, 'cor', this.value)" 
-                                   class="w-full h-8 bg-zinc-900 border border-zinc-800 rounded-lg p-1 cursor-pointer">
-                        </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-[#39FF14] font-bold text-sm">R$</span>
+                        <input type="number" step="0.50" value="${p.preco}" onchange="atualizarPreco(${p.id}, this.value)" 
+                            class="bg-zinc-950 border border-zinc-700 rounded-lg w-full py-2 pl-10 text-white font-black outline-none">
                     </div>
-                    <button onclick="removerPoligono(${idx})" class="text-xs text-red-500 font-bold hover:text-red-400 flex items-center gap-1 pt-1">
-                        🗑️ Remover Área
-                    </button>
-                `;
-                container.appendChild(div);
-            });
+                </div>
+            `).join('');
         }
 
-        function atualizarDados(index, campo, valor) {
-            if (campo === 'preco') {
-                poligonos[index].preco = parseFloat(valor) || 0;
-            } else if (campo === 'nome') {
-                poligonos[index].nome = valor;
-            } else if (campo === 'cor') {
-                poligonos[index].obj.setOptions({ fillColor: valor, strokeColor: valor });
-            }
+        function atualizarPreco(id, valor) {
+            const p = poligonos.find(x => x.id === id);
+            if(p) p.preco = parseFloat(valor);
         }
 
-        function removerPoligono(index) {
-            poligonos[index].obj.setMap(null);
-            poligonos.splice(index, 1);
-            if (poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
-            atualizarListaSidebar();
-        }
-
-        async function carregarConfiguracoes() {
-            try {
-                const snapshot = await db.collection("config_taxas").get();
-                let bounds = new google.maps.LatLngBounds();
-                let temPontos = false;
-
-                snapshot.forEach(doc => {
-                    if(doc.id !== "dados_globais") {
-                        const data = doc.data();
-                        // Ignora dados corrompidos ou em branco das tentativas anteriores
-                        if (data.pontos && Array.isArray(data.pontos) && data.pontos.length > 0 && data.pontos[0].lat) {
-                            const polygon = new google.maps.Polygon({
-                                paths: data.pontos,
-                                fillColor: data.cor || "#39FF14",
-                                fillOpacity: 0.3,
-                                strokeWeight: 2,
-                                strokeColor: data.cor || "#39FF14",
-                                editable: true,
-                                draggable: true
-                            });
-                            polygon.setMap(map);
-                            adicionarPoligonoLista(polygon, data.preco, data.cor, data.nome);
-                            
-                            data.pontos.forEach(pt => {
-                                bounds.extend(new google.maps.LatLng(pt.lat, pt.lng));
-                                temPontos = true;
-                            });
-                        }
-                    }
-                });
-
-                if (temPontos) {
-                    map.fitBounds(bounds);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar dados do mapa: ", e);
+        function removerArea(id) {
+            const index = poligonos.findIndex(x => x.id === id);
+            if (index > -1) {
+                poligonos[index].obj.setMap(null);
+                poligonos.splice(index, 1);
+                if(poligonos.length === 0) document.getElementById('placeholder-msg').style.display = 'block';
+                atualizarListaSidebar();
             }
         }
 
@@ -266,7 +216,7 @@
 
             const dadosParaSalvar = poligonos.map(p => {
                 const path = p.obj.getPath().getArray().map(latLng => ({ lat: latLng.lat(), lng: latLng.lng() }));
-                return { preco: parseFloat(p.preco) || 0, cor: p.obj.fillColor, pontos: path, nome: p.nome || "" };
+                return { preco: p.preco, cor: p.obj.fillColor, pontos: path };
             });
 
             try {
@@ -281,14 +231,9 @@
                 await batch.commit();
 
                 alert("Mapa salvo com sucesso no Firebase!");
-                const statusEl = document.getElementById('status-save');
-                if (statusEl) {
-                    statusEl.classList.remove('hidden');
-                    setTimeout(() => statusEl.classList.add('hidden'), 3000);
-                }
+                document.getElementById('status-save').classList.remove('hidden');
             } catch (e) {
                 alert("Erro ao salvar: " + e.message);
-                console.error(e);
             } finally {
                 btn.innerText = "SALVAR ALTERAÇÕES";
                 btn.disabled = false;
