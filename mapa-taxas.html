@@ -13,7 +13,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
     
-    <!-- FIREBASE SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
     <script>
@@ -62,6 +61,14 @@
                     </div>
                 </div>
 
+                <div class="mt-4 pt-4 border-t border-zinc-800">
+                    <h3 class="text-[10px] font-bold text-[#39FF14] mb-2 uppercase tracking-wider">Importar Coordenadas</h3>
+                    <textarea id="txt-coordenadas-import" rows="3" class="w-full bg-zinc-950 text-[10px] text-zinc-300 p-2 rounded-lg border border-zinc-700 font-mono focus:outline-none focus:border-[#39FF14]" placeholder="Cole o seu array aqui..."></textarea>
+                    <button onclick="importarCoordenadasManualmente()" class="w-full mt-2 bg-zinc-800 hover:bg-zinc-700 text-[#39FF14] font-bold py-2 rounded-lg text-[10px] uppercase transition-colors border border-[#39FF14]/20">
+                        Gerar Polígono
+                    </button>
+                </div>
+
                 <div class="pt-4 mt-4 border-t border-zinc-800">
                     <button onclick="salvarConfiguracoes()" id="btn-salvar" class="w-full bg-[#39FF14] hover:bg-[#32e612] text-black font-black py-4 rounded-xl uppercase text-xs transition-all shadow-lg active:scale-95">
                         Salvar Alterações
@@ -79,7 +86,7 @@
         async function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
                 center: { lat: -22.9235, lng: -43.6364 }, // Paciência, RJ
-                zoom: 15,
+                zoom: 14,
                 styles: [
                     { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
                     { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
@@ -87,34 +94,27 @@
                 ]
             });
 
-            drawingManager = new google.maps.DrawingManager({
-    drawingMode: null,
-    drawingControl: true, //  Alterado para true para exibir os botões
-    drawingControlOptions: {
-        position: google.maps.ControlPosition.TOP_CENTER,
-        drawingModes: [google.maps.DrawingMode.POLYGON] // Mantém apenas o botão de polígono
-    },
-    polygonOptions: {
-        editable: true,
-        draggable: true,
-        fillColor: '#39FF14', // Mantém o seu verde neon padrão
-        fillOpacity: 0.4,
-        strokeColor: '#39FF14',
-        strokeWeight: 2,
-        clickable: true,
-        zIndex: 1
-    }
-});
-drawingManager.setMap(map);
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingControl: true,
+                drawingControlOptions: { 
+                    position: google.maps.ControlPosition.TOP_CENTER, 
+                    drawingModes: [google.maps.drawing.OverlayType.POLYGON] 
+                },
+                polygonOptions: { 
+                    editable: true, 
+                    draggable: true, 
+                    fillOpacity: 0.45, 
+                    strokeWeight: 2 
+                }
+            });
+            drawingManager.setMap(map);
 
             google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
                 adicionarPoligonoArray(polygon, 0);
                 atualizarListaSidebar();
             });
-            // Autocomplete removido para evitar bloqueios de permissão da chave da API.
-            // A busca continuará funcionando normalmente pelo Geocoder no botão "Incluir"
 
-            // CARREGAR DADOS EXISTENTES AO ABRIR
+            // CARREGAR DADOS EXISTENTES DO FIREBASE IMEDIATAMENTE AO ABRIR
             carregarDadosSalvos();
         }
 
@@ -127,9 +127,8 @@ drawingManager.setMap(map);
                 if (status === "OK" && results[0].geometry) {
                     const loc = results[0].geometry.location;
                     map.setCenter(loc);
-                    map.setZoom(18);
+                    map.setZoom(16);
 
-                    // Cria um quadrado pequeno (aprox. 50 metros ao redor do local)
                     const offset = 0.0005;
                     const path = [
                         { lat: loc.lat() + offset, lng: loc.lng() - offset },
@@ -142,12 +141,12 @@ drawingManager.setMap(map);
                         path: path,
                         editable: true,
                         draggable: true,
-                        fillOpacity: 0.8,
-                        strokeWeight: 3,
+                        fillOpacity: 0.45,
+                        strokeWeight: 2,
                         map: map
                     });
 
-                    adicionarPoligonoArray(polygon, 0); // Começa com valor R$ 0.00
+                    adicionarPoligonoArray(polygon, 0);
                     atualizarListaSidebar();
                     document.getElementById('input-endereco').value = "";
                 } else {
@@ -170,14 +169,17 @@ drawingManager.setMap(map);
                 if (!snapshot.empty) {
                     snapshot.forEach(doc => {
                         const area = doc.data();
+                        
+                        // Garante que o polígono seja desenhado setando a propriedade map explicitamente
                         const polygon = new google.maps.Polygon({
                             path: area.pontos,
                             editable: true,
                             draggable: true,
                             fillOpacity: 0.45,
                             strokeWeight: 2,
-                            map: map
+                            map: map // <--- ISSO DESENHA NO MAPA AUTOMATICAMENTE
                         });
+                        
                         adicionarPoligonoArray(polygon, area.preco, area.cor);
                     });
                     atualizarListaSidebar();
@@ -187,6 +189,46 @@ drawingManager.setMap(map);
             } catch (e) {
                 console.error("Erro ao carregar:", e);
                 document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
+            }
+        }
+
+        function importarCoordenadasManualmente() {
+            const textarea = document.getElementById('txt-coordenadas-import');
+            const texto = textarea.value.trim();
+
+            if (!texto) {
+                alert("Por favor, cole as coordenadas no campo de texto.");
+                return;
+            }
+
+            try {
+                const pontos = JSON.parse(texto);
+
+                if (!Array.isArray(pontos) || pontos.length < 3) {
+                    alert("Dados inválidos. O array precisa ter pelo menos 3 coordenadas.");
+                    return;
+                }
+
+                const polygon = new google.maps.Polygon({
+                    path: pontos,
+                    editable: true,
+                    draggable: true,
+                    fillOpacity: 0.45,
+                    strokeWeight: 2,
+                    map: map
+                });
+
+                adicionarPoligonoArray(polygon, 0);
+                atualizarListaSidebar();
+                
+                // Centraliza a tela no primeiro ponto gerado
+                map.setCenter(pontos[0]);
+                textarea.value = "";
+                
+                alert("Polígono gerado no mapa!");
+            } catch (e) {
+                alert("Erro ao ler as coordenadas. Certifique-se de colar no formato correto JSON.");
+                console.error(e);
             }
         }
 
