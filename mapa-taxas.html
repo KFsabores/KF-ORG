@@ -43,7 +43,7 @@
                 </button>
             </div>
             <div id="status-save" class="hidden text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full border border-green-500/50 animate-pulse">
-                Sincronizado com a Planilha
+                Sincronizado com o Firebase
             </div>
         </header>
         
@@ -79,8 +79,8 @@
     </div>
 
     <script>
-        let map;
-        let drawingManager;
+        let map = null;
+        let drawingManager = null;
         let poligonos = [];
 
         async function initMap() {
@@ -114,9 +114,9 @@
                 atualizarListaSidebar();
             });
 
-            // CORREÇÃO DE ESCOPO: Aguarda os blocos visuais e garante a inicialização da variável 'map' global
+            // Dispara o carregamento assim que o mapa estiver totalmente pronto na tela gráfica
             google.maps.event.addListenerOnce(map, 'tilesloaded', function() {
-                setTimeout(carregarDadosSalvos, 200);
+                carregarDadosSalvos();
             });
         }
 
@@ -166,6 +166,12 @@
         }
 
         async function carregarDadosSalvos() {
+            // Se por acaso o mapa ainda não estiver pronto, espera 200ms e tenta novamente
+            if (!map) {
+                setTimeout(carregarDadosSalvos, 200);
+                return;
+            }
+
             try {
                 poligonos = [];
                 const msgPlaceholder = document.getElementById('placeholder-msg');
@@ -174,7 +180,6 @@
                 if (!snapshot.empty) {
                     snapshot.forEach(doc => {
                         const area = doc.data();
-                        
                         if (!area.pontos || !Array.isArray(area.pontos)) return;
                         
                         const pontosFormatados = area.pontos.map(p => {
@@ -186,10 +191,13 @@
                             editable: true,
                             draggable: true,
                             fillOpacity: 0.45,
-                            strokeWeight: 2,
-                            map: map // Agora a variável 'map' global já está 100% instanciada
+                            strokeWeight: 2
                         });
                         
+                        // Primeiro coloca no mapa global que já está verificado
+                        polygon.setMap(map);
+                        
+                        // Depois joga na estrutura da barra lateral
                         adicionarPoligonoArray(polygon, area.preco, area.cor);
                     });
                     
@@ -228,7 +236,6 @@
                     const pontos = JSON.parse(linhaLimpa);
 
                     if (!Array.isArray(pontos) || pontos.length < 3) {
-                        console.warn("Linha ignorada por pontos insuficientes:", linhaLimpa);
                         return;
                     }
 
@@ -251,13 +258,11 @@
 
             if (poligonosCriados > 0) {
                 atualizarListaSidebar();
-                
                 if (poligonos.length > 0) {
                     const ultimoPoligono = poligonos[poligonos.length - 1].obj;
                     const primeiroPonto = ultimoPoligono.getPath().getAt(0);
                     map.setCenter(primeiroPonto);
                 }
-
                 textarea.value = "";
                 alert(`${poligonosCriados} polígono(s) gerado(s) com sucesso! Defina os valores na barra lateral.`);
             } else {
