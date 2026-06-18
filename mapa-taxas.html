@@ -114,8 +114,10 @@
                 atualizarListaSidebar();
             });
 
-            // CARREGAR DADOS EXISTENTES DO FIREBASE IMEDIATAMENTE AO ABRIR
-            carregarDadosSalvos();
+            // CORREÇÃO AQUI: Aguarda os blocos visuais do mapa carregarem totalmente antes de puxar os dados
+            google.maps.event.addListenerOnce(map, 'tilesloaded', function() {
+                carregarDadosSalvos();
+            });
         }
 
         async function buscarEAdicionarEndereco() {
@@ -165,26 +167,30 @@
 
         async function carregarDadosSalvos() {
             try {
+                // Limpa o array para evitar duplicados se a função for chamada novamente
+                poligonos = [];
+                const msgPlaceholder = document.getElementById('placeholder-msg');
+                
                 const snapshot = await db.collection("config_taxas").get();
                 if (!snapshot.empty) {
                     snapshot.forEach(doc => {
                         const area = doc.data();
                         
-                        // Garante que o polígono seja desenhado setando a propriedade map explicitamente
                         const polygon = new google.maps.Polygon({
                             path: area.pontos,
                             editable: true,
                             draggable: true,
                             fillOpacity: 0.45,
                             strokeWeight: 2,
-                            map: map // <--- ISSO DESENHA NO MAPA AUTOMATICAMENTE
+                            map: map // Inicializa amarrado diretamente no mapa
                         });
                         
                         adicionarPoligonoArray(polygon, area.preco, area.cor);
                     });
                     atualizarListaSidebar();
                 } else {
-                    document.getElementById('placeholder-msg').innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
+                    msgPlaceholder.innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
+                    msgPlaceholder.style.display = 'block';
                 }
             } catch (e) {
                 console.error("Erro ao carregar:", e);
@@ -193,72 +199,66 @@
         }
 
         function importarCoordenadasManualmente() {
-    const textarea = document.getElementById('txt-coordenadas-import');
-    const texto = textarea.value.trim();
+            const textarea = document.getElementById('txt-coordenadas-import');
+            const texto = textarea.value.trim();
 
-    if (!texto) {
-        alert("Por favor, cole as coordenadas no campo de texto.");
-        return;
-    }
-
-    // Divide o texto por quebras de linha para processar cada polígono individualmente
-    const linhas = texto.split('\n');
-    let poligonosCriados = 0;
-
-    linhas.forEach((linha) => {
-        let linhaLimpa = linha.trim();
-        if (!linhaLimpa) return;
-
-        // Se a linha terminar com vírgula por ter sido copiada de uma lista, remove
-        if (linhaLimpa.endsWith(',')) {
-            linhaLimpa = linhaLimpa.slice(0, -1);
-        }
-
-        try {
-            // Converte a linha de texto para o Array de objetos [{lat: ..., lng: ...}]
-            const pontos = JSON.parse(linhaLimpa);
-
-            if (!Array.isArray(pontos) || pontos.length < 3) {
-                console.warn("Linha ignorada por pontos insuficientes:", linhaLimpa);
+            if (!texto) {
+                alert("Por favor, cole as coordenadas no campo de texto.");
                 return;
             }
 
-            // Cria o objeto do Polígono no mapa
-            const polygon = new google.maps.Polygon({
-                path: pontos,
-                editable: true,
-                draggable: true,
-                fillOpacity: 0.45,
-                strokeWeight: 2,
-                map: map
+            const linhas = texto.split('\n');
+            let poligonosCriados = 0;
+
+            linhas.forEach((linha) => {
+                let linhaLimpa = Math.floor ? linha.trim() : linha;
+                linhaLimpa = linhaLimpa.trim();
+                if (!linhaLimpa) return;
+
+                if (linhaLimpa.endsWith(',')) {
+                    linhaLimpa = linhaLimpa.slice(0, -1);
+                }
+
+                try {
+                    const pontos = JSON.parse(linhaLimpa);
+
+                    if (!Array.isArray(pontos) || pontos.length < 3) {
+                        console.warn("Linha ignorada por pontos insuficientes:", linhaLimpa);
+                        return;
+                    }
+
+                    const polygon = new google.maps.Polygon({
+                        path: pontos,
+                        editable: true,
+                        draggable: true,
+                        fillOpacity: 0.45,
+                        strokeWeight: 2,
+                        map: map
+                    });
+
+                    adicionarPoligonoArray(polygon, 0);
+                    poligonosCriados++;
+
+                } catch (e) {
+                    console.error("Erro ao processar linha de coordenadas:", e);
+                }
             });
 
-            // Adiciona no array do sistema usando a função padrão que gera o ID e joga na barra lateral
-            adicionarPoligonoArray(polygon, 0);
-            poligonosCriados++;
+            if (poligonosCriados > 0) {
+                atualizarListaSidebar();
+                
+                if (poligonos.length > 0) {
+                    const ultimoPoligono = poligonos[poligonos.length - 1].obj;
+                    const primeiroPonto = ultimoPoligono.getPath().getAt(0);
+                    map.setCenter(primeiroPonto);
+                }
 
-        } catch (e) {
-            console.error("Erro ao processar linha de coordenadas:", e);
+                textarea.value = "";
+                alert(`${poligonosCriados} polígono(s) gerado(s) com sucesso! Defina os valores na barra lateral.`);
+            } else {
+                alert("Não foi possível gerar nenhum polígono. Verifique o formato do texto.");
+            }
         }
-    });
-
-    if (poligonosCriados > 0) {
-        // Atualiza a lista visual da barra lateral com os novos campos de preço
-        atualizarListaSidebar();
-        
-        // Foca o mapa no primeiro ponto do último polígono criado
-        if (poligonos.length > 0) {
-            const ultimoPoligono = poligonos[poligonos.length - 1].obj;
-            const primeiroPonto = ultimoPoligono.getPath().getAt(0);
-            map.setCenter(primeiroPonto);
-        }
-
-        textarea.value = "";
-        alert(`${poligonosCriados} polígono(s) gerado(s) com sucesso! Defina os valores na barra lateral.`);
-    } else {
-        alert("Não foi possível gerar nenhum polígono. Verifique o formato do texto.");
-    }
-}
 
         function atualizarListaSidebar() {
             const container = document.getElementById('lista-areas');
