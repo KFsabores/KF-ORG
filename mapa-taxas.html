@@ -74,7 +74,7 @@
 
     <script>
         let map;
-        let drawingManager;
+        let ingManager;
         let poligonos = [];
 
         async function initMap() {
@@ -114,22 +114,22 @@
             });
 
             drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: null,
-                drawingControl: true,
-                drawingControlOptions: {
-                    // Posicionado no rodapé para não ficar escondido atrás do layout
-                    position: google.maps.ControlPosition.BOTTOM_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                },
-                polygonOptions: {
-                    fillColor: "#39FF14",
-                    fillOpacity: 0.3,
-                    strokeWeight: 2,
-                    strokeColor: "#39FF14",
-                    editable: true,
-                    draggable: true
-                }
-            });
+    drawingMode: null,
+    drawingControl: true,
+    drawingControlOptions: {
+        // MUDADO: Alterado para TOP_RIGHT para garantir visibilidade total
+        position: google.maps.ControlPosition.TOP_RIGHT,
+        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+    },
+    polygonOptions: {
+        fillColor: "#39FF14",
+        fillOpacity: 0.3,
+        strokeWeight: 2,
+        strokeColor: "#39FF14",
+        editable: true,
+        draggable: true
+    }
+});
             drawingManager.setMap(map);
 
             google.maps.event.addListener(drawingManager, 'polygoncomplete', function (polygon) {
