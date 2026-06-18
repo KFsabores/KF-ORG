@@ -166,37 +166,50 @@
         }
 
         async function carregarDadosSalvos() {
-            try {
-                // Limpa o array para evitar duplicados se a função for chamada novamente
-                poligonos = [];
-                const msgPlaceholder = document.getElementById('placeholder-msg');
+    try {
+        // Limpa o array local para evitar duplicações
+        poligonos = [];
+        const msgPlaceholder = document.getElementById('placeholder-msg');
+        
+        const snapshot = await db.collection("config_taxas").get();
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                const area = doc.data();
                 
-                const snapshot = await db.collection("config_taxas").get();
-                if (!snapshot.empty) {
-                    snapshot.forEach(doc => {
-                        const area = doc.data();
-                        
-                        const polygon = new google.maps.Polygon({
-                            path: area.pontos,
-                            editable: true,
-                            draggable: true,
-                            fillOpacity: 0.45,
-                            strokeWeight: 2,
-                            map: map // Inicializa amarrado diretamente no mapa
-                        });
-                        
-                        adicionarPoligonoArray(polygon, area.preco, area.cor);
-                    });
-                    atualizarListaSidebar();
-                } else {
-                    msgPlaceholder.innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
-                    msgPlaceholder.style.display = 'block';
-                }
-            } catch (e) {
-                console.error("Erro ao carregar:", e);
-                document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
-            }
+                // CORREÇÃO CRÍTICA: Trata e valida as coordenadas explicitamente para o formato do Google
+                if (!area.pontos || !Array.isArray(area.pontos)) return;
+                
+                const pontosFormatados = area.pontos.map(p => {
+                    // Garante que estamos pegando lat/lng independentemente de como foi salvo
+                    const lat = parseFloat(p.lat);
+                    const lng = parseFloat(p.lng);
+                    return new google.maps.LatLng(lat, lng);
+                });
+                
+                // Cria o polígono com os pontos tratados
+                const polygon = new google.maps.Polygon({
+                    path: pontosFormatados,
+                    editable: true,
+                    draggable: true,
+                    fillOpacity: 0.45,
+                    strokeWeight: 2,
+                    map: map // Vincula diretamente ao mapa atual
+                });
+                
+                // Adiciona o polígono ao array global e à lista visual da barra lateral
+                adicionarPoligonoArray(polygon, area.preco, area.cor);
+            });
+            
+            atualizarListaSidebar();
+        } else {
+            msgPlaceholder.innerText = "Nenhuma área salva no Firebase. Comece a desenhar!";
+            msgPlaceholder.style.display = 'block';
         }
+    } catch (e) {
+        console.error("Erro ao carregar dados do Firebase:", e);
+        document.getElementById('placeholder-msg').innerText = "Erro ao carregar dados.";
+    }
+}
 
         function importarCoordenadasManualmente() {
             const textarea = document.getElementById('txt-coordenadas-import');
